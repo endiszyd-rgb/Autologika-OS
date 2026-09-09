@@ -68,8 +68,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "GITHUB_OWNER",
-        "repo": "GITHUB_REPO",
+        "owner": "endiszyd-rgb",
+        "repo": "Autologika-OS",
         "releaseType": "release"
       }
     ]

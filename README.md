@@ -11,7 +11,7 @@ npm.cmd test
 npm.cmd run dist
 ```
 
-Instalator, `latest.yml` i `.blockmap` powstają razem w katalogu `release`. Przed włączeniem aktualizacji zamień `GITHUB_OWNER` i `GITHUB_REPO` w `build.publish` pliku `package.json`. Szczegółowa instrukcja: [RELEASE_GUIDE.md](RELEASE_GUIDE.md). Test zachowania danych: [RELEASE_TEST.md](RELEASE_TEST.md).
+Instalator, `latest.yml` i `.blockmap` powstają razem w katalogu `release`. Aktualizacje są skonfigurowane dla repozytorium `endiszyd-rgb/Autologika-OS`. Szczegółowa instrukcja: [RELEASE_GUIDE.md](RELEASE_GUIDE.md). Test zachowania danych: [RELEASE_TEST.md](RELEASE_TEST.md).
 
 ## Katalog prac 3.0
 

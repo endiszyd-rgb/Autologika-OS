@@ -2,17 +2,17 @@
 
 ## 1. Repozytorium GitHub
 
-Utwórz puste repozytorium, najlepiej publiczne, aby zainstalowane aplikacje mogły pobierać aktualizacje bez tokenu. W katalogu projektu wykonaj:
+Projekt korzysta z repozytorium `endiszyd-rgb/Autologika-OS`. Zdalne repozytorium jest ustawione poleceniem:
 
 ```powershell
-git remote add origin https://github.com/TWOJ_OWNER/TWOJE_REPO.git
+git remote add origin https://github.com/endiszyd-rgb/Autologika-OS.git
 git push -u origin master
 ```
 
-W [package.json](package.json) zamień dokładnie:
+W [package.json](package.json) są ustawione:
 
-- `build.publish.owner`: `GITHUB_OWNER` → nazwa konta lub organizacji,
-- `build.publish.repo`: `GITHUB_REPO` → nazwa repozytorium.
+- `build.publish.owner`: `endiszyd-rgb`,
+- `build.publish.repo`: `Autologika-OS`.
 
 Tych wartości nie zmieniaj pomiędzy zwykłymi aktualizacjami. Nie dodawaj tokenu do pliku.
 
