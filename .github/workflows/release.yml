@@ -1,0 +1,66 @@
+name: Windows release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Pobierz kod
+        uses: actions/checkout@v4
+
+      - name: Ustaw Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Sprawdź zgodność taga z package.json
+        shell: pwsh
+        run: |
+          $packageVersion = (Get-Content package.json | ConvertFrom-Json).version
+          $tagVersion = $env:GITHUB_REF_NAME.TrimStart('v')
+          if ($packageVersion -ne $tagVersion) {
+            throw "Tag $tagVersion nie odpowiada wersji package.json $packageVersion"
+          }
+
+      - name: Zainstaluj zależności
+        run: npm ci
+
+      - name: Przebuduj better-sqlite3 dla Electron
+        run: npm run rebuild
+
+      - name: Testy
+        run: npm test
+
+      - name: Vite production build
+        run: npm run build
+
+      - name: Zbuduj i opublikuj wydanie stabilne
+        if: ${{ !contains(github.ref_name, '-') }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish always
+
+      - name: Zbuduj i opublikuj wydanie beta
+        if: ${{ contains(github.ref_name, '-') }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --publish always --config.publish.releaseType=prerelease
+
+      - name: Zachowaj artefakty workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: Autologika-OS-${{ github.ref_name }}
+          path: |
+            release/Autologika-Setup-*.exe
+            release/latest*.yml
+            release/*.blockmap
+          if-no-files-found: error
+

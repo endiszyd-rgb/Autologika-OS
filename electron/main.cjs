@@ -4,8 +4,9 @@ const fs = require('fs')
 const http = require('http')
 const os = require('os')
 const crypto = require('crypto')
-const { getDb } = require('./db.cjs')
+const { getDb, createVersionBackup, databasePath } = require('./db.cjs')
 const cloudSync = require('./cloud-sync.cjs')
+const updater = require('./updater.cjs')
 const { findQuoteApproval, assertQuoteEditable } = require('./quote-approval.cjs')
 const { createAppointment, updateAppointment } = require('./appointments.cjs')
 
@@ -50,10 +51,17 @@ ipcMain.handle('zebra:environment', async()=>{
 })
 
 app.whenReady().then(async()=>{
+  try{getDb()}catch(error){
+    const logPath=path.join(app.getPath('userData'),'migration-errors.log')
+    try{fs.appendFileSync(logPath,`${new Date().toISOString()} ${error.stack||error}\nBackup: ${error.backupPath||'brak'}\n`,'utf8')}catch{}
+    dialog.showErrorBox('Nie udało się zaktualizować bazy danych',`Autologika OS nie uruchomi się, aby chronić dane.\n\n${error.message}\n\nBackup: ${error.backupPath||'nie utworzono'}\nLog: ${logPath}`)
+    app.quit();return
+  }
   createWindow()
   try{ cloudSync.startAuto() }catch(e){ console.error('[cloud sync autostart]',e) }
   try{ await autoBackupDb() }catch(e){ console.error('[auto backup]',e) }
   try{ const cfg=loadRemoteConfig(); if(cfg.autoStart) await createMobileServer(cfg.port) }catch(e){ console.error('[mobile autostart]',e) }
+  updater.init({prepareInstall:prepareUpdateInstall})
   app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0)createWindow()})
 })
 app.on('window-all-closed',()=>{if(process.platform!=='darwin')app.quit()})
@@ -67,6 +75,12 @@ ipcMain.handle('renderer:log',(_event,payload={})=>{
   }catch(e){ console.error('renderer log failed',e); return false }
 })
 ipcMain.handle('renderer:logPath',()=>rendererLogPath())
+ipcMain.handle('updater:getStatus',()=>updater.getStatus())
+ipcMain.handle('updater:check',()=>updater.check())
+ipcMain.handle('updater:download',()=>updater.download())
+ipcMain.handle('updater:install',()=>updater.install())
+ipcMain.handle('updater:setChannel',(_event,channel)=>updater.setChannel(channel))
+ipcMain.handle('updater:logPath',()=>updater.logPath())
 
 ipcMain.handle('cloudSync:config',()=>cloudSync.publicConfig())
 ipcMain.handle('cloudSync:status',()=>cloudSync.status())
@@ -498,11 +512,19 @@ function documentHtml(o,items,diag,notes,type,signature,qcRows=[]){
 
 ipcMain.handle('orders:exportPdf',async(_,{id,type='order'})=>{const db=getDb();const o=db.prepare(`${orderSelect} WHERE o.id=?`).get(id);if(!o)return{canceled:true};const items=db.prepare('SELECT * FROM order_items WHERE order_id=? ORDER BY id').all(id);const diag=db.prepare('SELECT * FROM diagnostics WHERE order_id=? ORDER BY id DESC LIMIT 1').get(id);const notes=db.prepare('SELECT * FROM order_notes WHERE order_id=?').get(id);const signature=db.prepare('SELECT * FROM signatures WHERE order_id=? ORDER BY created_at DESC,id DESC LIMIT 1').get(id);const qcRows=db.prepare('SELECT * FROM order_qc WHERE order_id=? AND deleted_at IS NULL ORDER BY id').all(id);const html=documentHtml(o,items,diag,notes,type,signature,qcRows);const w=new BrowserWindow({show:false,webPreferences:{sandbox:true}});await w.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent(html));const suffix=type==='intake'?'Przyjecie':type==='release'?'Wydanie':'Zlecenie';const {filePath,canceled}=await dialog.showSaveDialog({defaultPath:`Autologika_${suffix}_${o.id}_${o.plate||'auto'}.pdf`,filters:[{name:'PDF',extensions:['pdf']}]});if(canceled||!filePath){w.destroy();return{canceled:true}}const pdf=await w.webContents.printToPDF({printBackground:true,pageSize:'A4'});fs.writeFileSync(filePath,pdf);w.destroy();return{canceled:false,filePath}})
 
-ipcMain.handle('system:dbPath',()=>path.join(app.getPath('userData'),'autologika.db'))
+ipcMain.handle('system:dbPath',()=>databasePath())
 ipcMain.handle('system:backup',async()=>{const src=path.join(app.getPath('userData'),'autologika.db');const {filePath,canceled}=await dialog.showSaveDialog({defaultPath:`autologika-backup-${new Date().toISOString().slice(0,10)}.db`,filters:[{name:'SQLite database',extensions:['db']}]});if(canceled||!filePath)return{canceled:true};fs.copyFileSync(src,filePath);return{canceled:false,filePath}})
 async function autoBackupDb(){const dir=path.join(app.getPath('userData'),'backups');fs.mkdirSync(dir,{recursive:true});const day=new Date().toISOString().slice(0,10);const dst=path.join(dir,`autologika-auto-${day}.db`);if(!fs.existsSync(dst)){await getDb().backup(dst);const files=fs.readdirSync(dir).filter(x=>/^autologika-auto-\d{4}-\d{2}-\d{2}\.db$/.test(x)).sort().reverse();for(const old of files.slice(14)){try{fs.unlinkSync(path.join(dir,old))}catch{}}}return {dir,file:dst,exists:fs.existsSync(dst)}}
 ipcMain.handle('system:autoBackup',()=>autoBackupDb())
 ipcMain.handle('system:autoBackupStatus',()=>{const dir=path.join(app.getPath('userData'),'backups');const files=fs.existsSync(dir)?fs.readdirSync(dir).filter(x=>x.startsWith('autologika-auto-')).sort().reverse():[];return {dir,count:files.length,last:files[0]||''}})
+
+async function prepareUpdateInstall({currentVersion,targetVersion}){
+  cloudSync.stopAuto()
+  for(let i=0;i<50&&cloudSync.status().running;i++)await new Promise(resolve=>setTimeout(resolve,100))
+  if(cloudSync.status().running)throw new Error('Synchronizacja danych nadal trwa. Spróbuj ponownie za chwilę.')
+  if(mobileServer)await stopMobileServer()
+  return createVersionBackup({currentVersion,targetVersion,kind:'BEFORE_UPDATE'})
+}
 
 // --- Autologika OS 0.4 ------------------------------------------------------
 ipcMain.handle('vehicles:findByVin',(_,vin)=>getDb().prepare(`SELECT v.*,c.name customer,c.phone FROM vehicles v JOIN customers c ON c.id=v.customer_id WHERE UPPER(REPLACE(v.vin,' ',''))=? LIMIT 1`).get(String(vin||'').replace(/\s/g,'').toUpperCase())||null)

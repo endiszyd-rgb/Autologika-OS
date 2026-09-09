@@ -1,4 +1,17 @@
-# Autologika OS 0.40.3 — Workshop Studio
+# Autologika OS 1.0.0 — Workshop Studio
+
+Instalowalna aplikacja Windows 10/11 x64 z lokalną bazą SQLite, instalatorem NSIS i przygotowanymi aktualizacjami przez GitHub Releases. Dane warsztatu pozostają w katalogu Electron `userData` i nie są częścią katalogu instalacyjnego.
+
+## Wersja produkcyjna i instalator
+
+```powershell
+npm.cmd ci
+npm.cmd run rebuild
+npm.cmd test
+npm.cmd run dist
+```
+
+Instalator, `latest.yml` i `.blockmap` powstają razem w katalogu `release`. Przed włączeniem aktualizacji zamień `GITHUB_OWNER` i `GITHUB_REPO` w `build.publish` pliku `package.json`. Szczegółowa instrukcja: [RELEASE_GUIDE.md](RELEASE_GUIDE.md). Test zachowania danych: [RELEASE_TEST.md](RELEASE_TEST.md).
 
 ## Katalog prac 3.0
 

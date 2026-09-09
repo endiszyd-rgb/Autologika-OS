@@ -1,16 +1,58 @@
 const Database = require('better-sqlite3')
 const path = require('path')
+const fs = require('fs')
 const { app } = require('electron')
 const { seedTechnicalReference } = require('./technical-seed.cjs')
 
 let db
+const SCHEMA_VERSION = 1
+const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
+const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
+const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
+
+function checkpointDatabase(database){
+  try{ database.pragma('wal_checkpoint(FULL)') }catch{}
+}
+
+function createMigrationBackup(database,dbPath,fromVersion,toVersion){
+  const dir=backupDirectory();fs.mkdirSync(dir,{recursive:true})
+  checkpointDatabase(database)
+  const stamp=safeTimestamp(),file=path.join(dir,`autologika-before-schema-${fromVersion}-to-${toVersion}-${stamp}.db`)
+  fs.copyFileSync(dbPath,file)
+  const manifest={kind:'BEFORE_MIGRATION',createdAt:new Date().toISOString(),applicationVersion:app.getVersion(),schemaFrom:fromVersion,schemaTo:toVersion,databasePath:dbPath,backupPath:file}
+  const manifestPath=file.replace(/\.db$/,'.json');fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2),'utf8')
+  return{file,manifestPath,manifest}
+}
+
+async function createVersionBackup({currentVersion=app.getVersion(),targetVersion='',kind='BEFORE_UPDATE'}={}){
+  const database=getDb(),dbPath=databasePath(),dir=backupDirectory();fs.mkdirSync(dir,{recursive:true})
+  checkpointDatabase(database)
+  const stamp=safeTimestamp(),file=path.join(dir,`autologika-${String(kind).toLowerCase().replace(/_/g,'-')}-${currentVersion}-to-${targetVersion||'unknown'}-${stamp}.db`)
+  await database.backup(file)
+  if(!fs.existsSync(file)||fs.statSync(file).size===0)throw new Error('Kopia bazy nie została utworzona poprawnie.')
+  const manifest={kind,createdAt:new Date().toISOString(),currentVersion,targetVersion,databasePath:dbPath,backupPath:file,schemaVersion:database.pragma('user_version',{simple:true})}
+  const manifestPath=file.replace(/\.db$/,'.json');fs.writeFileSync(manifestPath,JSON.stringify(manifest,null,2),'utf8')
+  return{file,manifestPath,manifest}
+}
+
 function getDb() {
   if (db) return db
-  const dbPath = path.join(app.getPath('userData'), 'autologika.db')
+  const dbPath = databasePath(), existed=fs.existsSync(dbPath)&&fs.statSync(dbPath).size>0
+  fs.mkdirSync(path.dirname(dbPath),{recursive:true})
   db = new Database(dbPath)
-  db.pragma('journal_mode = WAL')
-  db.pragma('foreign_keys = ON')
-  migrate(db)
+  const currentVersion=Number(db.pragma('user_version',{simple:true})||0)
+  let safetyBackup=null
+  try{
+    if(currentVersion>SCHEMA_VERSION)throw new Error(`Baza danych ma nowszy schemat (${currentVersion}) niż ta wersja programu (${SCHEMA_VERSION}). Automatyczny downgrade jest zablokowany.`)
+    if(existed&&currentVersion<SCHEMA_VERSION)safetyBackup=createMigrationBackup(db,dbPath,currentVersion,SCHEMA_VERSION)
+    db.pragma('journal_mode = WAL')
+    db.pragma('foreign_keys = ON')
+    migrate(db,currentVersion)
+  }catch(error){
+    try{db.close()}catch{};db=undefined
+    error.backupPath=safetyBackup?.file||''
+    throw error
+  }
   seed(db)
   const templateCount=db.prepare("SELECT COUNT(*) c FROM message_templates").get().c
   if(!templateCount){
@@ -28,7 +70,16 @@ function getDb() {
   return db
 }
 
-function migrate(db) {
+function migrate(db,currentVersion=0) {
+  if(currentVersion>=SCHEMA_VERSION)return
+  const upgrade=db.transaction(()=>{
+    migrateSchemaV1(db)
+    db.pragma(`user_version = ${SCHEMA_VERSION}`)
+  })
+  upgrade()
+}
+
+function migrateSchemaV1(db) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS customers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -504,4 +555,4 @@ function seed(db) {
     .run(o.lastInsertRowid,v.lastInsertRowid,'Diagnostyka braku mocy',start.toISOString(),end.toISOString(),'Stanowisko 1','PLAN')
 }
 
-module.exports = { getDb }
+module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION }
