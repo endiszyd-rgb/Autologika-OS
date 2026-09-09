@@ -50,7 +50,7 @@ function migrate(db) {
       parts_cost REAL DEFAULT 0, parts_sale REAL DEFAULT 0, other_cost REAL DEFAULT 0,
       other_sale REAL DEFAULT 0, discount REAL DEFAULT 0, diagnosis_fee REAL DEFAULT 0,
       source TEXT DEFAULT 'nieznane', opened_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      due_at TEXT, closed_at TEXT,
+      due_at TEXT, closed_at TEXT, archived_at TEXT,
       FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
     );
     CREATE TABLE IF NOT EXISTS diagnostics (
@@ -470,6 +470,7 @@ function migrate(db) {
   if(!cols.includes('employee_id')) db.exec('ALTER TABLE work_logs ADD COLUMN employee_id INTEGER')
   const orderCols=db.prepare("PRAGMA table_info(orders)").all().map(x=>x.name)
   if(!orderCols.includes('wait_state')) db.exec("ALTER TABLE orders ADD COLUMN wait_state TEXT NOT NULL DEFAULT 'BRAK'")
+  if(!orderCols.includes('archived_at')) db.exec('ALTER TABLE orders ADD COLUMN archived_at TEXT')
   const commCols=db.prepare("PRAGMA table_info(communications)").all().map(x=>x.name)
   if(!commCols.includes('reply_due_at')) db.exec("ALTER TABLE communications ADD COLUMN reply_due_at TEXT")
 

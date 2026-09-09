@@ -284,18 +284,18 @@ function syncOrderItemTotals(orderId){
 
 ipcMain.handle('dashboard:get',()=>{
   const db=getDb();
-  const open=db.prepare("SELECT COUNT(*) c FROM orders WHERE status != 'WYDANE'").get().c
+  const open=db.prepare("SELECT COUNT(*) c FROM orders WHERE archived_at IS NULL AND status != 'WYDANE'").get().c
   const today=db.prepare("SELECT COUNT(*) c FROM orders WHERE date(opened_at)=date('now','localtime')").get().c
   const month=db.prepare(`SELECT COALESCE(SUM(labor_hours*labor_rate + parts_sale + other_sale + diagnosis_fee - discount),0) revenue,COALESCE(SUM(parts_cost + other_cost),0) variableCost,COALESCE(SUM(labor_hours),0) laborHours FROM orders WHERE strftime('%Y-%m',opened_at)=strftime('%Y-%m','now','localtime')`).get()
   const actual=db.prepare(`SELECT COALESCE(SUM(CASE WHEN duration_minutes IS NOT NULL THEN duration_minutes ELSE (julianday('now')-julianday(started_at))*1440 END),0) minutes FROM work_logs WHERE strftime('%Y-%m',started_at)=strftime('%Y-%m','now','localtime')`).get().minutes
-  const status=db.prepare("SELECT status,COUNT(*) c FROM orders WHERE status!='WYDANE' GROUP BY status").all()
-  const recent=db.prepare(`${orderSelect} ORDER BY o.opened_at DESC LIMIT 8`).all()
+  const status=db.prepare("SELECT status,COUNT(*) c FROM orders WHERE archived_at IS NULL AND status!='WYDANE' GROUP BY status").all()
+  const recent=db.prepare(`${orderSelect} WHERE o.archived_at IS NULL AND o.status!='WYDANE' ORDER BY o.opened_at DESC LIMIT 8`).all()
   const sources=db.prepare(`SELECT source, COUNT(*) c FROM orders WHERE strftime('%Y-%m',opened_at)=strftime('%Y-%m','now','localtime') GROUP BY source ORDER BY c DESC`).all()
   const reminders=db.prepare(`SELECT r.*,v.plate,v.make,v.model FROM reminders r JOIN vehicles v ON v.id=r.vehicle_id WHERE done=0 ORDER BY COALESCE(due_date,'9999-12-31') LIMIT 8`).all()
   const next=db.prepare(`SELECT a.*,v.plate,v.make,v.model FROM appointments a LEFT JOIN vehicles v ON v.id=a.vehicle_id WHERE datetime(a.end_at)>=datetime('now') ORDER BY a.start_at LIMIT 5`).all()
   const active=db.prepare(`SELECT w.*,o.title,v.plate,v.make,v.model FROM work_logs w JOIN orders o ON o.id=w.order_id JOIN vehicles v ON v.id=o.vehicle_id WHERE w.ended_at IS NULL ORDER BY w.started_at DESC`).all()
   const notificationCount =
-    db.prepare("SELECT COUNT(*) c FROM orders WHERE status!='WYDANE' AND COALESCE(wait_state,'BRAK')!='BRAK'").get().c +
+    db.prepare("SELECT COUNT(*) c FROM orders WHERE archived_at IS NULL AND status!='WYDANE' AND COALESCE(wait_state,'BRAK')!='BRAK'").get().c +
     db.prepare("SELECT COUNT(*) c FROM communications WHERE needs_reply=1 AND resolved=0").get().c +
     db.prepare("SELECT COUNT(*) c FROM job_part_orders WHERE expected_at IS NOT NULL AND datetime(expected_at)<datetime('now') AND status NOT IN ('ODEBRANE','ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE')").get().c +
     db.prepare("SELECT COUNT(*) c FROM vehicle_findings f JOIN vehicles v ON v.id=f.vehicle_id WHERE f.deleted_at IS NULL AND f.status!='RESOLVED' AND (f.severity IN ('CRITICAL','HIGH') OR (f.due_date IS NOT NULL AND date(f.due_date)<=date('now','+14 days')) OR (f.due_mileage IS NOT NULL AND v.mileage>=f.due_mileage))").get().c
@@ -336,9 +336,12 @@ ipcMain.handle('vehicleFindings:list',(_,vehicleId)=>getDb().prepare(`SELECT * F
 ipcMain.handle('vehicleFindings:create',(_,{vehicleId,orderId,data})=>{const r=getDb().prepare(`INSERT INTO vehicle_findings(vehicle_id,source_order_id,category,title,details,severity,status,due_date,due_mileage) VALUES (?,?,?,?,?,?,?,?,?)`).run(vehicleId,orderId||null,data.category||'USTERKA',data.title,data.details||'',data.severity||'INFO',data.status||'OPEN',data.due_date||null,data.due_mileage||null);return{id:Number(r.lastInsertRowid)}})
 ipcMain.handle('vehicleFindings:setStatus',(_,{id,status})=>{getDb().prepare(`UPDATE vehicle_findings SET status=?,resolved_at=CASE WHEN ?='RESOLVED' THEN CURRENT_TIMESTAMP ELSE NULL END WHERE id=?`).run(status,status,id);return true})
 
-ipcMain.handle('orders:list',(_,status='')=>status?getDb().prepare(`${orderSelect} WHERE o.status=? ORDER BY o.opened_at DESC`).all(status):getDb().prepare(`${orderSelect} ORDER BY CASE WHEN o.status='WYDANE' THEN 1 ELSE 0 END,o.opened_at DESC`).all())
+ipcMain.handle('orders:list',(_,status='')=>{const db=getDb();if(status==='ACTIVE')return db.prepare(`${orderSelect} WHERE o.archived_at IS NULL AND o.status!='WYDANE' ORDER BY o.opened_at DESC`).all();if(status==='ARCHIVE')return db.prepare(`${orderSelect} WHERE o.archived_at IS NOT NULL OR o.status='WYDANE' ORDER BY COALESCE(o.archived_at,o.closed_at,o.opened_at) DESC`).all();return status?db.prepare(`${orderSelect} WHERE o.status=? AND o.archived_at IS NULL ORDER BY o.opened_at DESC`).all(status):db.prepare(`${orderSelect} WHERE o.archived_at IS NULL AND o.status!='WYDANE' ORDER BY o.opened_at DESC`).all()})
 ipcMain.handle('orders:get',(_,id)=>getDb().prepare(`${orderSelect} WHERE o.id=?`).get(id))
 ipcMain.handle('orders:create',(_,d)=>{const r=getDb().prepare(`INSERT INTO orders(vehicle_id,title,complaint,status,priority,diagnosis_limit,labor_rate,diagnosis_fee,source,due_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(d.vehicle_id,d.title,d.complaint||'','PRZYJETE',d.priority||'NORMALNY',+d.diagnosis_limit||0,+d.labor_rate||220,+d.diagnosis_fee||0,d.source||'nieznane',d.due_at||null);return{id:r.lastInsertRowid}})
+ipcMain.handle('orders:archive',(_event,id)=>{const db=getDb(),order=db.prepare('SELECT status FROM orders WHERE id=?').get(id);if(!order)return{ok:false,error:'Zlecenie nie istnieje.'};if(!['GOTOWE','WYDANE'].includes(order.status))return{ok:false,error:'Do archiwum można przenieść zlecenie gotowe lub wydane.'};db.prepare('UPDATE orders SET archived_at=CURRENT_TIMESTAMP WHERE id=?').run(id);return{ok:true}})
+ipcMain.handle('orders:restore',(_event,id)=>{const result=getDb().prepare("UPDATE orders SET archived_at=NULL,status=CASE WHEN status='WYDANE' THEN 'GOTOWE' ELSE status END,closed_at=CASE WHEN status='WYDANE' THEN NULL ELSE closed_at END WHERE id=?").run(id);return{ok:result.changes>0}})
+ipcMain.handle('orders:remove',(_event,id)=>{const db=getDb(),files=db.prepare("SELECT file_path FROM attachments WHERE order_id=? AND COALESCE(file_path,'')!=''").all(id);const result=db.prepare('DELETE FROM orders WHERE id=?').run(id);if(result.changes)for(const file of files)try{fs.unlinkSync(file.file_path)}catch{}return{ok:result.changes>0}})
 ipcMain.handle('intake:create',(_,d)=>{
   const db=getDb()
   const tx=db.transaction(()=>{
