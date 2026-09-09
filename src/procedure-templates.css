@@ -2,20 +2,20 @@
 .ptHero { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 24px; padding: 24px 26px; border: 1px solid #293840; border-radius: 20px; background: radial-gradient(circle at 80% -20%, rgba(196, 244, 124, .08), transparent 32%), linear-gradient(135deg, #111c21, #0b1216); box-shadow: 0 18px 50px rgba(0, 0, 0, .22); }
 .ptHero::after { content: ""; position: absolute; right: 240px; top: -150px; width: 300px; height: 300px; border: 1px solid rgba(88, 200, 216, .09); border-radius: 50%; }
 .ptHero > div:first-child, .ptHero > button { position: relative; z-index: 1; }
-.ptHero small, .ptPreviewHead small, .ptScope small { color: #61cbd9; font-size: 8px; font-weight: 900; letter-spacing: 1.35px; }
-.ptHero h2 { margin: 6px 0; color: #eff3f4; font-size: 27px; letter-spacing: -.5px; }
-.ptHero p { max-width: 720px; margin: 0; color: #82939b; font-size: 11px; line-height: 1.55; }
+.ptHero small, .ptPreviewHead small, .ptScope small { color: #69d0dc; font-size: 10px; font-weight: 900; letter-spacing: 1.25px; }
+.ptHero h2 { margin: 7px 0; color: #f3f6f6; font-size: 30px; letter-spacing: -.6px; }
+.ptHero p { max-width: 720px; margin: 0; color: #9aabb0; font-size: 13px; line-height: 1.6; }
 .ptStats { position: relative; z-index: 1; display: flex; gap: 7px; }
 .ptStats > div { min-width: 76px; padding: 11px 13px; border: 1px solid #293940; border-radius: 12px; background: rgba(10, 17, 20, .75); text-align: center; }
-.ptStats b { display: block; color: #eef3f3; font-size: 19px; }
-.ptStats span { color: #718289; font-size: 8px; }
+.ptStats b { display: block; color: #f3f6f6; font-size: 22px; }
+.ptStats span { color: #8a9a9f; font-size: 10px; }
 
 .ptMode { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ptMode > button { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 10px; padding: 12px 14px; border-color: #27363d; background: #0e161a; text-align: left; }
 .ptMode > button > span { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid #304149; border-radius: 9px; color: #5c747d; }
 .ptMode > button > div { display: grid; gap: 2px; }
-.ptMode > button b { color: #c8d2d5; font-size: 11px; }
-.ptMode > button small { color: #64757c; font-size: 8px; }
+.ptMode > button b { color: #dce3e5; font-size: 13px; }
+.ptMode > button small { color: #839399; font-size: 10px; }
 .ptMode > button.active { border-color: rgba(88, 200, 216, .38); background: linear-gradient(90deg, rgba(88, 200, 216, .1), #0e161a); }
 .ptMode > button.active > span { border-color: rgba(88, 200, 216, .35); color: #70d6e2; background: rgba(88, 200, 216, .07); }
 .ptMode > button.active b { color: #eff4f4; }
@@ -25,22 +25,22 @@
 .ptToolbar > div span { color: #5cc9d8; }
 .ptToolbar input { padding: 0; border: 0; background: transparent; outline: 0; }
 .ptToolbar select { height: 40px; }
-.ptToolbar > b { padding: 0 8px; color: #72838a; font-size: 9px; white-space: nowrap; }
-.ptCatalogGrid, .ptCustomGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.ptCatalogCard, .ptCustomCard { position: relative; overflow: hidden; min-height: 238px; padding: 14px; border: 1px solid #27363d; border-radius: 14px; background: linear-gradient(145deg, #121c21, #0c1418); animation: ptIn .38s both; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
+.ptToolbar > b { padding: 0 8px; color: #8b9ba0; font-size: 11px; white-space: nowrap; }
+.ptCatalogGrid, .ptCustomGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ptCatalogCard, .ptCustomCard { position: relative; overflow: hidden; min-height: 274px; padding: 18px; border: 1px solid #2b3b42; border-radius: 15px; background: linear-gradient(145deg, #131e23, #0d1519); animation: ptIn .38s both; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
 .ptCatalogCard:hover, .ptCustomCard:hover { transform: translateY(-2px); border-color: #3a5058; box-shadow: 0 13px 28px rgba(0, 0, 0, .2); }
 .ptCatalogCard > header, .ptCustomCard > header { height: auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 11px; border: 0; }
-.ptCatalogCard > header span, .ptCustomCard > header span { overflow: hidden; color: #5bc8d6; font-size: 7px; font-weight: 900; letter-spacing: .8px; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
-.ptCatalogCard > header em, .ptCustomCard > header em { color: #788990; font-size: 8px; font-style: normal; white-space: nowrap; }
-.ptCatalogCard h3, .ptCustomCard h3 { min-height: 35px; margin: 0 0 4px; color: #e5ebec; font-size: 14px; line-height: 1.3; }
-.ptCatalogCard > p, .ptCustomCard > p { margin: 0 0 11px; color: #91a0a5; font-size: 9px; }
-.ptCatalogCard > small { display: -webkit-box; min-height: 32px; overflow: hidden; color: #63747b; font-size: 8px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.ptCatalogCard > header span, .ptCustomCard > header span { overflow: hidden; color: #69d3df; font-size: 9px; font-weight: 900; letter-spacing: .8px; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.ptCatalogCard > header em, .ptCustomCard > header em { color: #91a1a6; font-size: 10px; font-style: normal; white-space: nowrap; }
+.ptCatalogCard h3, .ptCustomCard h3 { min-height: 42px; margin: 0 0 5px; color: #f0f4f4; font-size: 18px; line-height: 1.3; }
+.ptCatalogCard > p, .ptCustomCard > p { margin: 0 0 13px; color: #aab7ba; font-size: 11px; }
+.ptCatalogCard > small { display: -webkit-box; min-height: 46px; overflow: hidden; color: #84959b; font-size: 10px; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .ptCounts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 11px; }
-.ptCounts span { padding: 6px 3px; border: 1px solid #223138; border-radius: 7px; color: #66777e; font-size: 7px; text-align: center; }
-.ptCounts b { display: block; margin-bottom: 2px; color: #bcc8ca; font-size: 10px; }
+.ptCounts span { padding: 8px 4px; border: 1px solid #293940; border-radius: 8px; color: #86969b; font-size: 9px; text-align: center; }
+.ptCounts b { display: block; margin-bottom: 2px; color: #d8e0e2; font-size: 13px; }
 .ptCatalogCard > footer, .ptCustomCard > footer { display: flex; gap: 6px; margin-top: 12px; }
-.ptCatalogCard > footer button, .ptCustomCard > footer button { flex: 1; padding: 7px 8px; font-size: 8px; }
-.ptCustomCard { min-height: 185px; }
+.ptCatalogCard > footer button, .ptCustomCard > footer button { flex: 1; min-height: 38px; padding: 8px 10px; font-size: 10px; }
+.ptCustomCard { min-height: 220px; }
 .ptCustomCard > header em { padding: 3px 6px; border-radius: 12px; background: rgba(196, 244, 124, .08); color: #b6dd7b; font-size: 7px; font-weight: 900; }
 .ptMore { align-self: center; min-width: 220px; margin: 6px auto 12px; }
 .ptMore span { margin-left: 8px; color: #718087; font-size: 8px; }
@@ -50,16 +50,16 @@
 .ptEmpty p { max-width: 480px; margin: 0 0 15px; font-size: 10px; line-height: 1.5; }
 
 .ptPreviewHead { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 14px; border-bottom: 1px solid #28363d; }
-.ptPreviewHead h2 { margin: 4px 0; font-size: 22px; }
-.ptPreviewHead p { margin: 0; color: #7c8d93; font-size: 10px; }
+.ptPreviewHead h2 { margin: 5px 0; font-size: 25px; }
+.ptPreviewHead p { margin: 0; color: #94a4a9; font-size: 12px; }
 .ptScope { margin: 14px 0; padding: 13px 15px; border-left: 3px solid #5bc8d6; border-radius: 7px; background: #10191d; }
-.ptScope p { margin: 6px 0 0; color: #a7b3b6; font-size: 10px; line-height: 1.55; }
+.ptScope p { margin: 7px 0 0; color: #bdc7c9; font-size: 12px; line-height: 1.65; }
 .ptPreviewGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .ptPreviewList { overflow: hidden; border: 1px solid #29373e; border-radius: 11px; background: #0e161a; }
-.ptPreviewList h4 { display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 10px 12px; border-bottom: 1px solid #25333a; font-size: 10px; }
-.ptPreviewList h4 span { padding: 2px 6px; border-radius: 10px; background: #19252a; color: #76878d; font-size: 8px; }
-.ptPreviewList p { display: grid; grid-template-columns: 24px 1fr; gap: 7px; margin: 0; padding: 8px 10px; border-bottom: 1px solid #1c292f; color: #aab6b8; font-size: 9px; line-height: 1.4; }
-.ptPreviewList p i { color: #5dc9d7; font-size: 8px; font-style: normal; font-weight: 800; }
+.ptPreviewList h4 { display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 12px 14px; border-bottom: 1px solid #25333a; color: #e2e8e9; font-size: 12px; }
+.ptPreviewList h4 span { padding: 3px 7px; border-radius: 10px; background: #19252a; color: #91a1a6; font-size: 10px; }
+.ptPreviewList p { display: grid; grid-template-columns: 28px 1fr; gap: 9px; margin: 0; padding: 10px 12px; border-bottom: 1px solid #1c292f; color: #c1cbcd; font-size: 11px; line-height: 1.5; }
+.ptPreviewList p i { color: #69d1dd; font-size: 10px; font-style: normal; font-weight: 800; }
 .ptPreviewList > small { display: block; padding: 13px; color: #63747b; }
 .ptPreviewList.qc { border-color: rgba(94, 226, 155, .2); }
 .ptPreviewList.qc p i { color: #5ee29b; }
@@ -67,6 +67,7 @@
 .ptPreviewList.warning p i { color: #e7b356; }
 
 @keyframes ptIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-@media (max-width: 1300px) { .ptCatalogGrid, .ptCustomGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ptHero { grid-template-columns: 1fr auto; } .ptStats { grid-row: 2; justify-self: start; } }
+@media (max-width: 1300px) { .ptHero { grid-template-columns: 1fr auto; } .ptStats { grid-row: 2; justify-self: start; } }
+@media (max-width: 1050px) { .ptCatalogGrid, .ptCustomGrid { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .ptHero { grid-template-columns: 1fr; } .ptStats { grid-row: auto; } .ptToolbar { grid-template-columns: 1fr; } .ptCatalogGrid, .ptCustomGrid, .ptPreviewGrid { grid-template-columns: 1fr; } .ptPreviewList.warning { grid-column: auto; } }
 @media (prefers-reduced-motion: reduce) { .procedureTemplates * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; } }
