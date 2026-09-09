@@ -27,12 +27,12 @@ const nextAction=o=>{
  if(!o)return {tone:'neutral',title:'Wybierz zlecenie',detail:'Brak aktywnego zlecenia'}
  if(o.wait_state==='KLIENT')return {tone:'warn',title:'Skontaktuj się z klientem',detail:'Zlecenie czeka na odpowiedź klienta',tab:'contact'}
  if(o.wait_state==='CZESCI')return {tone:'warn',title:'Sprawdź zamówione części',detail:'Zlecenie jest zablokowane przez części',tab:'parts'}
- if(o.wait_state==='DECYZJA')return {tone:'warn',title:'Uzyskaj decyzję / akceptację',detail:'Kosztorys lub zakres prac wymaga decyzji',tab:'approval'}
+ if(o.wait_state==='DECYZJA')return {tone:'warn',title:'Uzyskaj decyzję / akceptację',detail:'Kosztorys lub zakres prac wymaga decyzji',tab:'quote'}
  if(o.status==='PRZYJETE')return {tone:'info',title:'Rozpocznij diagnostykę',detail:'Potwierdź objaw, zapisz DTC i pomiary',tab:'diagnosis'}
  if(o.status==='DIAGNOZA')return {tone:'info',title:'Zamknij diagnozę i przygotuj wycenę',detail:'Po wniosku diagnostycznym przejdź do akceptacji',tab:'diagnosis'}
- if(o.status==='AKCEPTACJA')return {tone:'info',title:'Potwierdź zakres i przygotuj naprawę',detail:'Po akceptacji sprawdź części i przejdź do naprawy',tab:'approval'}
- if(o.status==='NAPRAWA')return {tone:'info',title:'Dokończ naprawę i kontrolę jakości',detail:'Po wykonaniu prac przejdź do QC / wydania',tab:'qc'}
- if(o.status==='GOTOWE')return {tone:'good',title:'Rozlicz i wydaj pojazd',detail:'Sprawdź płatność, dokumentację i zalecenia',tab:'closeout'}
+ if(o.status==='AKCEPTACJA')return {tone:'info',title:'Potwierdź zakres i przygotuj naprawę',detail:'Po akceptacji sprawdź części i przejdź do naprawy',tab:'quote'}
+ if(o.status==='NAPRAWA')return {tone:'info',title:'Dokończ naprawę i kontrolę jakości',detail:'Po wykonaniu prac przejdź do QC / wydania',tab:'release'}
+ if(o.status==='GOTOWE')return {tone:'good',title:'Rozlicz i wydaj pojazd',detail:'Sprawdź płatność, dokumentację i zalecenia',tab:'release'}
  return {tone:'good',title:'Zlecenie zakończone',detail:'Historia pozostaje dostępna w systemie',tab:'timeline'}
 }
 const processAdvice=({order,diag,items,parts,approvals,notes,payments,qcRows=[]})=>{
@@ -42,13 +42,13 @@ const processAdvice=({order,diag,items,parts,approvals,notes,payments,qcRows=[]}
  if(o.status==='PRZYJETE')return {title:'Przenieś do diagnozy',detail:'Auto jest przyjęte. Rozpocznij właściwy tok diagnostyczny.',status:'DIAGNOZA',wait:'BRAK'}
  if(o.status==='DIAGNOZA'&&!String(diag?.conclusion||'').trim())return {title:'Uzupełnij wniosek diagnostyczny',detail:'Status pozostaje DIAGNOZA do zapisania przyczyny.',tab:'diagnosis'}
  if(o.status==='DIAGNOZA'&&String(diag?.conclusion||'').trim())return {title:'Przejdź do akceptacji',detail:'Wniosek jest zapisany. Przygotuj zakres i uzyskaj decyzję klienta.',status:'AKCEPTACJA',wait:'DECYZJA',tab:'quote'}
- if(o.status==='AKCEPTACJA'&&!approved)return {title:pending?'Czekaj na decyzję klienta':'Zarejestruj akceptację klienta',detail:pending?'Akceptacja została wysłana i nadal jest oczekująca.':'Brak zatwierdzonego zakresu prac.',wait:'DECYZJA',tab:'approval'}
+ if(o.status==='AKCEPTACJA'&&!approved)return {title:pending?'Czekaj na decyzję klienta':'Zarejestruj akceptację klienta',detail:pending?'Akceptacja została wysłana i nadal jest oczekująca.':'Brak zatwierdzonego zakresu prac.',wait:'DECYZJA',tab:'quote'}
  if(o.status==='AKCEPTACJA'&&approved&&openParts.length)return {title:'Czekaj na części',detail:`Akceptacja jest. ${openParts.length} pozycji części nadal wymaga dostawy.`,wait:'CZESCI',tab:'parts'}
  if(o.status==='AKCEPTACJA'&&approved&&!openParts.length)return {title:'Rozpocznij naprawę',detail:'Zakres zaakceptowany i brak blokady części.',status:'NAPRAWA',wait:'BRAK'}
- if(o.status==='NAPRAWA'&&!qcDone)return {title:'Wykonaj QC',detail:'Przed oznaczeniem auta jako GOTOWE zapisz wynik kontroli jakości.',tab:'qc'}
+ if(o.status==='NAPRAWA'&&!qcDone)return {title:'Wykonaj QC',detail:'Przed oznaczeniem auta jako GOTOWE zapisz wynik kontroli jakości.',tab:'release'}
  if(o.status==='NAPRAWA'&&qcDone)return {title:'Oznacz jako gotowe',detail:'QC zapisane. Auto może przejść do rozliczenia i wydania.',status:'GOTOWE',wait:'BRAK'}
- if(o.status==='GOTOWE'&&due>0.01)return {title:'Rozlicz zlecenie',detail:`Pozostało do zapłaty ${money(due)}. Wydanie pozostaje decyzją operatora.`,tab:'payment'}
- if(o.status==='GOTOWE')return {title:'Gotowe do wydania',detail:'Rozliczenie zamknięte. Potwierdź wydanie pojazdu ręcznie.',status:'WYDANE',tab:'closeout'}
+ if(o.status==='GOTOWE'&&due>0.01)return {title:'Rozlicz zlecenie',detail:`Pozostało do zapłaty ${money(due)}.`,tab:'settlement'}
+ if(o.status==='GOTOWE')return {title:'Gotowe do wydania',detail:'Rozliczenie zamknięte. Sprawdź checklistę i potwierdź wydanie.',tab:'release'}
  return {title:'Proces zakończony',detail:'Zlecenie jest w historii.',tab:'timeline'}
 }
 
@@ -116,7 +116,7 @@ function PerformedWorkList({items,reload}){
  if(!works.length)return <Empty text="Nie zapisano jeszcze wykonanych prac."/>
  return <div className="performedWorks">{works.map(item=><article key={item.id} className="performedWork"><div><small>WYKONANA PRACA</small><h3>{item.work_name||item.name}</h3>{item.variant_name&&<b className="workVariant">{item.variant_name}</b>}{editing===item.id?<textarea autoFocus value={description} onChange={e=>setDescription(e.target.value)}/>:<p>{item.customer_description||item.notes||'Brak opisu zakresu.'}</p>}</div><div className="workPrice"><b>{money(item.price_snapshot??item.qty*item.unit_price)}</b><span>{Number(item.hours_snapshot??item.qty??0).toFixed(1)} h</span>{editing===item.id?<><button className="primary" onClick={async()=>{await api.items.updateDescription(item.id,description);setEditing(null);reload()}}>Zapisz opis</button><button onClick={()=>setEditing(null)}>Anuluj</button></>:<button onClick={()=>{setEditing(item.id);setDescription(item.customer_description||item.notes||'')}}>Edytuj opis</button>}<button className="danger" onClick={()=>confirm('Usunąć tę pracę ze zlecenia?')&&api.items.remove(item.id).then(reload)}>Usuń</button></div></article>)}</div>
 }
-function OrderRows({rows,onSelect}){return rows?.length?<div>{rows.map(o=><div className="orderrow" key={o.id} onClick={()=>onSelect?.(o.id)}><div><b>{o.plate||'bez nr'} · {o.make} {o.model}</b><span>{o.title}</span><small>{o.customer}</small></div><div><em className={'tag '+String(o.status).toLowerCase()}>{labels[o.status]||o.status}</em>{o.total!=null&&<strong>{money(o.total)}</strong>}</div></div>)}</div>:<Empty/>}
+function OrderRows({rows,onSelect}){return rows?.length?<div>{rows.map(o=><div className="orderrow" data-order-id={o.id} key={o.id} onClick={()=>onSelect?.(o.id)}><div><b>{o.plate||'bez nr'} · {o.make} {o.model}</b><span>{o.title}</span><small>{o.customer}</small></div><div><em className={'tag '+String(o.status).toLowerCase()}>{labels[o.status]||o.status}</em>{o.total!=null&&<strong>{money(o.total)}</strong>}</div></div>)}</div>:<Empty/>}
 
 function Dashboard({go,openOrder}){
  const[d,setD]=useState(null),[monthTarget,setMonthTarget]=useState(50000);useEffect(()=>{Promise.all([api.dashboard(),api.settings?.monthlyTarget?.()||Promise.resolve(50000)]).then(([data,target])=>{setD(data);setMonthTarget(Number(target)||50000)})},[]);if(!d)return <Loading/>
@@ -551,34 +551,49 @@ function PaymentPanel({order,rows,refs,reload}){
  </div>
 }
 
+function SettlementPanel({order,rows,refs,items,actualMinutes,reload}){
+ const paid=rows.reduce((sum,row)=>sum+Number(row.amount||0),0)
+ const total=Number(order.total||0), costs=Number(order.parts_cost||0)+Number(order.other_cost||0)
+ const balance=Math.max(0,total-paid), coverage=total>0?Math.min(100,Math.round(paid/total*100)):100
+ const cashResult=paid-costs
+ return <div className="settlementFlow">
+   <div className="settlementSummary" data-paid={paid.toFixed(2)} data-balance={balance.toFixed(2)}>
+     <div><span>Sprzedaż zlecenia</span><b>{money(total)}</b><small>wartość wykonanych prac</small></div>
+     <div><span>Wpłaty klienta</span><b>{money(paid)}</b><small>{coverage}% rozliczone</small></div>
+     <div className={balance>0.01?'due':'paid'}><span>Do rozliczenia</span><b>{money(balance)}</b><small>{balance>0.01?'płatność blokuje wydanie':'płatność rozliczona'}</small></div>
+     <div><span>Marża zlecenia</span><b>{money(order.contribution)}</b><small>sprzedaż minus koszty</small></div>
+   </div>
+   <div className="settlementProgress"><i style={{width:`${coverage}%`}}/><span>{coverage}%</span></div>
+   <div className="settlementColumns">
+     <PaymentPanel order={order} rows={rows} refs={refs} reload={reload}/>
+     <div className="centerGrid profitabilityGrid">
+       <Panel title="Rentowność i przepływ gotówki"><div className="profitHero"><span>Marża kontrybucyjna</span><strong>{money(order.contribution)}</strong><span>Wynik gotówkowy po kosztach</span><b className={cashResult<0?'debt':''}>{money(cashResult)}</b></div><div className="centerFacts"><div><span>Koszty części i pozostałe</span><b>{money(costs)}</b></div><div><span>Realny czas</span><b>{durText(actualMinutes)}</b></div><div><span>Sprzedaż / realną h</span><b>{actualMinutes?money(total/(actualMinutes/60)):'—'}</b></div><div><span>Rabat</span><b>{money(order.discount)}</b></div></div><p className="financeNote">Marża opisuje opłacalność wykonanej pracy. Wpłata zmienia rozliczenie i wynik gotówkowy, dlatego oba wyniki są widoczne obok siebie.</p></Panel>
+       <Panel title="Pozycje sprzedane">{items.length?<table><thead><tr><th>Pozycja</th><th>Koszt</th><th>Sprzedaż</th><th>Różnica</th></tr></thead><tbody>{items.map(x=><tr key={x.id}><td>{x.name}</td><td>{money(x.qty*x.unit_cost)}</td><td>{money(x.qty*x.unit_price)}</td><td>{money(x.qty*(x.unit_price-x.unit_cost))}</td></tr>)}</tbody></table>:<Empty/>}</Panel>
+     </div>
+   </div>
+ </div>
+}
+
 function ReminderPanel({order,rows,reload}){
  const[d,setD]=useState({title:'Następna obsługa',due_date:'',due_mileage:Number(order.mileage||0)?Number(order.mileage)+15000:'',note:''})
  return <Panel title="Przypomnienia serwisowe pojazdu"><div className="formgrid"><label className="wide">Co przypomnieć<input value={d.title} onChange={e=>setD({...d,title:e.target.value})}/></label><label>Data<input type="date" value={d.due_date} onChange={e=>setD({...d,due_date:e.target.value})}/></label><label>Przebieg<input type="number" value={d.due_mileage} onChange={e=>setD({...d,due_mileage:e.target.value})}/></label><label className="wide">Notatka<input value={d.note} onChange={e=>setD({...d,note:e.target.value})}/></label></div><button className="primary" onClick={()=>api.serviceReminders.add(order.vehicle_id,order.id,d).then(reload)}>+ Dodaj przypomnienie</button><div className="reminderList">{rows.length?rows.map(x=><div className={'serviceReminder '+x.status.toLowerCase()} key={x.id}><div><b>{x.title}</b><span>{x.due_date||'bez daty'} {x.due_mileage?`· ${Number(x.due_mileage).toLocaleString('pl-PL')} km`:''}</span><small>{x.note||''}</small></div>{x.status==='OPEN'&&<button onClick={()=>api.serviceReminders.close(x.id).then(reload)}>✓ wykonane</button>}</div>):<Empty text="Brak zaplanowanych przypomnień."/ >}</div></Panel>
 }
 
-function CloseoutPanel({order,data,payments,approvals,notes,diag,parts,logs,reload}){
- const [d,setD]=useState(data||{})
- useEffect(()=>setD(data||{}),[data])
+function CloseoutPanel({order,data,payments,onClosed,reload}){
+ const [error,setError]=useState(''),[closing,setClosing]=useState(false)
  const paid=payments.reduce((s,x)=>s+Number(x.amount||0),0), balance=Math.max(0,Number(order.total||0)-paid)
- const auto={
-   customer_approved:approvals.some(x=>x.status==='APPROVED'),
-   diagnosis_documented:!!(diag?.conclusion||diag?.recommendation),
-   parts_documented:parts.length===0||parts.every(x=>['ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE'].includes(x.status)),
-   work_logged:logs.some(x=>x.ended_at),
-   qc_done:!!notes.qc_notes,
-   payment_checked:balance<=0.01,
-   release_notes_done:!!notes.release_notes
- }
- const merged={...d}
- const labelsMap={customer_approved:'Akceptacja klienta zapisana',diagnosis_documented:'Diagnoza / wniosek zapisane',parts_documented:'Części rozliczone / zamknięte',work_logged:'Czas pracy zapisany',qc_done:'Kontrola jakości opisana',payment_checked:'Płatność rozliczona',release_notes_done:'Zalecenia przy wydaniu zapisane'}
- const completed=Object.keys(labelsMap).filter(k=>(merged[k]??auto[k])).length
+ const labelsMap={customer_approved:'Akceptacja klienta zapisana',diagnosis_documented:'Diagnoza / wniosek zapisane',parts_documented:'Części rozliczone / zamknięte',work_logged:'Czas pracy zapisany',qc_done:'Kontrola jakości zakończona',payment_checked:'Płatność rozliczona',release_notes_done:'Zalecenia przy wydaniu zapisane'}
+ const effective=Object.fromEntries(Object.keys(labelsMap).map(k=>[k,Boolean(data?.[k])]))
+ const completed=Object.keys(labelsMap).filter(k=>effective[k]).length
  const canClose=completed===Object.keys(labelsMap).length
- const save=async()=>{
-   const payload={}
-   Object.keys(labelsMap).forEach(k=>payload[k]=!!(merged[k]??auto[k]))
-   await api.closeout.save(order.id,payload);reload()
+ const complete=async()=>{
+   setClosing(true);setError('')
+   const result=await api.closeout.complete(order.id)
+   setClosing(false)
+   if(!result?.ok){const missing=(result?.missing||[]).map(k=>labelsMap[k]).filter(Boolean);setError(missing.length?`Uzupełnij: ${missing.join(', ')}.`:(result?.error||'Nie udało się zamknąć zlecenia.'));await reload();return}
+   await onClosed?.()
  }
- return <Panel title="Zamknięcie zlecenia"><div className="closeoutProgress"><b>{completed}/7</b><span>warunków zamknięcia</span><div><i style={{width:`${completed/7*100}%`}}/></div></div><div className="closeoutChecks">{Object.entries(labelsMap).map(([k,l])=>{const v=merged[k]??auto[k];return <label className={v?'ok':''} key={k}><input type="checkbox" checked={!!v} onChange={e=>setD({...merged,[k]:e.target.checked})}/><span>{l}</span><em>{auto[k]?'auto':'ręcznie'}</em></label>})}</div>{balance>0.01&&<div className="warnbox">Pozostało do zapłaty: <b>{money(balance)}</b></div>}<div className="actionrow"><button onClick={save}>Zapisz checklistę</button><button onClick={()=>api.orders.exportPdf(order.id,'release')}>PDF wydania</button><button className="primary" disabled={!canClose} onClick={async()=>{await save();await api.orders.updateStatus(order.id,'WYDANE');reload()}}>✓ ZAMKNIJ I OZNACZ JAKO WYDANE</button></div></Panel>
+ return <Panel title="Zamknięcie zlecenia"><div className="closeoutProgress"><b>{completed}/7</b><span>warunków zamknięcia</span><div><i style={{width:`${completed/7*100}%`}}/></div></div><p className="muted">Lista aktualizuje się automatycznie na podstawie akceptacji, naprawy, QC, dokumentacji i wpłat.</p><div className="closeoutChecks">{Object.entries(labelsMap).map(([k,l])=><label className={effective[k]?'ok':''} key={k}><input type="checkbox" checked={effective[k]} readOnly/><span>{l}</span><em>{effective[k]?'✓ automatycznie':'do wykonania'}</em></label>)}</div>{balance>0.01&&<div className="warnbox">Pozostało do zapłaty: <b>{money(balance)}</b></div>}{error&&<div className="warnbox closeoutError">{error}</div>}<div className="actionrow"><button onClick={()=>api.orders.exportPdf(order.id,'release')}>PDF wydania</button><button className="primary" disabled={!canClose||closing} onClick={complete}>{closing?'ZAMYKANIE…':'✓ ZAMKNIJ I OZNACZ JAKO WYDANE'}</button></div></Panel>
 }
 
 function Debtors(){
@@ -604,6 +619,7 @@ function OrderCenter({changed,initialId,openManual}){
  useEffect(()=>{if(initialId)setId(initialId)},[initialId])
  useEffect(()=>{load()},[id])
  const reload=async()=>{await load();await loadOrders();changed?.()}
+ const handleClosed=async()=>{const remaining=await api.orders.list();setOrders(remaining);const next=remaining.find(x=>x.id!==o.id)||remaining[0];if(next){setId(next.id);setTab('overview')}else{setId(null);setO(null)}changed?.()}
  if(!orders.length)return <section><Panel title="Centrum zlecenia"><Empty text="Najpierw utwórz zlecenie."/></Panel></section>
  if(!o)return <Loading/>
  const actualMinutes=logs.reduce((s,x)=>s+Number(x.duration_minutes||(!x.ended_at?(Date.now()-new Date(x.started_at))/60000:0)),0)
@@ -611,7 +627,7 @@ function OrderCenter({changed,initialId,openManual}){
  const partsOpen=parts.filter(x=>!['ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE'].includes(x.status))
  const advice=processAdvice({order:o,diag,items,parts,approvals,notes,payments,qcRows})
  const applyAdvice=async()=>{if(advice.status)await api.orders.updateStatus(o.id,advice.status);if(advice.wait)await api.orders.updateWait(o.id,advice.wait);if(advice.tab)setTab(advice.tab);await reload()}
- const tabs=[['overview','Przegląd'],['vehicle','Stan pojazdu'],['works','Wykonane prace'],['tech','Dane techniczne'],['diagnosis','Diagnostyka'],['quote','Wycena'],['parts','Części'],['time','Czas pracy'],['docs','Zdjęcia / dokumenty'],['contact','Kontakt'],['approval','Akceptacje'],['payment','Płatność'],['reminders','Przypomnienia'],['timeline','Oś czasu'],['closeout','Zamknięcie'],['qc','QC / wydanie'],['money','Rentowność']]
+ const tabs=[['overview','Przegląd'],['vehicle','Stan pojazdu'],['works','Wykonane prace'],['tech','Dane techniczne'],['diagnosis','Diagnostyka'],['quote','Wycena / akceptacja'],['parts','Części'],['time','Czas pracy'],['docs','Zdjęcia / dokumenty'],['contact','Kontakt'],['settlement','Płatność / wynik'],['reminders','Przypomnienia'],['timeline','Oś czasu'],['release','QC / wydanie']]
  return <section>
    <div className="centerPicker"><label>Aktywne zlecenie<select aria-label="Wybierz zlecenie" value={id||''} onChange={e=>{setId(Number(e.target.value));setTab('overview')}}>{orders.map(x=><option key={x.id} value={x.id}>#{x.id} · {x.plate} · {x.make} {x.model} · {x.title}</option>)}</select></label><div className="grow"/><button className="primary" onClick={()=>openManual?.(o)}>◫ Dokumentacja auta</button><button onClick={()=>api.orders.exportPdf(o.id,'intake')}>PDF przyjęcia</button><button onClick={()=>api.orders.exportPdf(o.id,'order')}>PDF zlecenia</button><button onClick={()=>api.orders.exportPdf(o.id,'release')}>PDF wydania</button></div>
    <div className="centerHero">
@@ -620,7 +636,7 @@ function OrderCenter({changed,initialId,openManual}){
    </div>
    {(()=>{const n=nextAction(o);return <div className={'nextAction '+n.tone}><div><small>NASTĘPNA CZYNNOŚĆ</small><b>{n.title}</b><span>{n.detail}</span></div><button className="primary" onClick={()=>n.tab&&setTab(n.tab)}>Przejdź →</button></div>})()}
    <div className="workflowAdvisor"><div><small>WORKFLOW 2.0 · SUGEROWANY KROK</small><b>{advice.title}</b><span>{advice.detail}</span></div><div className="actionrow">{advice.tab&&<button onClick={()=>setTab(advice.tab)}>Pokaż etap</button>}{(advice.status||advice.wait)&&<button className="primary" onClick={applyAdvice}>Zastosuj krok →</button>}</div></div>
-   <div className="steps centerSteps">{statuses.map(s=><button key={s} className={o.status===s?'sel':''} onClick={async()=>{await api.orders.updateStatus(o.id,s);reload()}}>{labels[s]}</button>)}</div><div className="waitBar"><span>Oczekiwanie:</span>{[['BRAK','brak'],['KLIENT','na klienta'],['CZESCI','na części'],['DECYZJA','na decyzję']].map(([v,l])=><button key={v} className={(o.wait_state||'BRAK')===v?'active':''} onClick={async()=>{await api.orders.updateWait(o.id,v);reload()}}>{l}</button>)}</div>
+   <div className="steps centerSteps">{statuses.map(s=><button key={s} className={o.status===s?'sel':''} disabled={s==='WYDANE'&&o.status!=='WYDANE'} title={s==='WYDANE'&&o.status!=='WYDANE'?'Wydanie potwierdź w zakładce QC / wydanie':''} onClick={async()=>{await api.orders.updateStatus(o.id,s);reload()}}>{labels[s]}</button>)}</div><div className="waitBar"><span>Oczekiwanie:</span>{[['BRAK','brak'],['KLIENT','na klienta'],['CZESCI','na części'],['DECYZJA','na decyzję']].map(([v,l])=><button key={v} className={(o.wait_state||'BRAK')===v?'active':''} onClick={async()=>{await api.orders.updateWait(o.id,v);reload()}}>{l}</button>)}</div>
    <div className="centerTabs">{tabs.map(([k,l])=><button data-order-tab={k} aria-current={tab===k?'page':undefined} className={tab===k?'active':''} key={k} onClick={()=>setTab(k)}>{l}{k==='parts'&&partsOpen.length>0?<i>{partsOpen.length}</i>:null}{k==='time'&&active.length>0?<i>{active.length}</i>:null}</button>)}</div>
 
    <div className="workspaceContent">
@@ -628,7 +644,7 @@ function OrderCenter({changed,initialId,openManual}){
    {tab==='overview'&&<div className="centerGrid">
       <Panel title="Zgłoszenie klienta"><p className="complaint">{o.complaint||'Brak opisu objawu'}</p><div className="centerFacts"><div><span>Przebieg</span><b>{Number(o.mileage||0).toLocaleString('pl-PL')} km</b></div><div><span>Silnik</span><b>{o.engine||'—'}</b></div><div><span>Limit diagnozy</span><b>{money(o.diagnosis_limit)}</b></div><div><span>Priorytet</span><b>{o.priority}</b></div></div></Panel>
       <Panel title="Co blokuje zlecenie">{partsOpen.length?<>{partsOpen.slice(0,6).map(p=><div className="blocker" key={p.id}><b>{p.name}</b><span>{p.status.replaceAll('_',' ')} {p.expected_at&&`· ETA ${new Date(p.expected_at).toLocaleString('pl-PL')}`}</span></div>)}</>:<div className="okbox">✓ Brak otwartych zamówień części</div>}{!diag?.conclusion&&<div className="warnbox">! Brak zapisanego wniosku diagnostycznego</div>}</Panel>
-      <Panel title="Szybkie akcje"><div className="quickGrid"><button onClick={()=>setTab('diagnosis')}>⌁ Diagnostyka</button><button onClick={()=>openManual?.(o)}>◫ Manual pojazdu</button><button onClick={()=>setShowWork(true)}>✓ Dodaj wykonaną pracę</button><button onClick={()=>setShowQuote(true)}>₿ Otwórz wycenę</button><button onClick={()=>setShowPart(true)}>+ Zamów część</button><button onClick={()=>api.attachments.pick(o.id,'PRZYJECIE').then(reload)}>▧ Dodaj zdjęcia</button><button onClick={()=>setTab('time')}>▶ Czas pracy</button><button onClick={()=>setTab('qc')}>✓ QC / wydanie</button><button onClick={()=>setTab('contact')}>✉ Kontakt / SMS</button></div></Panel>
+      <Panel title="Szybkie akcje"><div className="quickGrid"><button onClick={()=>setTab('diagnosis')}>⌁ Diagnostyka</button><button onClick={()=>openManual?.(o)}>◫ Manual pojazdu</button><button onClick={()=>setShowWork(true)}>✓ Dodaj wykonaną pracę</button><button onClick={()=>setShowQuote(true)}>₿ Otwórz wycenę</button><button onClick={()=>setShowPart(true)}>+ Zamów część</button><button onClick={()=>api.attachments.pick(o.id,'PRZYJECIE').then(reload)}>▧ Dodaj zdjęcia</button><button onClick={()=>setTab('time')}>▶ Czas pracy</button><button onClick={()=>setTab('release')}>✓ QC / wydanie</button><button onClick={()=>setTab('contact')}>✉ Kontakt / SMS</button></div></Panel>
       <Panel title="Kontrola procesu"><div className="processChecklist"><div className={diag?.conclusion?'done':'todo'}><i>{diag?.conclusion?'✓':'1'}</i><span><b>Diagnoza</b><small>{diag?.conclusion?'Wniosek zapisany':'Brak końcowego wniosku'}</small></span></div><div className={items.length?'done':'todo'}><i>{items.length?'✓':'2'}</i><span><b>Zakres / wycena</b><small>{items.length?`${items.length} pozycji zlecenia`:'Dodaj pozycje lub przygotuj wycenę'}</small></span></div><div className={partsOpen.length?'todo':'done'}><i>{partsOpen.length?'3':'✓'}</i><span><b>Części</b><small>{partsOpen.length?`${partsOpen.length} pozycji nadal otwartych`:'Brak blokady części'}</small></span></div><div className={o.status==='GOTOWE'||o.status==='WYDANE'?'done':'todo'}><i>{o.status==='GOTOWE'||o.status==='WYDANE'?'✓':'4'}</i><span><b>QC i wydanie</b><small>{o.status==='GOTOWE'||o.status==='WYDANE'?'Etap końcowy':'Do wykonania po naprawie'}</small></span></div></div></Panel>
       <Panel title="Podsumowanie realizacji"><div className="centerFacts"><div><span>Czas rzeczywisty</span><b>{durText(actualMinutes)}</b></div><div><span>Pozycje zlecenia</span><b>{items.length}</b></div><div><span>Zdjęcia / pliki</span><b>{files.length}</b></div><div><span>Otwarte części</span><b>{partsOpen.length}</b></div></div></Panel>
    </div>}
@@ -640,7 +656,7 @@ function OrderCenter({changed,initialId,openManual}){
    {tab==='tech'&&<TechnicalDataPanel order={o} entries={technical} reload={reload}/>}
    {tab==='diagnosis'&&<Panel title="Diagnostyka — jedna karta dla zlecenia"><div className="diagform"><label>Potwierdzenie objawu<textarea value={diag?.symptom_confirmed||''} onChange={e=>setDiag({...diag,symptom_confirmed:e.target.value})}/></label><label>DTC<textarea value={diag?.dtcs||''} onChange={e=>setDiag({...diag,dtcs:e.target.value})}/></label><label>Pomiary / live data / oscyloskop<textarea value={diag?.measurements||''} onChange={e=>setDiag({...diag,measurements:e.target.value})}/></label><label>Hipotezy i testy<textarea value={diag?.hypothesis||''} onChange={e=>setDiag({...diag,hypothesis:e.target.value})}/></label><label>Wniosek / przyczyna<textarea value={diag?.conclusion||''} onChange={e=>setDiag({...diag,conclusion:e.target.value})}/></label><label>Rekomendowana naprawa<textarea value={diag?.recommendation||''} onChange={e=>setDiag({...diag,recommendation:e.target.value})}/></label></div><div className="actionrow"><button className="primary" onClick={async()=>{await api.diagnostics.save(o.id,diag);await reload()}}>Zapisz diagnostykę</button><button onClick={()=>api.knowledge.fromOrder(o.id)}>→ Zapisz jako przypadek w bazie wiedzy</button></div></Panel>}
 
-   {tab==='quote'&&<Panel title="Wycena i akceptacja"><p className="muted">Wycena jest przygotowywana przed przeniesieniem pozycji do właściwego zlecenia. Po akceptacji klienta jednym przyciskiem przeniesiesz ją do kosztów i sprzedaży.</p><button className="primary" onClick={()=>setShowQuote(true)}>Otwórz kalkulator wyceny</button><div className="centerFacts topgap"><div><span>Aktualna sprzedaż</span><b>{money(o.total)}</b></div><div><span>Zakup części</span><b>{money(o.parts_cost)}</b></div><div><span>Sprzedaż części</span><b>{money(o.parts_sale)}</b></div><div><span>Robocizna</span><b>{money(o.labor_hours*o.labor_rate)}</b></div></div></Panel>}
+   {tab==='quote'&&<div className="connectedStage"><Panel title="Wycena i zakres"><p className="muted">Wycena jest przygotowywana przed przeniesieniem pozycji do właściwego zlecenia. Po decyzji klienta zaakceptowany zakres przechodzi do realizacji.</p><button className="primary" onClick={()=>setShowQuote(true)}>Otwórz kalkulator wyceny</button><div className="centerFacts topgap"><div><span>Aktualna sprzedaż</span><b>{money(o.total)}</b></div><div><span>Zakup części</span><b>{money(o.parts_cost)}</b></div><div><span>Sprzedaż części</span><b>{money(o.parts_sale)}</b></div><div><span>Robocizna</span><b>{money(o.labor_hours*o.labor_rate)}</b></div></div></Panel><div className="stageConnector"><i>1</i><span>Wycena</span><b>→</b><i>2</i><span>Decyzja klienta</span></div><ApprovalPanel order={o} rows={approvals} reload={reload}/></div>}
 
    {tab==='parts'&&<Panel title="Części zamawiane pod to zlecenie" action={<button className="primary" onClick={()=>setShowPart(true)}>+ Część</button>}>{parts.length?parts.map(p=><div className="centerPart" key={p.id}><div><b>{p.name} {p.qty!=1&&`× ${p.qty}`}</b><span>{p.part_no||'nr brak'} · {p.supplier||'dostawca nieustalony'}</span><small>zakup {money(p.qty*p.unit_cost)} · klient {money(p.qty*p.unit_price)} {p.external_order_no&&`· zam. ${p.external_order_no}`}</small></div><select value={p.status} onChange={e=>api.jobParts.status(p.id,e.target.value).then(reload)}><option>DO_ZAMOWIENIA</option><option>ZAMOWIONE</option><option>W_DRODZE</option><option>ODEBRANE</option><option>ZAMONTOWANE</option><option>DO_ZWROTU</option><option>ZWROT_ZAKONCZONY</option><option>ANULOWANE</option></select></div>):<Empty text="Brak części przypisanych do zlecenia."/ >}</Panel>}
 
@@ -652,15 +668,11 @@ function OrderCenter({changed,initialId,openManual}){
    {tab==='contact'&&<CommunicationPanel order={o} rows={comms} reload={reload}/>}
 
 
-   {tab==='approval'&&<ApprovalPanel order={o} rows={approvals} reload={reload}/>}
-   {tab==='payment'&&<PaymentPanel order={o} rows={payments} refs={salesRefs} reload={reload}/>}
+   {tab==='settlement'&&<SettlementPanel order={o} rows={payments} refs={salesRefs} items={items} actualMinutes={actualMinutes} reload={reload}/>}
    {tab==='reminders'&&<ReminderPanel order={o} rows={serviceReminders} reload={reload}/>}
-   {tab==='closeout'&&<CloseoutPanel order={o} data={closeout} payments={payments} approvals={approvals} notes={notes} diag={diag} parts={parts} logs={logs} reload={reload}/>}
    {tab==='timeline'&&<Timeline rows={timeline}/>}
 
-   {tab==='qc'&&<PersistentQC order={o} notes={notes} setNotes={setNotes} rows={qcRows} reload={reload}/>}
-
-   {tab==='money'&&<div className="centerGrid"><Panel title="Rentowność zlecenia"><div className="profitHero"><span>Przychód</span><b>{money(o.total)}</b><span>Marża kontrybucyjna</span><strong>{money(o.contribution)}</strong></div><div className="centerFacts"><div><span>Realny czas</span><b>{durText(actualMinutes)}</b></div><div><span>Przychód / realną h</span><b>{actualMinutes?money(o.total/(actualMinutes/60)):'—'}</b></div><div><span>Robocizna</span><b>{money(o.labor_hours*o.labor_rate)}</b></div><div><span>Rabat</span><b>{money(o.discount)}</b></div><div><span>Zapłacono</span><b>{money(payments.reduce((s,x)=>s+Number(x.amount||0),0))}</b></div><div><span>Pozostało</span><b>{money(Math.max(0,Number(o.total||0)-payments.reduce((s,x)=>s+Number(x.amount||0),0)))}</b></div></div></Panel><Panel title="Pozycje sprzedane">{items.length?<table><thead><tr><th>Pozycja</th><th>Koszt</th><th>Sprzedaż</th><th>Różnica</th></tr></thead><tbody>{items.map(x=><tr key={x.id}><td>{x.name}</td><td>{money(x.qty*x.unit_cost)}</td><td>{money(x.qty*x.unit_price)}</td><td>{money(x.qty*(x.unit_price-x.unit_cost))}</td></tr>)}</tbody></table>:<Empty/>}</Panel></div>}
+   {tab==='release'&&<div className="releaseFlow"><PersistentQC order={o} notes={notes} setNotes={setNotes} rows={qcRows} reload={reload}/><CloseoutPanel order={o} data={closeout} payments={payments} onClosed={handleClosed} reload={reload}/></div>}
 
    </div>
    {showWork&&<WorkCatalogModalV2 api={api} order={o} close={()=>setShowWork(false)} saved={()=>{setShowWork(false);reload()}}/>}

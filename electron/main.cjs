@@ -282,6 +282,32 @@ function syncOrderItemTotals(orderId){
   db.prepare('UPDATE orders SET parts_cost=?,parts_sale=?,other_cost=?,other_sale=? WHERE id=?').run(s.pc,s.ps,s.oc,s.os,orderId)
 }
 
+function syncCloseoutAutomation(orderId){
+  const db=getDb()
+  const state=db.prepare(`SELECT
+    EXISTS(SELECT 1 FROM approvals WHERE order_id=? AND status='APPROVED') customer_approved,
+    EXISTS(SELECT 1 FROM diagnostics WHERE order_id=? AND (TRIM(COALESCE(conclusion,''))!='' OR TRIM(COALESCE(recommendation,''))!='')) diagnosis_documented,
+    NOT EXISTS(SELECT 1 FROM job_part_orders WHERE order_id=? AND status NOT IN ('ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE')) parts_documented,
+    EXISTS(SELECT 1 FROM work_logs WHERE order_id=? AND ended_at IS NOT NULL) work_logged,
+    (SELECT COUNT(DISTINCT check_key) FROM order_qc WHERE order_id=? AND deleted_at IS NULL AND checked=1 AND check_key IN ('symptom','dtc','leaks','torque','road','warning','clean','recommend'))=8 qc_done,
+    COALESCE((SELECT SUM(amount) FROM payments WHERE order_id=?),0)+0.01 >= COALESCE((SELECT labor_hours*labor_rate+parts_sale+other_sale+diagnosis_fee-discount FROM orders WHERE id=?),0) payment_checked,
+    EXISTS(SELECT 1 FROM order_notes WHERE order_id=? AND TRIM(COALESCE(release_notes,''))!='') release_notes_done`)
+    .get(orderId,orderId,orderId,orderId,orderId,orderId,orderId,orderId)
+  db.prepare(`INSERT INTO closeout_checks(order_id,customer_approved,diagnosis_documented,parts_documented,work_logged,qc_done,payment_checked,release_notes_done,updated_at)
+    VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)
+    ON CONFLICT(order_id) DO UPDATE SET
+      customer_approved=excluded.customer_approved,
+      diagnosis_documented=excluded.diagnosis_documented,
+      parts_documented=excluded.parts_documented,
+      work_logged=excluded.work_logged,
+      qc_done=excluded.qc_done,
+      payment_checked=excluded.payment_checked,
+      release_notes_done=excluded.release_notes_done,
+      updated_at=CURRENT_TIMESTAMP`)
+    .run(orderId,state.customer_approved?1:0,state.diagnosis_documented?1:0,state.parts_documented?1:0,state.work_logged?1:0,state.qc_done?1:0,state.payment_checked?1:0,state.release_notes_done?1:0)
+  return db.prepare('SELECT * FROM closeout_checks WHERE order_id=?').get(orderId)
+}
+
 ipcMain.handle('dashboard:get',()=>{
   const db=getDb();
   const open=db.prepare("SELECT COUNT(*) c FROM orders WHERE archived_at IS NULL AND status != 'WYDANE'").get().c
@@ -548,6 +574,7 @@ ipcMain.handle('payments:add',(_,{orderId,data})=>{
     .run(orderId,+data.amount||0,data.method||'GOTOWKA',data.reference||'',data.note||'')
   db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
     .run(orderId,'PAYMENT','Płatność',`${Number(data.amount||0).toFixed(2)} zł · ${data.method||'GOTOWKA'}`)
+  syncCloseoutAutomation(orderId)
   return {id:r.lastInsertRowid}
 })
 ipcMain.handle('payments:remove',(_,id)=>{
@@ -556,17 +583,12 @@ ipcMain.handle('payments:remove',(_,id)=>{
   db.prepare(`DELETE FROM payments WHERE id=?`).run(id)
   db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
     .run(row.order_id,'PAYMENT','Usunięto płatność',`${Number(row.amount||0).toFixed(2)} zł`)
+  syncCloseoutAutomation(row.order_id)
   return true
 })
 
 ipcMain.handle('closeout:get',(_,orderId)=>{
-  const db=getDb()
-  let r=db.prepare(`SELECT * FROM closeout_checks WHERE order_id=?`).get(orderId)
-  if(!r){
-    db.prepare(`INSERT INTO closeout_checks(order_id) VALUES (?)`).run(orderId)
-    r=db.prepare(`SELECT * FROM closeout_checks WHERE order_id=?`).get(orderId)
-  }
-  return r
+  return syncCloseoutAutomation(orderId)
 })
 ipcMain.handle('closeout:save',(_,{orderId,data})=>{
   const db=getDb()
@@ -583,6 +605,19 @@ ipcMain.handle('closeout:save',(_,{orderId,data})=>{
       updated_at=CURRENT_TIMESTAMP`)
     .run(orderId,!!data.customer_approved?1:0,!!data.diagnosis_documented?1:0,!!data.parts_documented?1:0,!!data.work_logged?1:0,!!data.qc_done?1:0,!!data.payment_checked?1:0,!!data.release_notes_done?1:0)
   return true
+})
+ipcMain.handle('closeout:complete',(_,{orderId})=>{
+  const db=getDb()
+  const checks=syncCloseoutAutomation(orderId)
+  const fields=['customer_approved','diagnosis_documented','parts_documented','work_logged','qc_done','payment_checked','release_notes_done']
+  const missing=fields.filter(key=>!checks[key])
+  if(missing.length)return{ok:false,error:'Nie wszystkie warunki wydania są spełnione.',missing}
+  const tx=db.transaction(()=>{
+    const changed=db.prepare(`UPDATE orders SET status='WYDANE',wait_state='BRAK',closed_at=COALESCE(closed_at,CURRENT_TIMESTAMP) WHERE id=? AND status!='WYDANE'`).run(orderId)
+    if(!changed.changes)throw new Error('Zlecenie jest już zamknięte lub nie istnieje.')
+    db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(orderId,'ORDER_RELEASED','Pojazd wydany','Zlecenie zamknięte po spełnieniu checklisty wydania')
+  })
+  try{tx();return{ok:true}}catch(error){return{ok:false,error:error.message}}
 })
 
 ipcMain.handle('salesRefs:list',(_,orderId)=>getDb().prepare(`SELECT * FROM sales_refs WHERE order_id=? ORDER BY issued_at DESC,id DESC`).all(orderId))
@@ -630,6 +665,7 @@ ipcMain.handle('approvals:add',(_,{orderId,data})=>{
     .run(orderId,status,+data.amount||0,data.scope||'',data.channel||'TELEFON',data.note||'',status)
   db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
     .run(orderId,'APPROVAL',status==='APPROVED'?'Klient zaakceptował koszt':status==='DECLINED'?'Klient odrzucił koszt':'Oczekiwanie na akceptację',`${Number(data.amount||0).toFixed(2)} zł · ${data.scope||''}`)
+  syncCloseoutAutomation(orderId)
   return {id:r.lastInsertRowid}
 })
 ipcMain.handle('approvals:decide',(_,{id,status,note})=>{
@@ -638,6 +674,7 @@ ipcMain.handle('approvals:decide',(_,{id,status,note})=>{
   db.prepare(`UPDATE approvals SET status=?,note=CASE WHEN ?!='' THEN ? ELSE note END,decided_at=CURRENT_TIMESTAMP WHERE id=?`).run(status,note||'',note||'',id)
   db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
     .run(row.order_id,'APPROVAL',status==='APPROVED'?'Klient zaakceptował koszt':'Klient odrzucił koszt',`${Number(row.amount||0).toFixed(2)} zł · ${row.scope||''}`)
+  syncCloseoutAutomation(row.order_id)
   return true
 })
 
@@ -679,7 +716,7 @@ ipcMain.handle('bays:productivity',()=>getDb().prepare(`SELECT a.bay,
 
 // --- 0.33 DEV: persistent QC / release readiness ---------------------------
 ipcMain.handle('qc:list',(_,orderId)=>getDb().prepare(`SELECT * FROM order_qc WHERE order_id=? AND deleted_at IS NULL ORDER BY id`).all(orderId))
-ipcMain.handle('qc:set',(_,{orderId,key,label,checked,note=''})=>{const db=getDb();db.prepare(`INSERT INTO order_qc(order_id,check_key,label,checked,note,checked_at) VALUES (?,?,?,?,?,CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END) ON CONFLICT(order_id,check_key) DO UPDATE SET label=excluded.label,checked=excluded.checked,note=excluded.note,checked_at=CASE WHEN excluded.checked=1 THEN CURRENT_TIMESTAMP ELSE NULL END`).run(orderId,key,label,checked?1:0,note,checked?1:0);return true})
+ipcMain.handle('qc:set',(_,{orderId,key,label,checked,note=''})=>{const db=getDb();db.prepare(`INSERT INTO order_qc(order_id,check_key,label,checked,note,checked_at) VALUES (?,?,?,?,?,CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END) ON CONFLICT(order_id,check_key) DO UPDATE SET label=excluded.label,checked=excluded.checked,note=excluded.note,checked_at=CASE WHEN excluded.checked=1 THEN CURRENT_TIMESTAMP ELSE NULL END`).run(orderId,key,label,checked?1:0,note,checked?1:0);syncCloseoutAutomation(orderId);return true})
 
 // --- 0.32.3 DEV: Vehicle Intelligence / technical data ---------------------
 function technicalForOrder(orderId){

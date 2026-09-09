@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld('autologika', {
   intake: { create:data=>ipcRenderer.invoke('intake:create',data) },
   communications: { list:orderId=>ipcRenderer.invoke('communications:list',orderId), add:(orderId,data)=>ipcRenderer.invoke('communications:add',{orderId,data}), resolve:id=>ipcRenderer.invoke('communications:resolve',id) },
   payments: { list:orderId=>ipcRenderer.invoke('payments:list',orderId), add:(orderId,data)=>ipcRenderer.invoke('payments:add',{orderId,data}), remove:id=>ipcRenderer.invoke('payments:remove',id) },
-  closeout: { get:orderId=>ipcRenderer.invoke('closeout:get',orderId), save:(orderId,data)=>ipcRenderer.invoke('closeout:save',{orderId,data}) },
+  closeout: { get:orderId=>ipcRenderer.invoke('closeout:get',orderId), save:(orderId,data)=>ipcRenderer.invoke('closeout:save',{orderId,data}), complete:orderId=>ipcRenderer.invoke('closeout:complete',{orderId}) },
   salesRefs: { list:orderId=>ipcRenderer.invoke('salesRefs:list',orderId), add:(orderId,data)=>ipcRenderer.invoke('salesRefs:add',{orderId,data}) },
   serviceReminders: { listForVehicle:vehicleId=>ipcRenderer.invoke('serviceReminders:listForVehicle',vehicleId), add:(vehicleId,orderId,data)=>ipcRenderer.invoke('serviceReminders:add',{vehicleId,orderId,data}), close:id=>ipcRenderer.invoke('serviceReminders:close',id) },
   debtors: { list:()=>ipcRenderer.invoke('debtors:list') },
