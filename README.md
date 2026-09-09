@@ -1,4 +1,12 @@
-# Autologika OS 0.31.0 — Studio
+# Autologika OS 0.40.3 — Workshop Studio
+
+## Katalog prac 3.0
+
+Katalog obejmuje 40 grup, 225 prac i 618 jawnych wariantów. Każdy wariant ma stabilny identyfikator, własny opis klienta, czas, cenę i klucz procedury. Cennik Autologiki pozwala przeszukiwać także treść opisów oraz zmieniać opis klienta, opis techniczny, czas i cenę.
+
+Dodanie pracy do zlecenia zapisuje snapshot danych katalogowych w `order_items`. Późniejsza zmiana katalogu nie zmienia historycznego opisu, czasu ani ceny. Opis pozycji można nadal zmienić w Centrum zlecenia, a dokument PDF używa krótkiego opisu klienta.
+
+Kontrola kompletności katalogu: `npm run test:catalog`. Test migracji SQLite: `npm run test:migration`.
 
 Nowy ciemny interfejs z animowanym radarem warsztatu, interaktywną listą zleceń, celem miesiąca i panelem bieżących spraw. Punkty radaru otwierają zlecenia. Animacje respektują systemową preferencję ograniczenia ruchu. Formularze, nawigacja, kosztorysy i Workflow korzystają ze wspólnego motywu.
 

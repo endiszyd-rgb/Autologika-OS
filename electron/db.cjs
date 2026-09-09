@@ -1,6 +1,7 @@
 const Database = require('better-sqlite3')
 const path = require('path')
 const { app } = require('electron')
+const { seedTechnicalReference } = require('./technical-seed.cjs')
 
 let db
 function getDb() {
@@ -69,9 +70,36 @@ function migrate(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       order_id INTEGER NOT NULL, kind TEXT NOT NULL DEFAULT 'CZESC', name TEXT NOT NULL,
       qty REAL NOT NULL DEFAULT 1, unit_cost REAL NOT NULL DEFAULT 0, unit_price REAL NOT NULL DEFAULT 0,
-      part_no TEXT, supplier TEXT, notes TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      part_no TEXT, supplier TEXT, notes TEXT,
+      catalog_work_id TEXT, catalog_variant_id TEXT, work_name TEXT, variant_name TEXT,
+      customer_description TEXT, technical_description TEXT, hours_snapshot REAL, price_snapshot REAL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS work_procedure_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL, order_item_id INTEGER, template_key TEXT, title TEXT NOT NULL, variant TEXT,
+      pre_json TEXT NOT NULL DEFAULT '[]', steps_json TEXT NOT NULL DEFAULT '[]', qc_json TEXT NOT NULL DEFAULT '[]',
+      recommendations_json TEXT NOT NULL DEFAULT '[]', safety_json TEXT NOT NULL DEFAULT '[]',
+      parts_json TEXT NOT NULL DEFAULT '[]', materials_json TEXT NOT NULL DEFAULT '[]',
+      progress_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
+      FOREIGN KEY(order_item_id) REFERENCES order_items(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_work_procedure_runs_order ON work_procedure_runs(order_id);
+
+    CREATE TABLE IF NOT EXISTS technical_data_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      scope TEXT NOT NULL DEFAULT 'VEHICLE', vehicle_id INTEGER, make TEXT, model TEXT, generation TEXT,
+      year_from INTEGER, year_to INTEGER, engine TEXT, engine_code TEXT,
+      category TEXT NOT NULL DEFAULT 'NOTE', parameter TEXT NOT NULL, value TEXT, unit TEXT, notes TEXT, work_tags TEXT,
+      source_type TEXT NOT NULL DEFAULT 'WORKSHOP', source_name TEXT, source_ref TEXT, source_date TEXT,
+      verified INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_technical_vehicle ON technical_data_entries(vehicle_id);
+    CREATE INDEX IF NOT EXISTS idx_technical_engine ON technical_data_entries(make,engine_code);
+
     CREATE TABLE IF NOT EXISTS appointments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       order_id INTEGER, vehicle_id INTEGER, title TEXT NOT NULL,
@@ -104,6 +132,8 @@ function migrate(db) {
       quote_id INTEGER NOT NULL, kind TEXT NOT NULL DEFAULT 'CZESC', name TEXT NOT NULL,
       qty REAL NOT NULL DEFAULT 1, unit_cost REAL NOT NULL DEFAULT 0, unit_price REAL NOT NULL DEFAULT 0,
       labor_hours REAL NOT NULL DEFAULT 0, labor_rate REAL NOT NULL DEFAULT 0, notes TEXT,
+      catalog_work_id TEXT, catalog_variant_id TEXT, work_name TEXT, variant_name TEXT,
+      customer_description TEXT, technical_description TEXT, hours_snapshot REAL, price_snapshot REAL,
       FOREIGN KEY(quote_id) REFERENCES quotes(id) ON DELETE CASCADE
     );
     CREATE TABLE IF NOT EXISTS attachments (
@@ -273,6 +303,63 @@ function migrate(db) {
 
 
 
+    CREATE TABLE IF NOT EXISTS vehicle_findings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vehicle_id INTEGER NOT NULL, source_order_id INTEGER, category TEXT NOT NULL DEFAULT 'USTERKA',
+      title TEXT NOT NULL, details TEXT, severity TEXT NOT NULL DEFAULT 'INFO', status TEXT NOT NULL DEFAULT 'OPEN',
+      due_date TEXT, due_mileage INTEGER, resolved_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
+      FOREIGN KEY(source_order_id) REFERENCES orders(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_vehicle_findings_vehicle ON vehicle_findings(vehicle_id,status);
+
+    CREATE TABLE IF NOT EXISTS order_qc (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER NOT NULL, check_key TEXT NOT NULL, label TEXT NOT NULL,
+      checked INTEGER NOT NULL DEFAULT 0, note TEXT, checked_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(order_id,check_key), FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_order_qc_order ON order_qc(order_id);
+
+    CREATE TABLE IF NOT EXISTS work_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, group_name TEXT NOT NULL DEFAULT 'Własne', variant TEXT,
+      scope TEXT, hours REAL NOT NULL DEFAULT 1, rate REAL NOT NULL DEFAULT 220,
+      pre_json TEXT NOT NULL DEFAULT '[]', steps_json TEXT NOT NULL DEFAULT '[]', qc_json TEXT NOT NULL DEFAULT '[]',
+      parts_json TEXT NOT NULL DEFAULT '[]', materials_json TEXT NOT NULL DEFAULT '[]', recommendations_json TEXT NOT NULL DEFAULT '[]',
+      safety_json TEXT NOT NULL DEFAULT '[]', active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_work_templates_group ON work_templates(group_name,active);
+
+    CREATE TABLE IF NOT EXISTS technical_manual_pages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL, section TEXT NOT NULL DEFAULT 'Ogólne', subsection TEXT,
+      make TEXT, model TEXT, generation TEXT, year_from INTEGER, year_to INTEGER, engine TEXT, engine_code TEXT, gearbox_code TEXT,
+      work_tags TEXT, page_type TEXT NOT NULL DEFAULT 'IMAGE', file_path TEXT, mime TEXT,
+      source_type TEXT NOT NULL DEFAULT 'WORKSHOP', source_name TEXT, source_ref TEXT, source_date TEXT,
+      verification_level TEXT NOT NULL DEFAULT 'WORKSHOP', notes TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_manual_vehicle ON technical_manual_pages(make,model,engine_code,section);
+
+    CREATE TABLE IF NOT EXISTS technical_manual_hotspots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, manual_page_id INTEGER NOT NULL,
+      x REAL NOT NULL DEFAULT 0.5, y REAL NOT NULL DEFAULT 0.5, w REAL NOT NULL DEFAULT 0.03, h REAL NOT NULL DEFAULT 0.03,
+      label TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'TORQUE', value TEXT, unit TEXT, angle TEXT, note TEXT,
+      source_type TEXT NOT NULL DEFAULT 'WORKSHOP', source_name TEXT, source_ref TEXT,
+      verification_level TEXT NOT NULL DEFAULT 'WORKSHOP', technical_data_id INTEGER, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(manual_page_id) REFERENCES technical_manual_pages(id) ON DELETE CASCADE,
+      FOREIGN KEY(technical_data_id) REFERENCES technical_data_entries(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_manual_hotspots_page ON technical_manual_hotspots(manual_page_id);
+
+    CREATE TABLE IF NOT EXISTS technical_manual_steps (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, manual_page_id INTEGER NOT NULL, step_no INTEGER NOT NULL DEFAULT 1,
+      title TEXT NOT NULL, instruction TEXT, warning TEXT, tool TEXT, technical_data_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(manual_page_id) REFERENCES technical_manual_pages(id) ON DELETE CASCADE,
+      FOREIGN KEY(technical_data_id) REFERENCES technical_data_entries(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_manual_steps_page ON technical_manual_steps(manual_page_id,step_no);
+
     CREATE TABLE IF NOT EXISTS app_settings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       setting_key TEXT NOT NULL UNIQUE,
@@ -303,7 +390,26 @@ function migrate(db) {
 
   `)
 
-  const syncTables=['app_settings','customers','vehicles','orders','diagnostics','order_notes','job_part_orders','payments','appointments','suppliers','order_items','work_logs','communications','approvals','order_events','sales_refs','service_reminders_v2','attachments','signatures']
+
+  const manualHotspotCols=db.prepare("PRAGMA table_info(technical_manual_hotspots)").all().map(x=>x.name)
+  if(!manualHotspotCols.includes('part_hint')) db.exec("ALTER TABLE technical_manual_hotspots ADD COLUMN part_hint TEXT")
+  if(!manualHotspotCols.includes('tool_hint')) db.exec("ALTER TABLE technical_manual_hotspots ADD COLUMN tool_hint TEXT")
+  if(!manualHotspotCols.includes('sequence_ref')) db.exec("ALTER TABLE technical_manual_hotspots ADD COLUMN sequence_ref TEXT")
+
+  // Snapshot katalogu: pozycja historyczna nie może zmienić się po edycji katalogu.
+  const ensureColumns=(table,columns)=>{
+    const existing=db.prepare(`PRAGMA table_info(${table})`).all().map(x=>x.name)
+    for(const [name,type] of columns) if(!existing.includes(name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`)
+  }
+  const catalogSnapshotColumns=[
+    ['catalog_work_id','TEXT'],['catalog_variant_id','TEXT'],['work_name','TEXT'],['variant_name','TEXT'],
+    ['customer_description','TEXT'],['technical_description','TEXT'],['hours_snapshot','REAL'],['price_snapshot','REAL']
+  ]
+  ensureColumns('order_items',catalogSnapshotColumns)
+  ensureColumns('quote_items',catalogSnapshotColumns)
+  ensureColumns('work_procedure_runs',[['catalog_work_id','TEXT'],['catalog_variant_id','TEXT'],['technical_description','TEXT'],['technical_data_key','TEXT']])
+
+  const syncTables=['app_settings','customers','vehicles','orders','diagnostics','order_notes','job_part_orders','payments','appointments','suppliers','order_items','work_logs','communications','approvals','order_events','sales_refs','service_reminders_v2','attachments','signatures','work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps']
   for(const table of syncTables){
     const names=db.prepare(`PRAGMA table_info(${table})`).all().map(x=>x.name)
     if(!names.includes('cloud_id')) db.exec(`ALTER TABLE ${table} ADD COLUMN cloud_id TEXT`)
@@ -354,6 +460,8 @@ function migrate(db) {
     SELECT 'signatures',a.id,a.cloud_id,'UPSERT' FROM signatures a
     WHERE a.cloud_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM sync_queue q WHERE q.entity_type='signatures' AND q.row_id=a.id)`).run()
 
+  const procedureCols=db.prepare("PRAGMA table_info(work_procedure_runs)").all().map(x=>x.name)
+  if(!procedureCols.includes('technical_json')) db.exec("ALTER TABLE work_procedure_runs ADD COLUMN technical_json TEXT NOT NULL DEFAULT '[]'")
   const vehicleCols=db.prepare("PRAGMA table_info(vehicles)").all().map(x=>x.name)
   if(!vehicleCols.includes('generation')) db.exec('ALTER TABLE vehicles ADD COLUMN generation TEXT')
   if(!vehicleCols.includes('power_hp')) db.exec('ALTER TABLE vehicles ADD COLUMN power_hp INTEGER')
@@ -368,6 +476,13 @@ function migrate(db) {
 }
 
 function seed(db) {
+  seedTechnicalReference(db)
+  const manualCount=db.prepare('SELECT COUNT(*) c FROM technical_manual_pages').get().c
+  if(!manualCount){
+    const m=db.prepare(`INSERT INTO technical_manual_pages(title,section,subsection,page_type,source_type,source_name,verification_level,notes) VALUES (?,?,?,?,?,?,?,?)`).run('Szablon interaktywnego rysunku','Silnik','Szablon','DIAGRAM','WORKSHOP','Autologika','WORKSHOP','Poglądowy własny diagram do testowania hotspotów i procedur. Nie zawiera danych OEM.')
+    db.prepare(`INSERT INTO technical_manual_hotspots(manual_page_id,x,y,label,kind,note,verification_level) VALUES (?,?,?,?,?,?,?)`).run(m.lastInsertRowid,.31,.35,'Wałek / koło — punkt demonstracyjny','NOTE','Dodaj zweryfikowaną wartość dopiero po przypisaniu właściwego pojazdu i źródła.','WORKSHOP')
+    db.prepare(`INSERT INTO technical_manual_steps(manual_page_id,step_no,title,instruction) VALUES (?,?,?,?)`).run(m.lastInsertRowid,1,'Przypisz pojazd i źródło','Uzupełnij markę, model, kod silnika oraz źródło przed dodawaniem danych technicznych.')
+  }
   const empCount=db.prepare('SELECT COUNT(*) c FROM employees').get().c
   if(!empCount) db.prepare('INSERT INTO employees(name,role,hourly_cost) VALUES (?,?,?)').run('Właściciel','Diagnosta / właściciel',0)
   const count = db.prepare('SELECT COUNT(*) c FROM customers').get().c

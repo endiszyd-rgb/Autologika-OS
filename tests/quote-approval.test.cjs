@@ -10,16 +10,17 @@ function setup(t) {
   t.after(() => db.close())
   // Use the application's schema and IPC callbacks, without launching Electron.
   const schema = fs.readFileSync(require.resolve('../electron/db.cjs'), 'utf8')
-  for (const table of ['orders', 'quotes', 'quote_items', 'approvals', 'order_events']) {
+  for (const table of ['orders', 'quotes', 'quote_items', 'approvals', 'order_events', 'order_items']) {
     db.exec(schema.match(new RegExp(`CREATE TABLE IF NOT EXISTS ${table} \\([\\s\\S]*?\\);`))[0])
   }
   db.exec("ALTER TABLE orders ADD COLUMN wait_state TEXT DEFAULT 'BRAK'")
   db.exec('PRAGMA foreign_keys=OFF; INSERT INTO orders(id,vehicle_id,title) VALUES (1,1,\'Test\'); INSERT INTO quotes(id,order_id) VALUES (1,1),(10,1)')
+  db.transaction = fn => (...args) => { db.exec('BEGIN'); try { const value=fn(...args); db.exec('COMMIT'); return value } catch(error) { db.exec('ROLLBACK'); throw error } }
   const handlers = {}
   const source = fs.readFileSync(require.resolve('../electron/main.cjs'), 'utf8')
   vm.runInNewContext(source.slice(source.indexOf("ipcMain.handle('quotes:get'"), source.indexOf("ipcMain.handle('attachments:list'")), {
     ipcMain: { handle: (name, callback) => { handlers[name] = callback } },
-    getDb: () => db, findQuoteApproval, assertQuoteEditable, partMarkup: () => 0.2,
+    getDb: () => db, findQuoteApproval, assertQuoteEditable, partMarkup: () => 0.2, syncOrderItemTotals: () => {},
   })
   return { db, call: (name, arg) => handlers[`quotes:${name}`](null, arg) }
 }
@@ -59,4 +60,16 @@ test('accepting quote 1 cannot use approval for quote 10', t => {
   const { db, call } = setup(t)
   db.exec("INSERT INTO approvals(order_id,scope,status) VALUES (1,'Wycena #10 · Filtr','APPROVED')")
   assert.equal(call('accept', 1).reason, 'APPROVAL_REQUIRED')
+})
+
+test('accepted catalog labor keeps its snapshot in the order', t => {
+  const { db, call } = setup(t)
+  call('addItem', { orderId: 1, data: { kind:'ROBOCIZNA', name:'Wymiana klocków — tył EPB', labor_hours:1.2, labor_rate:300, catalog_work_id:'work_brakes', catalog_variant_id:'variant_rear_epb', work_name:'Wymiana klocków', variant_name:'tył EPB', customer_description:'Opis zapisany w kosztorysie.', hours_snapshot:1.2, price_snapshot:360 } })
+  db.exec("INSERT INTO approvals(order_id,scope,status) VALUES (1,'Wycena #10 · Hamulce','APPROVED')")
+  assert.equal(call('accept',10).ok,true)
+  const item=db.prepare("SELECT * FROM order_items WHERE order_id=1 AND kind='ROBOCIZNA'").get()
+  assert.equal(item.catalog_variant_id,'variant_rear_epb')
+  assert.equal(item.customer_description,'Opis zapisany w kosztorysie.')
+  assert.equal(item.hours_snapshot,1.2)
+  assert.equal(item.price_snapshot,360)
 })
