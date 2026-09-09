@@ -1,0 +1,391 @@
+const Database = require('better-sqlite3')
+const path = require('path')
+const { app } = require('electron')
+
+let db
+function getDb() {
+  if (db) return db
+  const dbPath = path.join(app.getPath('userData'), 'autologika.db')
+  db = new Database(dbPath)
+  db.pragma('journal_mode = WAL')
+  db.pragma('foreign_keys = ON')
+  migrate(db)
+  seed(db)
+  const templateCount=db.prepare("SELECT COUNT(*) c FROM message_templates").get().c
+  if(!templateCount){
+    const ins=db.prepare("INSERT INTO message_templates(name,body,kind) VALUES (?,?,?)")
+    const defaults=[
+      ['Diagnoza gotowa','Dzień dobry, mamy już wynik diagnostyki {auto} ({rej}). Proszę o kontakt w sprawie dalszych działań. AUTOLOGIKA','DIAGNOZA'],
+      ['Wycena do akceptacji','Dzień dobry, wycena naprawy {auto} ({rej}) wynosi {kwota}. Proszę o potwierdzenie, czy realizujemy naprawę. AUTOLOGIKA','WYCENA'],
+      ['Czekamy na część','Dzień dobry, do {auto} ({rej}) czekamy na zamówioną część. Damy znać od razu po jej dostawie. AUTOLOGIKA','CZESCI'],
+      ['Auto gotowe','Dzień dobry, {auto} ({rej}) jest gotowe do odbioru. Kwota do zapłaty: {kwota}. AUTOLOGIKA','GOTOWE'],
+      ['Przypomnienie o decyzji','Dzień dobry, wracam do wyceny dotyczącej {auto} ({rej}). Czekamy na decyzję, czy mamy kontynuować naprawę. AUTOLOGIKA','PRZYPOMNIENIE']
+    ]
+    const tx=db.transaction(()=>defaults.forEach(x=>ins.run(...x))); tx()
+  }
+
+  return db
+}
+
+function migrate(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS customers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL, phone TEXT, email TEXT, company TEXT, notes TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS vehicles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id INTEGER NOT NULL, plate TEXT, vin TEXT, make TEXT, model TEXT,
+      year INTEGER, engine TEXT, mileage INTEGER, notes TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(customer_id) REFERENCES customers(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vehicle_id INTEGER NOT NULL, title TEXT NOT NULL, complaint TEXT,
+      status TEXT NOT NULL DEFAULT 'PRZYJETE', priority TEXT NOT NULL DEFAULT 'NORMALNY',
+      diagnosis_limit REAL DEFAULT 0, labor_hours REAL DEFAULT 0, labor_rate REAL DEFAULT 220,
+      parts_cost REAL DEFAULT 0, parts_sale REAL DEFAULT 0, other_cost REAL DEFAULT 0,
+      other_sale REAL DEFAULT 0, discount REAL DEFAULT 0, diagnosis_fee REAL DEFAULT 0,
+      source TEXT DEFAULT 'nieznane', opened_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      due_at TEXT, closed_at TEXT,
+      FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS diagnostics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL, symptom_confirmed TEXT, dtcs TEXT, measurements TEXT,
+      hypothesis TEXT, conclusion TEXT, recommendation TEXT, time_hours REAL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS reminders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vehicle_id INTEGER NOT NULL, title TEXT NOT NULL, due_date TEXT, due_mileage INTEGER,
+      done INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS order_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL, kind TEXT NOT NULL DEFAULT 'CZESC', name TEXT NOT NULL,
+      qty REAL NOT NULL DEFAULT 1, unit_cost REAL NOT NULL DEFAULT 0, unit_price REAL NOT NULL DEFAULT 0,
+      part_no TEXT, supplier TEXT, notes TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS appointments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER, vehicle_id INTEGER, title TEXT NOT NULL,
+      start_at TEXT NOT NULL, end_at TEXT NOT NULL, bay TEXT NOT NULL DEFAULT 'Stanowisko 1',
+      status TEXT NOT NULL DEFAULT 'PLAN', notes TEXT,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE SET NULL,
+      FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE SET NULL
+    );
+    CREATE TABLE IF NOT EXISTS knowledge_cases (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vehicle TEXT, engine TEXT, symptom TEXT NOT NULL, dtcs TEXT,
+      measurements TEXT, cause TEXT, solution TEXT, tags TEXT,
+      source_order_id INTEGER, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(source_order_id) REFERENCES orders(id) ON DELETE SET NULL
+    );
+    CREATE TABLE IF NOT EXISTS work_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL, worker TEXT NOT NULL DEFAULT 'Właściciel', note TEXT,
+      started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, ended_at TEXT, duration_minutes INTEGER,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS quotes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'ROBOCZA', notes TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, accepted_at TEXT,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS quote_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      quote_id INTEGER NOT NULL, kind TEXT NOT NULL DEFAULT 'CZESC', name TEXT NOT NULL,
+      qty REAL NOT NULL DEFAULT 1, unit_cost REAL NOT NULL DEFAULT 0, unit_price REAL NOT NULL DEFAULT 0,
+      labor_hours REAL NOT NULL DEFAULT 0, labor_rate REAL NOT NULL DEFAULT 0, notes TEXT,
+      FOREIGN KEY(quote_id) REFERENCES quotes(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS attachments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL, name TEXT NOT NULL, file_path TEXT NOT NULL DEFAULT '', mime TEXT,
+      storage_path TEXT, size_bytes INTEGER, sha256 TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS signatures (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL, signed_by TEXT NOT NULL DEFAULT 'Klient', points_json TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS order_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL UNIQUE, intake_notes TEXT, release_notes TEXT, qc_notes TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_orders_vehicle ON orders(vehicle_id);
+    CREATE INDEX IF NOT EXISTS idx_items_order ON order_items(order_id);
+    CREATE INDEX IF NOT EXISTS idx_appointments_start ON appointments(start_at);
+    CREATE INDEX IF NOT EXISTS idx_knowledge_symptom ON knowledge_cases(symptom);
+    CREATE INDEX IF NOT EXISTS idx_work_logs_order ON work_logs(order_id);
+    CREATE INDEX IF NOT EXISTS idx_quotes_order ON quotes(order_id);
+    CREATE TABLE IF NOT EXISTS employees (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL, role TEXT DEFAULT 'Mechanik', hourly_cost REAL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS suppliers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL, phone TEXT, email TEXT, account_no TEXT, notes TEXT
+    );
+    CREATE TABLE IF NOT EXISTS inventory_parts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      part_no TEXT, name TEXT NOT NULL, stock REAL NOT NULL DEFAULT 0, min_stock REAL NOT NULL DEFAULT 0,
+      unit_cost REAL NOT NULL DEFAULT 0, sell_price REAL NOT NULL DEFAULT 0, supplier_id INTEGER, location TEXT, notes TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL
+    );
+    CREATE TABLE IF NOT EXISTS purchase_orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, supplier_id INTEGER, status TEXT NOT NULL DEFAULT 'ROBOCZE',
+      ordered_at TEXT, expected_at TEXT, notes TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL
+    );
+    CREATE TABLE IF NOT EXISTS purchase_order_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, purchase_order_id INTEGER NOT NULL, inventory_part_id INTEGER,
+      part_no TEXT, name TEXT NOT NULL, qty REAL NOT NULL DEFAULT 1, unit_cost REAL NOT NULL DEFAULT 0, received_qty REAL NOT NULL DEFAULT 0,
+      FOREIGN KEY(purchase_order_id) REFERENCES purchase_orders(id) ON DELETE CASCADE,
+      FOREIGN KEY(inventory_part_id) REFERENCES inventory_parts(id) ON DELETE SET NULL
+    );
+    CREATE TABLE IF NOT EXISTS job_part_orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, order_id INTEGER NOT NULL, supplier_id INTEGER,
+      part_no TEXT, name TEXT NOT NULL, qty REAL NOT NULL DEFAULT 1, unit_cost REAL NOT NULL DEFAULT 0, unit_price REAL NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'DO_ZAMOWIENIA', external_order_no TEXT, expected_at TEXT, ordered_at TEXT, received_at TEXT, installed_at TEXT, returned_at TEXT,
+      notes TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE, FOREIGN KEY(supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_job_parts_order ON job_part_orders(order_id);
+    CREATE INDEX IF NOT EXISTS idx_job_parts_status ON job_part_orders(status);
+    CREATE INDEX IF NOT EXISTS idx_inventory_part_no ON inventory_parts(part_no);
+    CREATE INDEX IF NOT EXISTS idx_purchase_status ON purchase_orders(status);
+    CREATE INDEX IF NOT EXISTS idx_attachments_order ON attachments(order_id);
+
+    CREATE TABLE IF NOT EXISTS communications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL,
+      direction TEXT NOT NULL DEFAULT 'OUT',
+      channel TEXT NOT NULL DEFAULT 'TELEFON',
+      message TEXT NOT NULL,
+      contact_name TEXT,
+      needs_reply INTEGER NOT NULL DEFAULT 0,
+      resolved INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_communications_order ON communications(order_id);
+    CREATE INDEX IF NOT EXISTS idx_communications_reply ON communications(needs_reply,resolved);
+
+    CREATE TABLE IF NOT EXISTS approvals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'PENDING',
+      amount REAL NOT NULL DEFAULT 0,
+      scope TEXT NOT NULL DEFAULT '',
+      channel TEXT NOT NULL DEFAULT 'TELEFON',
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      decided_at TEXT,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_approvals_order ON approvals(order_id);
+
+    CREATE TABLE IF NOT EXISTS order_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL,
+      event_type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      details TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_order_events_order ON order_events(order_id);
+
+
+    CREATE TABLE IF NOT EXISTS payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL,
+      amount REAL NOT NULL DEFAULT 0,
+      method TEXT NOT NULL DEFAULT 'GOTOWKA',
+      reference TEXT,
+      note TEXT,
+      paid_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_payments_order ON payments(order_id);
+
+    CREATE TABLE IF NOT EXISTS closeout_checks (
+      order_id INTEGER PRIMARY KEY,
+      customer_approved INTEGER NOT NULL DEFAULT 0,
+      diagnosis_documented INTEGER NOT NULL DEFAULT 0,
+      parts_documented INTEGER NOT NULL DEFAULT 0,
+      work_logged INTEGER NOT NULL DEFAULT 0,
+      qc_done INTEGER NOT NULL DEFAULT 0,
+      payment_checked INTEGER NOT NULL DEFAULT 0,
+      release_notes_done INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS sales_refs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL,
+      document_type TEXT NOT NULL DEFAULT 'PARAGON',
+      document_no TEXT,
+      issued_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      note TEXT,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_sales_refs_order ON sales_refs(order_id);
+
+    CREATE TABLE IF NOT EXISTS service_reminders_v2 (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vehicle_id INTEGER NOT NULL,
+      order_id INTEGER,
+      title TEXT NOT NULL,
+      due_date TEXT,
+      due_mileage INTEGER,
+      note TEXT,
+      status TEXT NOT NULL DEFAULT 'OPEN',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_service_reminders_v2_vehicle ON service_reminders_v2(vehicle_id);
+
+    CREATE TABLE IF NOT EXISTS message_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      body TEXT NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'OTHER',
+      active INTEGER NOT NULL DEFAULT 1
+    );
+
+
+
+    CREATE TABLE IF NOT EXISTS app_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      setting_key TEXT NOT NULL UNIQUE,
+      value TEXT NOT NULL DEFAULT '',
+      cloud_id TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      deleted_at TEXT,
+      version INTEGER NOT NULL DEFAULT 1
+    );
+    INSERT OR IGNORE INTO app_settings(setting_key,value,cloud_id,updated_at,version)
+      VALUES ('monthly_target','50000','monthly-target',CURRENT_TIMESTAMP,1);
+
+    CREATE TABLE IF NOT EXISTS sync_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+    CREATE TABLE IF NOT EXISTS sync_queue (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_type TEXT NOT NULL,
+      row_id INTEGER,
+      cloud_id TEXT,
+      operation TEXT NOT NULL DEFAULT 'UPSERT',
+      queued_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_sync_queue_entity ON sync_queue(entity_type,row_id);
+
+  `)
+
+  const syncTables=['app_settings','customers','vehicles','orders','diagnostics','order_notes','job_part_orders','payments','appointments','suppliers','order_items','work_logs','communications','approvals','order_events','sales_refs','service_reminders_v2','attachments','signatures']
+  for(const table of syncTables){
+    const names=db.prepare(`PRAGMA table_info(${table})`).all().map(x=>x.name)
+    if(!names.includes('cloud_id')) db.exec(`ALTER TABLE ${table} ADD COLUMN cloud_id TEXT`)
+    if(!names.includes('updated_at')) db.exec(`ALTER TABLE ${table} ADD COLUMN updated_at TEXT`)
+    if(!names.includes('deleted_at')) db.exec(`ALTER TABLE ${table} ADD COLUMN deleted_at TEXT`)
+    if(!names.includes('version')) db.exec(`ALTER TABLE ${table} ADD COLUMN version INTEGER NOT NULL DEFAULT 1`)
+    db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_${table}_cloud_id ON ${table}(cloud_id) WHERE cloud_id IS NOT NULL`)
+    db.prepare(`UPDATE ${table} SET cloud_id=lower(hex(randomblob(16))) WHERE cloud_id IS NULL`).run()
+    if(names.includes('created_at')) db.prepare(`UPDATE ${table} SET updated_at=COALESCE(updated_at,created_at,CURRENT_TIMESTAMP)`).run()
+    else db.prepare(`UPDATE ${table} SET updated_at=COALESCE(updated_at,CURRENT_TIMESTAMP)`).run()
+    db.exec(`
+      CREATE TRIGGER IF NOT EXISTS sync_${table}_assign_cloud AFTER INSERT ON ${table}
+      WHEN NEW.cloud_id IS NULL
+      BEGIN
+        UPDATE ${table} SET cloud_id=lower(hex(randomblob(16))),updated_at=CURRENT_TIMESTAMP WHERE id=NEW.id;
+      END;
+      CREATE TRIGGER IF NOT EXISTS sync_${table}_insert AFTER INSERT ON ${table}
+      WHEN NEW.cloud_id IS NOT NULL AND COALESCE((SELECT value FROM sync_meta WHERE key='applying_remote'),'0')!='1'
+      BEGIN
+        INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation) VALUES ('${table}',NEW.id,NEW.cloud_id,'UPSERT');
+      END;
+      CREATE TRIGGER IF NOT EXISTS sync_${table}_update AFTER UPDATE ON ${table}
+      WHEN COALESCE((SELECT value FROM sync_meta WHERE key='applying_remote'),'0')!='1'
+      BEGIN
+        UPDATE ${table} SET updated_at=CURRENT_TIMESTAMP,version=COALESCE(OLD.version,1)+1 WHERE id=NEW.id AND NEW.updated_at IS OLD.updated_at;
+        DELETE FROM sync_queue WHERE entity_type='${table}' AND row_id=NEW.id;
+        INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation) VALUES ('${table}',NEW.id,COALESCE(NEW.cloud_id,OLD.cloud_id),'UPSERT');
+      END;
+      CREATE TRIGGER IF NOT EXISTS sync_${table}_delete AFTER DELETE ON ${table}
+      WHEN COALESCE((SELECT value FROM sync_meta WHERE key='applying_remote'),'0')!='1'
+      BEGIN
+        DELETE FROM sync_queue WHERE entity_type='${table}' AND cloud_id=OLD.cloud_id;
+        INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation) VALUES ('${table}',NULL,OLD.cloud_id,'DELETE');
+      END;
+    `)
+  }
+
+  const attachmentCols=db.prepare("PRAGMA table_info(attachments)").all().map(x=>x.name)
+  if(!attachmentCols.includes('storage_path')) db.exec('ALTER TABLE attachments ADD COLUMN storage_path TEXT')
+  if(!attachmentCols.includes('size_bytes')) db.exec('ALTER TABLE attachments ADD COLUMN size_bytes INTEGER')
+  if(!attachmentCols.includes('sha256')) db.exec('ALTER TABLE attachments ADD COLUMN sha256 TEXT')
+  if(!attachmentCols.includes('category')) db.exec("ALTER TABLE attachments ADD COLUMN category TEXT NOT NULL DEFAULT 'PRZYJECIE'")
+  // Załączniki i podpisy weszły do synchronizacji w 0.19. Istniejące rekordy też muszą trafić do kolejki.
+  db.prepare(`INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation)
+    SELECT 'attachments',a.id,a.cloud_id,'UPSERT' FROM attachments a
+    WHERE a.cloud_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM sync_queue q WHERE q.entity_type='attachments' AND q.row_id=a.id)`).run()
+  db.prepare(`INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation)
+    SELECT 'signatures',a.id,a.cloud_id,'UPSERT' FROM signatures a
+    WHERE a.cloud_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM sync_queue q WHERE q.entity_type='signatures' AND q.row_id=a.id)`).run()
+
+  const vehicleCols=db.prepare("PRAGMA table_info(vehicles)").all().map(x=>x.name)
+  if(!vehicleCols.includes('generation')) db.exec('ALTER TABLE vehicles ADD COLUMN generation TEXT')
+  if(!vehicleCols.includes('power_hp')) db.exec('ALTER TABLE vehicles ADD COLUMN power_hp INTEGER')
+  if(!vehicleCols.includes('engine_code')) db.exec('ALTER TABLE vehicles ADD COLUMN engine_code TEXT')
+  const cols=db.prepare("PRAGMA table_info(work_logs)").all().map(x=>x.name)
+  if(!cols.includes('employee_id')) db.exec('ALTER TABLE work_logs ADD COLUMN employee_id INTEGER')
+  const orderCols=db.prepare("PRAGMA table_info(orders)").all().map(x=>x.name)
+  if(!orderCols.includes('wait_state')) db.exec("ALTER TABLE orders ADD COLUMN wait_state TEXT NOT NULL DEFAULT 'BRAK'")
+  const commCols=db.prepare("PRAGMA table_info(communications)").all().map(x=>x.name)
+  if(!commCols.includes('reply_due_at')) db.exec("ALTER TABLE communications ADD COLUMN reply_due_at TEXT")
+
+}
+
+function seed(db) {
+  const empCount=db.prepare('SELECT COUNT(*) c FROM employees').get().c
+  if(!empCount) db.prepare('INSERT INTO employees(name,role,hourly_cost) VALUES (?,?,?)').run('Właściciel','Diagnosta / właściciel',0)
+  const count = db.prepare('SELECT COUNT(*) c FROM customers').get().c
+  if (count) return
+  const c = db.prepare('INSERT INTO customers(name,phone,email,company,notes) VALUES (?,?,?,?,?)')
+    .run('Klient demo','500 600 700','demo@autologika.pl','','Dane demonstracyjne')
+  const v = db.prepare('INSERT INTO vehicles(customer_id,plate,vin,make,model,year,engine,mileage) VALUES (?,?,?,?,?,?,?,?)')
+    .run(c.lastInsertRowid,'ZPL 12345','WVWZZZ1KZBW000001','Volkswagen','Touran',2011,'2.0 TDI',224500)
+  const o = db.prepare(`INSERT INTO orders(vehicle_id,title,complaint,status,priority,diagnosis_limit,labor_hours,labor_rate,diagnosis_fee,source,due_at)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+    .run(v.lastInsertRowid,'Diagnostyka braku mocy','Auto traci moc po rozgrzaniu','DIAGNOZA','NORMALNY',350,1.2,250,300,'polecenie',new Date(Date.now()+86400000).toISOString())
+  db.prepare('INSERT INTO reminders(vehicle_id,title,due_date,due_mileage) VALUES (?,?,?,?)')
+    .run(v.lastInsertRowid,'Serwis olejowy',new Date(Date.now()+45*86400000).toISOString().slice(0,10),234500)
+  db.prepare('INSERT INTO order_items(order_id,kind,name,qty,unit_cost,unit_price,part_no,supplier) VALUES (?,?,?,?,?,?,?,?)')
+    .run(o.lastInsertRowid,'CZESC','Filtr paliwa',1,75,105,'DEMO-001','Hurtownia demo')
+  const start = new Date(Date.now()+2*3600000); const end = new Date(start.getTime()+90*60000)
+  db.prepare('INSERT INTO appointments(order_id,vehicle_id,title,start_at,end_at,bay,status) VALUES (?,?,?,?,?,?,?)')
+    .run(o.lastInsertRowid,v.lastInsertRowid,'Diagnostyka braku mocy',start.toISOString(),end.toISOString(),'Stanowisko 1','PLAN')
+}
+
+module.exports = { getDb }

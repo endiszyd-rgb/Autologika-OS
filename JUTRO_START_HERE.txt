@@ -1,0 +1,29 @@
+HOTFIX 0.20.1 — SUPABASE
+
+1. Uruchom Ustawienia > Chmura i synchronizacja.
+2. URL: https://<projekt>.supabase.co
+3. W polu Publishable key wklej CAŁY klucz sb_publishable_...
+4. Kliknij Zapisz konfigurację chmury.
+5. Pole klucza po zapisie ma być PUSTE — to celowe. Pod nim zobaczysz skrót klucza i jego długość.
+6. Kliknij Test połączenia. Oczekiwany wynik: Supabase działa / HTTP 200.
+7. Dopiero potem Utwórz konto albo Zaloguj.
+8. Nie używaj sb_secret_...
+
+AUTOLOGIKA 0.20 / ANDROID 0.5 — JUTRO START HERE
+
+1. Na PC rozpakuj Autologika_OS_MVP_0.20.zip do nowego katalogu.
+2. Użyj Node 22 LTS. W PowerShell korzystaj z npm.cmd.
+3. npm.cmd install
+4. npm.cmd run rebuild
+5. npm.cmd run dev
+6. W Supabase uruchom/zweryfikuj cloud_schema_supabase.sql.
+7. Zaloguj Desktop i Android na to samo konto.
+8. Test rekordu: utwórz testowe zlecenie na PC -> synchronizuj -> sprawdź tablet.
+9. Test zdjęcia: tablet / PRZYJĘCIE -> Cloud -> PC.
+10. Test kategorii: dodaj zdjęcia DIAGNOZA i NAPRAWA; sprawdź ich podział na obu urządzeniach.
+11. Test usunięcia: usuń jedno testowe zdjęcie na tablecie -> synchronizuj -> sprawdź, czy znika z PC. Potem odwrotnie.
+12. Test PDF offline na Androidzie: Dokumenty -> Otwórz PDF bez Wi-Fi.
+13. Test backupu desktop: Ustawienia -> Dane i backup; sprawdź automatyczną kopię.
+14. Dopiero po tych testach przechodzimy do rzeczywistych danych klientów.
+
+Nie kopiuj service_role do żadnej aplikacji klienckiej.

@@ -1,0 +1,58 @@
+{
+  "name": "autologika-os",
+  "version": "0.31.0",
+  "private": true,
+  "description": "Autologika OS 0.31.0 - automatyczne decyzje klienta, powiadomienia LIVE i synchronizacja Workflow",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "test:ui": "npm run build && electron scripts/ui-preview.cjs",
+    "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+    "build": "vite build",
+    "start": "electron .",
+    "dist:win": "npm run build && electron-builder --win nsis",
+    "dist:portable": "npm run build && electron-builder --win portable",
+    "rebuild": "electron-rebuild -f -w better-sqlite3"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8",
+    "vite": "^6.0.5",
+    "wait-on": "^8.0.1",
+    "@electron/rebuild": "^3.7.1"
+  },
+  "build": {
+    "appId": "pl.autologika.os",
+    "productName": "Autologika OS",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json",
+      "documents/**/*"
+    ],
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

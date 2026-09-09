@@ -1,0 +1,18 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+const esc=(s:any)=>String(s??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c))
+const money=(n:any)=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(Number(n)||0)
+Deno.serve(async(req)=>{
+ const url=new URL(req.url), token=url.searchParams.get('t')||''
+ const sb=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+ const {data:r}=await sb.from('customer_approval_links').select('*').eq('token',token).maybeSingle()
+ if(!r||new Date(r.expires_at)<new Date()) return new Response('Link jest nieprawidłowy lub wygasł.',{status:404,headers:{'content-type':'text/plain; charset=utf-8'}})
+ if(req.method==='POST'&&r.status==='PENDING'){
+   const f=await req.formData(), decision=String(f.get('decision')||''), note=String(f.get('note')||'').slice(0,1000)
+   if(['APPROVED','DECLINED'].includes(decision)) await sb.from('customer_approval_links').update({status:decision,customer_note:note,decided_at:new Date().toISOString()}).eq('id',r.id).eq('status','PENDING')
+   return Response.redirect(`${url.origin}${url.pathname}?t=${encodeURIComponent(token)}`,303)
+ }
+ const s=r.snapshot||{}, items=Array.isArray(s.items)?s.items:[]
+ const status=r.status==='APPROVED'?'✓ Kosztorys zaakceptowany':r.status==='DECLINED'?'× Kosztorys odrzucony':'Oczekuje na Twoją decyzję'
+ const html=`<!doctype html><html lang="pl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Autologika — akceptacja kosztorysu</title><style>body{margin:0;background:#0d1014;color:#f5f1e8;font:16px system-ui}main{max-width:720px;margin:auto;padding:24px}.brand{font-weight:900;letter-spacing:.18em;color:#d9ad58}.card{background:#151a20;border:1px solid #2b323b;border-radius:18px;padding:20px;margin:16px 0}h1{margin:.3em 0}.muted{color:#9da6b1}.row{display:flex;justify-content:space-between;gap:18px;padding:14px 0;border-bottom:1px solid #2b323b}.total{font-size:30px;font-weight:900;text-align:right;color:#e6bd6a}textarea{width:100%;min-height:90px;box-sizing:border-box;background:#0d1014;color:white;border:1px solid #39424d;border-radius:12px;padding:12px}button{border:0;border-radius:14px;padding:17px 22px;font-weight:900;font-size:16px}.buttons{display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-top:16px}.no{background:#3a2023;color:#ffd9dc}.yes{background:#d6aa55;color:#111}.status{text-align:center;font-size:20px;font-weight:800}</style><main><div class="brand">AUTOLOGIKA</div><div class="card"><div class="muted">KOSZTORYS NAPRAWY</div><h1>${esc(s.vehicle||'Pojazd')}</h1><div class="muted">${esc(s.plate||'')} ${s.vin?'· VIN '+esc(s.vin):''}</div></div>${s.diagnosis?`<div class="card"><b>Wynik diagnostyki</b><p>${esc(s.diagnosis)}</p></div>`:''}<div class="card">${items.map((x:any)=>`<div class="row"><div><b>${esc(x.name)}</b><div class="muted">${esc(x.kind)}</div></div><strong>${money(x.value)}</strong></div>`).join('')}<div class="total">${money(s.total)}</div></div>${r.status==='PENDING'?`<form method="post" class="card"><label>Uwagi (opcjonalnie)</label><textarea name="note"></textarea><div class="buttons"><button class="no" name="decision" value="DECLINED">ODRZUCAM</button><button class="yes" name="decision" value="APPROVED">✓ AKCEPTUJĘ ${money(s.total)}</button></div></form>`:`<div class="card status">${status}</div>`}<p class="muted">Decyzja zostanie zapisana wraz z datą i godziną. Link wygasa ${new Date(r.expires_at).toLocaleString('pl-PL')}.</p></main></html>`
+ return new Response(html,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}})
+})
