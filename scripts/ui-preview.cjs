@@ -120,6 +120,36 @@ app.on('browser-window-created', (_, win) => {
       await capture('orders-repair-added')
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.orderRepairDetail .mini>div:nth-child(2) b').textContent===document.querySelector('.orderrow strong').textContent`),true)
       console.log('ORDER_REPAIR_CASCADE', 'repair selected from 3-level catalog and added as a procedure bundle')
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('button')].find(x=>x.textContent.includes('Nowe zlecenie')).click()`)
+      await delay(350)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.vehicleChoiceList>button').length >= 6`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.newOrderMode>button').length`),2)
+      assert.equal(await win.webContents.executeJavaScript(`getComputedStyle(document.querySelector('.modal')).backgroundColor!==getComputedStyle(document.querySelector('.newOrderStep')).backgroundColor`),true)
+      await capture('new-order-existing-vehicle')
+      const database=require('../electron/db.cjs').getDb()
+      const countsBefore={customers:database.prepare('SELECT COUNT(*) n FROM customers').get().n,vehicles:database.prepare('SELECT COUNT(*) n FROM vehicles').get().n,orders:database.prepare('SELECT COUNT(*) n FROM orders').get().n}
+      await win.webContents.executeJavaScript(`document.querySelector('[data-vehicle-mode="new"]').click()`)
+      await delay(200)
+      await win.webContents.executeJavaScript(`document.querySelector('.ownerMode button:last-child').click()`)
+      await delay(100)
+      await win.webContents.executeJavaScript(`{
+        const setInput=(element,value)=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(element,value);element.dispatchEvent(new Event('input',{bubbles:true}))};
+        setInput(document.querySelector('input[aria-label="Nazwa nowego klienta"]'),'Klient z nowego zlecenia');
+        const plate=[...document.querySelectorAll('.newOrderVehicleCatalog label')].find(x=>x.textContent.startsWith('Nr rej.')).querySelector('input');
+        setInput(plate,'PO TEST1');
+        const make=[...document.querySelectorAll('.newOrderVehicleCatalog label')].find(x=>x.textContent.startsWith('Marka')).querySelector('select');
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(make,'Audi');make.dispatchEvent(new Event('change',{bubbles:true}));
+      }`)
+      await delay(250)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.newOrderActions .primary').disabled`),false)
+      await capture('new-order-new-vehicle')
+      await win.webContents.executeJavaScript(`document.querySelector('.newOrderActions .primary').click()`)
+      await delay(700)
+      assert.equal(database.prepare('SELECT COUNT(*) n FROM customers').get().n,countsBefore.customers+1)
+      assert.equal(database.prepare('SELECT COUNT(*) n FROM vehicles').get().n,countsBefore.vehicles+1)
+      assert.equal(database.prepare('SELECT COUNT(*) n FROM orders').get().n,countsBefore.orders+1)
+      assert.equal(database.prepare("SELECT COUNT(*) n FROM vehicles WHERE plate='PO TEST1' AND make='Audi'").get().n,1)
+      console.log('NEW_ORDER_VEHICLE', 'existing vehicle list and inline customer/vehicle creation verified')
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Szybkie przyjęcie"]').click()`)
       await delay(400)
       assert.equal(await win.webContents.executeJavaScript('window.scrollY'), 0)
