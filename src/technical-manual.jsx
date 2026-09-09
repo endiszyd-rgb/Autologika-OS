@@ -1,4 +1,5 @@
 import React,{useEffect,useMemo,useState} from 'react'
+import './technical-manual.css'
 
 const api=window.autologika
 const LEVELS=['OEM_VERIFIED','VERIFIED','CORROBORATED_SECONDARY','WORKSHOP','UNVERIFIED']
@@ -61,4 +62,3 @@ export default function TechnicalManual({context=null,onClearContext}){
   {stepDraft&&<div className="modalback" onMouseDown={e=>e.target===e.currentTarget&&setStepDraft(null)}><div className="modal"><div className="modalhead"><h2>Dodaj krok procedury</h2><button onClick={()=>setStepDraft(null)}>×</button></div><div className="formgrid"><label className="wide">Tytuł<input autoFocus value={stepDraft.title||''} onChange={e=>setStepDraft({...stepDraft,title:e.target.value})}/></label><label className="wide">Instrukcja<textarea value={stepDraft.instruction||''} onChange={e=>setStepDraft({...stepDraft,instruction:e.target.value})}/></label><label className="wide">Narzędzie / wyposażenie<input value={stepDraft.tool||''} onChange={e=>setStepDraft({...stepDraft,tool:e.target.value})}/></label><label className="wide">Ostrzeżenie<textarea value={stepDraft.warning||''} onChange={e=>setStepDraft({...stepDraft,warning:e.target.value})}/></label></div><div className="actionrow right"><button onClick={()=>setStepDraft(null)}>Anuluj</button><button className="primary" disabled={!stepDraft.title?.trim()} onClick={saveStep}>Dodaj krok</button></div></div></div>}
  </section>
 }
-
