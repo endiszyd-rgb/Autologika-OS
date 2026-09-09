@@ -115,7 +115,21 @@ app.on('browser-window-created', (_, win) => {
       await delay(500)
       assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.manualModule')`),true)
       assert.equal((await inspect()).fatal,false)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.manualBranch>.manualBranchHead').length`),28)
       await capture('technical-manual')
+      await win.webContents.executeJavaScript(`{
+        [...document.querySelectorAll('.manualBranch>.manualBranchHead')].find(x=>x.querySelector('b')?.textContent==='Audi').click();
+      }`)
+      await delay(150)
+      await win.webContents.executeJavaScript(`{
+        [...document.querySelectorAll('.manualBranchDepth1>.manualBranchHead')].find(x=>x.querySelector('b')?.textContent==='A3').click();
+      }`)
+      await delay(150)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.manualVehicleLeaf').length > 0`),true)
+      await win.webContents.executeJavaScript(`document.querySelector('.manualVehicleLeaf').click()`)
+      await delay(150)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.manualWelcome h2').textContent`),'Audi A3')
+      await capture('technical-manual-catalog')
       win.setSize(1100,800)
       await delay(350)
       assert.equal((await inspect()).overflow,false)

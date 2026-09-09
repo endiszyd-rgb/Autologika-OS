@@ -84,6 +84,16 @@
 .manualLeaf > div { display: grid; gap: 2px; min-width: 0; }
 .manualLeaf b { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .manualLeaf em { font-size: 9px; color: #6d7a83; font-style: normal; }
+.manualCatalogVariants { padding-bottom: 8px; }
+.manualGeneration > small { display: block; padding: 8px 12px 5px 40px; color: #697680; font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.manualVehicleLeaf { width: calc(100% - 16px); margin: 2px 8px; padding: 7px 9px 7px 42px; border: 0; border-radius: 8px; background: transparent; color: #d9e0e4; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; text-align: left; }
+.manualVehicleLeaf:hover { background: rgba(255, 255, 255, .045); }
+.manualVehicleLeaf.active { background: rgba(67, 183, 199, .14); box-shadow: inset 2px 0 #5bd1df; }
+.manualVehicleLeaf > span { min-width: 38px; color: #6acdd9; font-size: 9px; font-weight: 700; }
+.manualVehicleLeaf > div { min-width: 0; display: grid; gap: 1px; }
+.manualVehicleLeaf b { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.manualVehicleLeaf em { overflow: hidden; color: #66747d; font-size: 9px; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+.manualDocumentLeaf { margin-left: 12px; width: calc(100% - 24px); padding-left: 12px; }
 
 .manualCanvasArea { min-width: 0; padding: 16px; background: radial-gradient(circle at 55% 10%, #17232a, #0f161a 46%, #0b1115); }
 .manualPageHeader { display: flex; justify-content: space-between; gap: 20px; align-items: center; margin-bottom: 12px; }
@@ -159,7 +169,7 @@
 .manualSourceStrip b { font-size: 12px; }
 .manualSourceStrip span { max-width: 800px; overflow: hidden; color: #71838d; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .manualImportChoice { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
-.manualWelcome { height: 650px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #778b96; }
+.manualWelcome { height: 650px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28px; text-align: center; color: #778b96; }
 .manualWelcome > div { font-size: 72px; color: #3e5968; }
 .manualWelcome h2 { margin: 8px 0; color: #dbe6eb; }
 .manualWelcome p { max-width: 500px; line-height: 1.6; }
