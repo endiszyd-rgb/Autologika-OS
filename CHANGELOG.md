@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2 — 2026-09-10
+
+### Poprawki
+
+- Autofill z kodu AZTEC dopasowuje markę i model z dowodu rejestracyjnego do wartości katalogowych niezależnie od wielkości liter i znaków diakrytycznych.
+- Marki i modele spoza katalogu pozostają widoczne jako dane wpisane ręcznie.
+
 ## 1.0.1 — 2026-09-10
 
 ### Nowości

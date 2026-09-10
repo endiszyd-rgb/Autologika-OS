@@ -23,6 +23,9 @@ const statuses=['PRZYJETE','DIAGNOZA','AKCEPTACJA','NAPRAWA','GOTOWE','WYDANE']
 const labels={PRZYJETE:'Przyjęte',DIAGNOZA:'Diagnoza',AKCEPTACJA:'Akceptacja',NAPRAWA:'Naprawa',GOTOWE:'Gotowe',WYDANE:'Wydane'}
 const isoLocal=d=>{const x=new Date(d.getTime()-d.getTimezoneOffset()*60000);return x.toISOString().slice(0,16)}
 const durText=m=>{m=Math.round(Number(m||0));return `${Math.floor(m/60)}h ${m%60}m`}
+const catalogKey=value=>String(value||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleUpperCase('pl-PL').replace(/[^A-Z0-9]/g,'')
+const catalogMatch=(items,value)=>items.find(item=>catalogKey(item)===catalogKey(value))||String(value||'').trim()
+const canonicalVehicleForm=form=>{const make=catalogMatch(vehicleMakes,form?.make),model=catalogMatch(vehicleModels(make),form?.model);return {...form,make,model}}
 const deletionImpact=preview=>{const c=preview?.counts||{};return [`Pojazdy: ${c.vehicles||0}`,`Zlecenia i ich dane: ${c.orders||0}`,`Załączniki: ${c.attachments||0}`,`Terminy odłączone od rekordu: ${c.appointments||0}`].join('\n')}
 const nextAction=o=>{
  if(!o)return {tone:'neutral',title:'Wybierz zlecenie',detail:'Brak aktywnego zlecenia'}
@@ -490,7 +493,7 @@ function NewEmployee({close,saved}){const[d,setD]=useState({name:'',role:'Mechan
 
 function QuickIntake({changed,go,initialScan}){
  const blank={customer_name:'',customer_phone:'',customer_email:'',company:'',plate:'',vin:'',make:'',model:'',generation:'',year:'',engine:'',power_hp:'',engine_code:'',mileage:'',title:'Diagnostyka / naprawa',complaint:'',diagnosis_limit:350,labor_rate:220,diagnosis_fee:0,priority:'NORMALNY',source:'nieznane',due_at:'',intake_notes:''}
- const[d,setD]=useState(()=>({...blank,...(initialScan?.registration?.form||{}),vin:initialScan?.registration?.form?.vin||initialScan?.vin||'',intake_notes:initialScan?.registration?.form?.intake_notes||(initialScan?.vin?`VIN odczytany skanerem Zebra ${new Date(initialScan.capturedAt||Date.now()).toLocaleString('pl-PL')}`:'')})),[saving,setSaving]=useState(false),[created,setCreated]=useState(null)
+ const[d,setD]=useState(()=>{const registration=canonicalVehicleForm(initialScan?.registration?.form||{});return {...blank,...registration,vin:registration.vin||initialScan?.vin||'',intake_notes:registration.intake_notes||(initialScan?.vin?`VIN odczytany skanerem Zebra ${new Date(initialScan.capturedAt||Date.now()).toLocaleString('pl-PL')}`:'')}}),[saving,setSaving]=useState(false),[created,setCreated]=useState(null)
  const save=async()=>{if(!d.customer_name||!d.title||(!d.plate&&!d.vin))return;setSaving(true);try{const r=await api.intake.create(d);setCreated(r);changed?.()}finally{setSaving(false)}}
  if(created)return <section><div className="successIntake"><b>✓ Zlecenie #{created.order_id} utworzone</b><span>Klient, pojazd i zlecenie są już połączone w bazie.</span><div><button onClick={()=>{setD(blank);setCreated(null)}}>Przyjmij kolejne auto</button><button className="primary" onClick={()=>go?.('center')}>Otwórz Centrum zlecenia →</button></div></div></section>
  return <section className="intakePage">{(initialScan?.vin||initialScan?.registration?.ok)&&<div className="scannerIntakeNotice"><span>✓</span><div><b>{initialScan?.registration?.ok?'Dowód rejestracyjny odczytany automatycznie':'VIN pobrany ze skanera Zebra'}</b><small>{d.plate?`${d.plate} · `:''}{d.vin} · sprawdź zgodność z dokumentem przed zapisaniem</small></div></div>}<div className="intakeIntro"><div><b>PRZYJĘCIE W JEDNYM EKRANIE</b><h2>Klient → auto → zlecenie</h2><p>Jeśli numer telefonu lub VIN już istnieje, system wykorzysta istniejący rekord zamiast tworzyć duplikat.</p></div><div className="intakeBadge">TABLET READY</div></div>
@@ -522,7 +525,7 @@ function VinScanner({onUseScan}){
 }
 
 function VehicleIntakePanel({d,setD}){
- const[manualMake,setManualMake]=useState(false),[manualModel,setManualModel]=useState(false),[manualGeneration,setManualGeneration]=useState(false),[manualYear,setManualYear]=useState(false),[manualEngine,setManualEngine]=useState(false),[manualPower,setManualPower]=useState(false),[manualCode,setManualCode]=useState(false)
+ const[manualMake,setManualMake]=useState(()=>Boolean(d.make&&!vehicleMakes.includes(d.make))),[manualModel,setManualModel]=useState(()=>Boolean(d.model&&!vehicleModels(d.make).includes(d.model))),[manualGeneration,setManualGeneration]=useState(false),[manualYear,setManualYear]=useState(false),[manualEngine,setManualEngine]=useState(false),[manualPower,setManualPower]=useState(false),[manualCode,setManualCode]=useState(false)
  const models=vehicleModels(d.make)
  const generations=vehicleGenerations(d.make,d.model)
  const hasDetails=generations.length>0

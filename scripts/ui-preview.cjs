@@ -6,6 +6,7 @@ const os = require('node:os')
 const assert = require('node:assert/strict')
 app.setPath('userData', fs.mkdtempSync(path.join(os.tmpdir(), 'autologika-ui-')))
 const output = path.join(__dirname, '..', 'artifacts', 'ui')
+const registrationSample = fs.readFileSync(path.join(__dirname, '..', 'tests', 'fixtures', 'polish-registration-base64.txt'), 'utf8').trim()
 fs.mkdirSync(output, { recursive: true })
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 const errors = []
@@ -264,6 +265,21 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.scannerIntakeNotice').textContent.includes('WVWZZZ1JZXW000001')`),true)
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('VIN')).querySelector('input').value`),'WVWZZZ1JZXW000001')
       console.log('ZEBRA_SCAN_INTAKE','captured scan persisted and VIN transferred to quick intake')
+      await win.webContents.executeJavaScript(`document.querySelector('nav button[title="VIN / AZTEC"]').click()`)
+      await delay(300)
+      await win.webContents.executeJavaScript(`{
+        const field=document.querySelector('.scanRaw.lab');
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(field,${JSON.stringify(registrationSample)});
+        field.dispatchEvent(new Event('input',{bubbles:true}));
+        field.closest('.panel').querySelector('button.primary').click();
+      }`)
+      await delay(500)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.registrationDecoded').textContent.includes('TOYOTA')`),true)
+      await win.webContents.executeJavaScript(`document.querySelector('.scanResult').closest('.panel').querySelector('.actionrow button.primary').click()`)
+      await delay(350)
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Marka')).querySelector('select').value`),'Toyota')
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Model')).querySelector('select').value`),'Corolla')
+      console.log('AZTEC_VEHICLE_AUTOFILL','decoded uppercase make and model matched catalog values in quick intake')
       assert.equal(await win.webContents.executeJavaScript('window.scrollY'), 0)
       await capture('intake')
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Workflow"]').click()`)
@@ -362,10 +378,11 @@ app.on('browser-window-created', (_, win) => {
       await delay(250)
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Ustawienia"]').click()`)
       await delay(450)
-      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.updateBrand h2').textContent`),'Wersja 1.0.0')
+      const expectedVersion=require('../package.json').version
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.updateBrand h2').textContent`),`Wersja ${expectedVersion}`)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.updateMessage').textContent.includes('trybie developerskim')`),true)
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.updateActions button')].some(x=>x.textContent.includes('Sprawdź aktualizacje'))`),true)
-      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.sidefoot').textContent.includes('1.0.0')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.sidefoot').textContent.includes(${JSON.stringify(expectedVersion)})`),true)
       await capture('settings-updates')
       assert.equal((await inspect()).fatal,false)
       await win.webContents.executeJavaScript(`document.querySelector('.commandLauncher').click()`)
