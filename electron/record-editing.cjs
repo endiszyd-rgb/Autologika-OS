@@ -16,8 +16,8 @@ function customerData(input={}){
 }
 
 function vehicleData(db,input={},excludeId=0){
- const customer_id=Number(input.customer_id),plate=normalizedPlate(input.plate),vin=normalizedVin(input.vin),make=text(input.make),model=text(input.model)
- if(!Number.isInteger(customer_id)||!db.prepare('SELECT id FROM customers WHERE id=?').get(customer_id))throw new Error('Wybierz istniejącego klienta.')
+ const rawCustomerId=input.customer_id,customer_id=rawCustomerId===null||rawCustomerId===undefined||String(rawCustomerId).trim()===''?null:Number(rawCustomerId),plate=normalizedPlate(input.plate),vin=normalizedVin(input.vin),make=text(input.make),model=text(input.model)
+ if(customer_id!==null&&(!Number.isInteger(customer_id)||!db.prepare('SELECT id FROM customers WHERE id=?').get(customer_id)))throw new Error('Wybrany klient nie istnieje.')
  if(!make)throw new Error('Wybierz lub wpisz markę pojazdu.')
  if(!plate&&!vin)throw new Error('Podaj numer rejestracyjny lub VIN.')
  if(vin&&!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin))throw new Error('VIN musi mieć 17 prawidłowych znaków.')

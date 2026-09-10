@@ -33,3 +33,16 @@ test('vehicle records normalize identifiers, prevent duplicates and remain edita
  assert.deepEqual({...db.prepare('SELECT plate,model,engine_code,mileage FROM vehicles WHERE id=?').get(first.id)},{plate:'PO 34 CD',model:'Golf',engine_code:'CAXA',mileage:121500})
 })
 
+
+
+test('vehicle can be created and edited without creating or selecting a customer',()=>{
+ const db=fixture()
+ const customersBefore=db.prepare('SELECT COUNT(*) n FROM customers').get().n
+ const created=createVehicle(db,{customer_id:null,plate:'WE 1234A',make:'Toyota',model:'Corolla'})
+ assert.deepEqual({...db.prepare('SELECT customer_id,plate,make,model FROM vehicles WHERE id=?').get(created.id)},{customer_id:null,plate:'WE 1234A',make:'Toyota',model:'Corolla'})
+ assert.equal(db.prepare('SELECT COUNT(*) n FROM customers').get().n,customersBefore)
+ updateVehicle(db,created.id,{customer_id:1,plate:'WE 1234A',make:'Toyota',model:'Corolla'})
+ assert.equal(db.prepare('SELECT customer_id FROM vehicles WHERE id=?').get(created.id).customer_id,1)
+ updateVehicle(db,created.id,{customer_id:'',plate:'WE 1234A',make:'Toyota',model:'Corolla'})
+ assert.equal(db.prepare('SELECT customer_id FROM vehicles WHERE id=?').get(created.id).customer_id,null)
+})

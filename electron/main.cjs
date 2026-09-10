@@ -163,7 +163,7 @@ ipcMain.handle('settings:resetCatalogOverride',(_e,variantId)=>{const map=readCa
 const orderSelect = `SELECT o.*,v.id vehicle_id,v.plate,v.make,v.model,v.generation,v.year,v.vin,v.mileage,v.engine,v.power_hp,v.engine_code,c.name customer,c.phone,c.email,
   ROUND(o.labor_hours*o.labor_rate+o.parts_sale+o.other_sale+o.diagnosis_fee-o.discount,2) total,
   ROUND((o.labor_hours*o.labor_rate+o.parts_sale+o.other_sale+o.diagnosis_fee-o.discount)-(o.parts_cost+o.other_cost),2) contribution
-  FROM orders o JOIN vehicles v ON v.id=o.vehicle_id JOIN customers c ON c.id=v.customer_id`
+  FROM orders o JOIN vehicles v ON v.id=o.vehicle_id LEFT JOIN customers c ON c.id=v.customer_id`
 
 
 
@@ -372,7 +372,7 @@ ipcMain.handle('customers:create',(_,d)=>createCustomer(getDb(),d))
 ipcMain.handle('customers:update',(_,{id,data})=>updateCustomer(getDb(),id,data))
 ipcMain.handle('customers:deletePreview',(_,id)=>deletionPreview(getDb(),'customer',id))
 ipcMain.handle('customers:remove',(_,id)=>removeEntity(getDb(),'customer',id,{unlink:file=>fs.unlinkSync(file)}))
-ipcMain.handle('vehicles:list',(_,customerId)=>customerId?getDb().prepare('SELECT * FROM vehicles WHERE customer_id=? ORDER BY created_at DESC').all(customerId):getDb().prepare(`SELECT v.*,c.name customer FROM vehicles v JOIN customers c ON c.id=v.customer_id ORDER BY v.created_at DESC`).all())
+ipcMain.handle('vehicles:list',(_,customerId)=>customerId?getDb().prepare('SELECT * FROM vehicles WHERE customer_id=? ORDER BY created_at DESC').all(customerId):getDb().prepare(`SELECT v.*,c.name customer FROM vehicles v LEFT JOIN customers c ON c.id=v.customer_id ORDER BY v.created_at DESC`).all())
 ipcMain.handle('vehicles:create',(_,d)=>createVehicle(getDb(),d))
 ipcMain.handle('vehicles:update',(_,{id,data})=>updateVehicle(getDb(),id,data))
 ipcMain.handle('vehicles:deletePreview',(_,id)=>deletionPreview(getDb(),'vehicle',id))
@@ -382,7 +382,7 @@ ipcMain.handle('vehicles:history',(_,id)=>getDb().prepare(`${orderSelect} WHERE 
 // --- 0.33 DEV: Vehicle Intelligence 2.0 -----------------------------------
 ipcMain.handle('vehicles:profile',(_,id)=>{
   const db=getDb()
-  const vehicle=db.prepare(`SELECT v.*,c.name customer,c.phone,c.email FROM vehicles v JOIN customers c ON c.id=v.customer_id WHERE v.id=?`).get(id)
+  const vehicle=db.prepare(`SELECT v.*,c.name customer,c.phone,c.email FROM vehicles v LEFT JOIN customers c ON c.id=v.customer_id WHERE v.id=?`).get(id)
   if(!vehicle)return null
   const orders=db.prepare(`${orderSelect} WHERE o.vehicle_id=? ORDER BY o.opened_at DESC`).all(id)
   const findings=db.prepare(`SELECT * FROM vehicle_findings WHERE vehicle_id=? AND deleted_at IS NULL ORDER BY CASE status WHEN 'OPEN' THEN 0 WHEN 'MONITOR' THEN 1 ELSE 2 END,CASE severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END,created_at DESC`).all(id)
@@ -465,7 +465,7 @@ ipcMain.handle('knowledge:list',(_,q='')=>getDb().prepare(`SELECT * FROM knowled
 ipcMain.handle('knowledge:create',(_,d)=>{const r=getDb().prepare('INSERT INTO knowledge_cases(vehicle,engine,symptom,dtcs,measurements,cause,solution,tags,source_order_id) VALUES (?,?,?,?,?,?,?,?,?)').run(d.vehicle||'',d.engine||'',d.symptom,d.dtcs||'',d.measurements||'',d.cause||'',d.solution||'',d.tags||'',d.source_order_id||null);return{id:r.lastInsertRowid}})
 ipcMain.handle('knowledge:fromOrder',(_,orderId)=>{const db=getDb();const o=db.prepare(`${orderSelect} WHERE o.id=?`).get(orderId);const d=db.prepare('SELECT * FROM diagnostics WHERE order_id=? ORDER BY id DESC LIMIT 1').get(orderId);if(!o||!d)return{ok:false,error:'Brak zlecenia lub diagnostyki'};const r=db.prepare('INSERT INTO knowledge_cases(vehicle,engine,symptom,dtcs,measurements,cause,solution,tags,source_order_id) VALUES (?,?,?,?,?,?,?,?,?)').run(`${o.make} ${o.model}`,o.engine||'',o.complaint||o.title,d.dtcs||'',d.measurements||'',d.conclusion||'',d.recommendation||'',o.make||'',orderId);return{ok:true,id:r.lastInsertRowid}})
 
-ipcMain.handle('reminders:list',()=>getDb().prepare(`SELECT r.*,v.plate,v.make,v.model,c.name customer FROM reminders r JOIN vehicles v ON v.id=r.vehicle_id JOIN customers c ON c.id=v.customer_id WHERE done=0 ORDER BY COALESCE(due_date,'9999-12-31')`).all())
+ipcMain.handle('reminders:list',()=>getDb().prepare(`SELECT r.*,v.plate,v.make,v.model,c.name customer FROM reminders r JOIN vehicles v ON v.id=r.vehicle_id LEFT JOIN customers c ON c.id=v.customer_id WHERE done=0 ORDER BY COALESCE(due_date,'9999-12-31')`).all())
 ipcMain.handle('reminders:create',(_,d)=>{const r=getDb().prepare('INSERT INTO reminders(vehicle_id,title,due_date,due_mileage) VALUES (?,?,?,?)').run(d.vehicle_id,d.title,d.due_date||null,d.due_mileage||null);return{id:r.lastInsertRowid}})
 ipcMain.handle('reminders:done',(_,id)=>{getDb().prepare('UPDATE reminders SET done=1 WHERE id=?').run(id);return true})
 
@@ -548,7 +548,7 @@ async function prepareUpdateInstall({currentVersion,targetVersion}){
 }
 
 // --- Autologika OS 0.4 ------------------------------------------------------
-ipcMain.handle('vehicles:findByVin',(_,vin)=>getDb().prepare(`SELECT v.*,c.name customer,c.phone FROM vehicles v JOIN customers c ON c.id=v.customer_id WHERE UPPER(REPLACE(v.vin,' ',''))=? LIMIT 1`).get(String(vin||'').replace(/\s/g,'').toUpperCase())||null)
+ipcMain.handle('vehicles:findByVin',(_,vin)=>getDb().prepare(`SELECT v.*,c.name customer,c.phone FROM vehicles v LEFT JOIN customers c ON c.id=v.customer_id WHERE UPPER(REPLACE(v.vin,' ',''))=? LIMIT 1`).get(String(vin||'').replace(/\s/g,'').toUpperCase())||null)
 
 ipcMain.handle('employees:list',()=>getDb().prepare(`SELECT e.*,
   COALESCE(SUM(CASE WHEN strftime('%Y-%m',w.started_at)=strftime('%Y-%m','now','localtime') THEN COALESCE(w.duration_minutes,(julianday('now')-julianday(w.started_at))*1440) ELSE 0 END),0) minutes_month,
@@ -566,7 +566,7 @@ ipcMain.handle('worklog:productivity',()=>getDb().prepare(`SELECT e.id,e.name,e.
 ipcMain.handle('suppliers:list',()=>getDb().prepare('SELECT * FROM suppliers ORDER BY name').all())
 ipcMain.handle('suppliers:create',(_,d)=>{const r=getDb().prepare('INSERT INTO suppliers(name,phone,email,account_no,notes) VALUES (?,?,?,?,?)').run(d.name,d.phone||'',d.email||'',d.account_no||'',d.notes||'');return{id:r.lastInsertRowid}})
 
-ipcMain.handle('jobParts:list',(_,filter='OTWARTE')=>{const db=getDb();let where="";if(filter==='OTWARTE')where="WHERE j.status NOT IN ('ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE')";else if(filter!=='WSZYSTKIE')where="WHERE j.status=?";const sql=`SELECT j.*,s.name supplier,o.vehicle_id,v.plate,v.make,v.model,c.name customer FROM job_part_orders j JOIN orders o ON o.id=j.order_id JOIN vehicles v ON v.id=o.vehicle_id JOIN customers c ON c.id=v.customer_id LEFT JOIN suppliers s ON s.id=j.supplier_id ${where} ORDER BY CASE j.status WHEN 'DO_ZAMOWIENIA' THEN 0 WHEN 'ZAMOWIONE' THEN 1 WHEN 'W_DRODZE' THEN 2 WHEN 'ODEBRANE' THEN 3 WHEN 'DO_ZWROTU' THEN 4 ELSE 5 END,j.created_at DESC`;return filter!=='OTWARTE'&&filter!=='WSZYSTKIE'?db.prepare(sql).all(filter):db.prepare(sql).all()})
+ipcMain.handle('jobParts:list',(_,filter='OTWARTE')=>{const db=getDb();let where="";if(filter==='OTWARTE')where="WHERE j.status NOT IN ('ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE')";else if(filter!=='WSZYSTKIE')where="WHERE j.status=?";const sql=`SELECT j.*,s.name supplier,o.vehicle_id,v.plate,v.make,v.model,c.name customer FROM job_part_orders j JOIN orders o ON o.id=j.order_id JOIN vehicles v ON v.id=o.vehicle_id LEFT JOIN customers c ON c.id=v.customer_id LEFT JOIN suppliers s ON s.id=j.supplier_id ${where} ORDER BY CASE j.status WHEN 'DO_ZAMOWIENIA' THEN 0 WHEN 'ZAMOWIONE' THEN 1 WHEN 'W_DRODZE' THEN 2 WHEN 'ODEBRANE' THEN 3 WHEN 'DO_ZWROTU' THEN 4 ELSE 5 END,j.created_at DESC`;return filter!=='OTWARTE'&&filter!=='WSZYSTKIE'?db.prepare(sql).all(filter):db.prepare(sql).all()})
 ipcMain.handle('jobParts:forOrder',(_,orderId)=>getDb().prepare(`SELECT j.*,s.name supplier FROM job_part_orders j LEFT JOIN suppliers s ON s.id=j.supplier_id WHERE j.order_id=? ORDER BY j.created_at DESC`).all(orderId))
 ipcMain.handle('jobParts:create',(_,d)=>{const db=getDb();let price=+d.unit_price||0;if(!price)price=Math.round((+d.unit_cost||0)*(1+partMarkup(+d.unit_cost||0))*100)/100;const r=db.prepare(`INSERT INTO job_part_orders(order_id,supplier_id,part_no,name,qty,unit_cost,unit_price,status,external_order_no,expected_at,ordered_at,notes) VALUES (?,?,?,?,?,?,?,?,?,?,CASE WHEN ? IN ('ZAMOWIONE','W_DRODZE','ODEBRANE') THEN CURRENT_TIMESTAMP ELSE NULL END,?)`).run(d.order_id,d.supplier_id||null,d.part_no||'',d.name,+d.qty||1,+d.unit_cost||0,price,d.status||'DO_ZAMOWIENIA',d.external_order_no||'',d.expected_at||null,d.status||'DO_ZAMOWIENIA',d.notes||'');return{id:r.lastInsertRowid,unit_price:price}})
 ipcMain.handle('jobParts:status',(_,{id,status})=>{const db=getDb();db.prepare(`UPDATE job_part_orders SET status=?,updated_at=CURRENT_TIMESTAMP,ordered_at=CASE WHEN ?='ZAMOWIONE' AND ordered_at IS NULL THEN CURRENT_TIMESTAMP ELSE ordered_at END,received_at=CASE WHEN ?='ODEBRANE' THEN CURRENT_TIMESTAMP ELSE received_at END,installed_at=CASE WHEN ?='ZAMONTOWANE' THEN CURRENT_TIMESTAMP ELSE installed_at END,returned_at=CASE WHEN ?='ZWROT_ZAKONCZONY' THEN CURRENT_TIMESTAMP ELSE returned_at END WHERE id=?`).run(status,status,status,status,status,id);if(status==='ZAMONTOWANE'){const x=db.prepare('SELECT * FROM job_part_orders WHERE id=?').get(id);const exists=db.prepare("SELECT id FROM order_items WHERE order_id=? AND kind='CZESC' AND name=? AND ABS(qty-?)<0.0001 AND ABS(unit_cost-?)<0.0001 ORDER BY id DESC LIMIT 1").get(x.order_id,x.name,x.qty,x.unit_cost);if(!exists){db.prepare("INSERT INTO order_items(order_id,kind,name,qty,unit_cost,unit_price,part_no,supplier,notes) VALUES (?,'CZESC',?,?,?,?,?,?,?)").run(x.order_id,x.name,x.qty,x.unit_cost,x.unit_price,x.part_no||'',(db.prepare('SELECT name FROM suppliers WHERE id=?').get(x.supplier_id)||{}).name||'',`Zamówienie ${x.external_order_no||''}`);syncOrderItemTotals(x.order_id)}}return true})
@@ -691,7 +691,7 @@ ipcMain.handle('debtors:list',()=>{
     ROUND(o.total-COALESCE((SELECT SUM(amount) FROM payments p WHERE p.order_id=o.id),0),2) balance
     FROM orders o
     JOIN vehicles v ON v.id=o.vehicle_id
-    JOIN customers c ON c.id=v.customer_id
+    LEFT JOIN customers c ON c.id=v.customer_id
     WHERE ROUND(o.total-COALESCE((SELECT SUM(amount) FROM payments p WHERE p.order_id=o.id),0),2)>0.01
       AND o.status IN ('GOTOWE','WYDANE')
     ORDER BY balance DESC,o.opened_at`)

@@ -247,11 +247,24 @@ app.on('browser-window-created', (_, win) => {
         const field=[...document.querySelectorAll('.modal label')].find(x=>x.textContent.includes('Przebieg')).querySelector('input');
         Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,'76543');
         field.dispatchEvent(new Event('input',{bubbles:true}));
-        [...document.querySelectorAll('.modal button')].find(x=>x.textContent==='Zapisz').click();
+        [...document.querySelectorAll('.modal button')].find(x=>x.textContent==='Zapisz pojazd').click();
       }`)
       await delay(300)
       assert.equal(database.prepare('SELECT mileage FROM vehicles WHERE id=?').get(vehicleOnly).mileage,76543)
       console.log('CUSTOMER_VEHICLE_EDIT','customer company and vehicle mileage editing verified')
+      const standaloneCustomersBefore=database.prepare('SELECT COUNT(*) n FROM customers').get().n
+      await win.webContents.executeJavaScript(`document.querySelector('.standaloneVehicleButton').click()`)
+      await delay(200)
+      await win.webContents.executeJavaScript(`{
+        const setInput=(label,value)=>{const field=[...document.querySelectorAll('.modal label')].find(x=>x.textContent.startsWith(label)).querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,value);field.dispatchEvent(new Event('input',{bubbles:true}))};
+        setInput('Nr rej.','PO SOLO1');setInput('Marka','Toyota');setInput('Model','Corolla');
+        [...document.querySelectorAll('.modal button')].find(x=>x.textContent==='Zapisz pojazd').click();
+      }`)
+      await delay(400)
+      assert.equal(database.prepare("SELECT COUNT(*) n FROM vehicles WHERE plate='PO SOLO1' AND customer_id IS NULL").get().n,1)
+      assert.equal(database.prepare('SELECT COUNT(*) n FROM customers').get().n,standaloneCustomersBefore)
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.standaloneVehicleRow')].some(x=>x.textContent.includes('PO SOLO1')&&x.textContent.includes('Bez w?a?ciciela'))`),true)
+      console.log('STANDALONE_VEHICLE','vehicle saved and displayed without creating or selecting a customer')
       await win.webContents.executeJavaScript(`window.confirm=()=>true;[...document.querySelectorAll('[aria-label]')].find(x=>x.getAttribute('aria-label').includes('PO DELETE')&&x.classList.contains('recordDelete')).click()` )
       await delay(350)
       assert.equal(database.prepare('SELECT COUNT(*) n FROM vehicles WHERE id=?').get(vehicleOnly).n,0)

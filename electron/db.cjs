@@ -5,7 +5,7 @@ const { app } = require('electron')
 const { seedTechnicalReference } = require('./technical-seed.cjs')
 
 let db
-const SCHEMA_VERSION = 1
+const SCHEMA_VERSION = 2
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -72,11 +72,39 @@ function getDb() {
 
 function migrate(db,currentVersion=0) {
   if(currentVersion>=SCHEMA_VERSION)return
-  const upgrade=db.transaction(()=>{
-    migrateSchemaV1(db)
-    db.pragma(`user_version = ${SCHEMA_VERSION}`)
-  })
-  upgrade()
+  if(currentVersion<1){
+    db.transaction(()=>{migrateSchemaV1(db);db.pragma('user_version = 1')})()
+    currentVersion=1
+  }
+  if(currentVersion<2){
+    // SQLite nie pozwala usunąć NOT NULL przez ALTER TABLE. Odtwarzamy wyłącznie
+    // tabelę pojazdów, zachowując wszystkie kolumny, indeksy, triggery i dane.
+    db.pragma('foreign_keys = OFF')
+    try{
+      db.transaction(()=>{migrateSchemaV2(db);db.pragma('user_version = 2')})()
+    }finally{
+      db.pragma('foreign_keys = ON')
+    }
+    const foreignKeyErrors=db.pragma('foreign_key_check')
+    if(foreignKeyErrors.length)throw new Error('Migracja pojazdów naruszyła spójność bazy danych.')
+  }
+}
+
+function migrateSchemaV2(db){
+  const table=db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='vehicles'").get()
+  if(!table?.sql)throw new Error('Nie znaleziono tabeli pojazdów podczas migracji.')
+  const customerColumn=db.prepare("PRAGMA table_info(vehicles)").all().find(column=>column.name==='customer_id')
+  if(!customerColumn?.notnull)return
+  const dependentSchema=db.prepare("SELECT sql FROM sqlite_master WHERE tbl_name='vehicles' AND type IN ('index','trigger') AND sql IS NOT NULL").all().map(row=>row.sql)
+  const columns=db.prepare('PRAGMA table_info(vehicles)').all().map(column=>`"${column.name.replace(/"/g,'""')}"`).join(',')
+  const createSql=table.sql
+    .replace(/^CREATE TABLE\s+(?:IF NOT EXISTS\s+)?["`\[]?vehicles["`\]]?/i,'CREATE TABLE vehicles_v2')
+    .replace(/customer_id\s+INTEGER\s+NOT NULL/i,'customer_id INTEGER')
+  db.exec(createSql)
+  db.exec(`INSERT INTO vehicles_v2 (${columns}) SELECT ${columns} FROM vehicles`)
+  db.exec('DROP TABLE vehicles')
+  db.exec('ALTER TABLE vehicles_v2 RENAME TO vehicles')
+  for(const sql of dependentSchema)db.exec(sql)
 }
 
 function migrateSchemaV1(db) {
