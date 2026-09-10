@@ -16,8 +16,11 @@ app.on('browser-window-created', (_, win) => {
   })
   win.webContents.once('did-finish-load', async () => {
     try {
-      await delay(1200)
       const capture = async name => fs.writeFileSync(path.join(output, `${name}.png`), (await win.webContents.capturePage()).toPNG())
+      await delay(450)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.bootSplash') !== null`), true)
+      await capture('boot-splash')
+      await delay(750)
       const inspect = () => win.webContents.executeJavaScript(`({fatal:!!document.querySelector('.fatalScreen'),overflow:document.documentElement.scrollWidth>innerWidth,radar:document.querySelectorAll('.studioBlip').length,title:document.querySelector('header h1')?.textContent})`)
       const dashboard = await inspect()
       assert.equal(dashboard.fatal, false)
@@ -251,12 +254,12 @@ app.on('browser-window-created', (_, win) => {
         Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(field,'WVWZZZ1JZXW000001');
         field.dispatchEvent(new Event('input',{bubbles:true}));
       }`)
-      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.scannerGrid button')].find(x=>x.textContent.includes('Analizuj RAW')).click()`)
+      await win.webContents.executeJavaScript(`document.querySelector('.scanRaw.lab').closest('.panel').querySelector('button.primary').click()`)
       await delay(350)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.scanResult b').textContent`),'WVWZZZ1JZXW000001')
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.scanSaved').classList.contains('ok')`),true)
       await capture('zebra-scanner')
-      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.scannerGrid button')].find(x=>x.textContent.includes('Użyj w szybkim przyjęciu')).click()`)
+      await win.webContents.executeJavaScript(`document.querySelector('.scanResult').closest('.panel').querySelector('.actionrow button.primary').click()`)
       await delay(400)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.scannerIntakeNotice').textContent.includes('WVWZZZ1JZXW000001')`),true)
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('VIN')).querySelector('input').value`),'WVWZZZ1JZXW000001')

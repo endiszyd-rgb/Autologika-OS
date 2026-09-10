@@ -11,6 +11,7 @@ const { findQuoteApproval, assertQuoteEditable } = require('./quote-approval.cjs
 const { listAppointments, createAppointment, updateAppointment, removeAppointment } = require('./appointments.cjs')
 const { deletionPreview, removeEntity } = require('./entity-deletion.cjs')
 const { createCustomer, updateCustomer, createVehicle, updateVehicle } = require('./record-editing.cjs')
+const { decodeRegistrationPayload } = require('./registration-decoder.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -18,6 +19,7 @@ app.disableHardwareAcceleration()
 function createWindow(){
   const win = new BrowserWindow({
     width:1500,height:940,minWidth:1100,minHeight:720,backgroundColor:'#090b0d',
+    icon:path.join(__dirname,'..','build','icon.png'),
     show:false,
     webPreferences:{
       preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,
@@ -60,6 +62,7 @@ ipcMain.handle('zebra:recordCapture',(_event,payload={})=>{
   return {ok:true,path:zebraCapturePath(),capturedAt}
 })
 ipcMain.handle('zebra:capturePath',()=>zebraCapturePath())
+ipcMain.handle('zebra:decodeRegistration',(_event,payload)=>decodeRegistrationPayload(payload))
 
 app.whenReady().then(async()=>{
   try{getDb()}catch(error){

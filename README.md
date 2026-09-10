@@ -2,6 +2,12 @@
 
 Instalowalna aplikacja Windows 10/11 x64 z lokalną bazą SQLite, instalatorem NSIS i przygotowanymi aktualizacjami przez GitHub Releases. Dane warsztatu pozostają w katalogu Electron `userData` i nie są częścią katalogu instalacyjnego.
 
+## Skaner Zebra i dowód rejestracyjny
+
+Moduł VIN / AZTEC odbiera skany przez USB HID oraz surowe dane Zebra CoreScanner/SNAPI. Polski dowód rejestracyjny jest dekodowany automatycznie, a rejestracja, VIN, marka, model, rok, silnik, moc i dane posiadacza mogą jednym kliknięciem uzupełnić formularz Szybkiego przyjęcia. Każdy skan pozostaje zapisany lokalnie do diagnostyki.
+
+Dekodowanie standardu dowodu korzysta z pakietu [`polish-vehicle-registration-certificate-decoder`](https://github.com/dex4er/js-polish-vehicle-registration-certificate-decoder), udostępnionego na licencji GPL-2.0.
+
 ## Wersja produkcyjna i instalator
 
 ```powershell
