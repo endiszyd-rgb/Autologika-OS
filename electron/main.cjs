@@ -9,6 +9,7 @@ const cloudSync = require('./cloud-sync.cjs')
 const updater = require('./updater.cjs')
 const { findQuoteApproval, assertQuoteEditable } = require('./quote-approval.cjs')
 const { listAppointments, createAppointment, updateAppointment, removeAppointment } = require('./appointments.cjs')
+const { deletionPreview, removeEntity } = require('./entity-deletion.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -49,6 +50,15 @@ ipcMain.handle('zebra:environment', async()=>{
   }
   return {platform:process.platform,sdkInstalled:candidates.length>0,paths:candidates,coreScannerService:service,ready:process.platform==='win32'&&candidates.length>0&&service==='RUNNING'}
 })
+
+function zebraCapturePath(){return path.join(app.getPath('userData'),'zebra-scanner-captures.jsonl')}
+ipcMain.handle('zebra:recordCapture',(_event,payload={})=>{
+  const capturedAt=String(payload.capturedAt||new Date().toISOString())
+  const record={capturedAt,kind:String(payload.kind||'UNKNOWN'),vin:String(payload.vin||''),length:Number(payload.length||0),byteLength:Number(payload.byteLength||0),raw:String(payload.raw||'').slice(0,500000),original:String(payload.original||'').slice(0,500000),sdk:payload.sdk?{source:String(payload.sdk.source||''),scannerId:String(payload.sdk.scannerId||''),model:String(payload.sdk.model||''),serial:String(payload.sdk.serial||''),datatype:String(payload.sdk.datatype||''),hex:String(payload.sdk.hex||'').slice(0,1000000)}:null}
+  fs.appendFileSync(zebraCapturePath(),JSON.stringify(record)+'\n','utf8')
+  return {ok:true,path:zebraCapturePath(),capturedAt}
+})
+ipcMain.handle('zebra:capturePath',()=>zebraCapturePath())
 
 app.whenReady().then(async()=>{
   try{getDb()}catch(error){
@@ -355,8 +365,12 @@ ipcMain.handle('finance:analytics',()=>{
 
 ipcMain.handle('customers:list',(_,q='')=>getDb().prepare(`SELECT c.*, COUNT(DISTINCT v.id) vehicles, COUNT(DISTINCT o.id) orders FROM customers c LEFT JOIN vehicles v ON v.customer_id=c.id LEFT JOIN orders o ON o.vehicle_id=v.id WHERE c.name LIKE ? OR COALESCE(c.phone,'') LIKE ? OR COALESCE(c.company,'') LIKE ? GROUP BY c.id ORDER BY c.created_at DESC`).all(`%${q}%`,`%${q}%`,`%${q}%`))
 ipcMain.handle('customers:create',(_,d)=>{const r=getDb().prepare('INSERT INTO customers(name,phone,email,company,notes) VALUES (?,?,?,?,?)').run(d.name,d.phone||'',d.email||'',d.company||'',d.notes||'');return{id:r.lastInsertRowid}})
+ipcMain.handle('customers:deletePreview',(_,id)=>deletionPreview(getDb(),'customer',id))
+ipcMain.handle('customers:remove',(_,id)=>removeEntity(getDb(),'customer',id,{unlink:file=>fs.unlinkSync(file)}))
 ipcMain.handle('vehicles:list',(_,customerId)=>customerId?getDb().prepare('SELECT * FROM vehicles WHERE customer_id=? ORDER BY created_at DESC').all(customerId):getDb().prepare(`SELECT v.*,c.name customer FROM vehicles v JOIN customers c ON c.id=v.customer_id ORDER BY v.created_at DESC`).all())
 ipcMain.handle('vehicles:create',(_,d)=>{const r=getDb().prepare('INSERT INTO vehicles(customer_id,plate,vin,make,model,generation,year,engine,power_hp,engine_code,mileage,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(d.customer_id,d.plate||'',d.vin||'',d.make||'',d.model||'',d.generation||'',d.year||null,d.engine||'',+d.power_hp||null,d.engine_code||'',d.mileage||0,d.notes||'');return{id:r.lastInsertRowid}})
+ipcMain.handle('vehicles:deletePreview',(_,id)=>deletionPreview(getDb(),'vehicle',id))
+ipcMain.handle('vehicles:remove',(_,id)=>removeEntity(getDb(),'vehicle',id,{unlink:file=>fs.unlinkSync(file)}))
 ipcMain.handle('vehicles:history',(_,id)=>getDb().prepare(`${orderSelect} WHERE o.vehicle_id=? ORDER BY o.opened_at DESC`).all(id))
 
 // --- 0.33 DEV: Vehicle Intelligence 2.0 -----------------------------------
@@ -381,7 +395,8 @@ ipcMain.handle('orders:get',(_,id)=>getDb().prepare(`${orderSelect} WHERE o.id=?
 ipcMain.handle('orders:create',(_,d)=>{const r=getDb().prepare(`INSERT INTO orders(vehicle_id,title,complaint,status,priority,diagnosis_limit,labor_rate,diagnosis_fee,source,due_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(d.vehicle_id,d.title,d.complaint||'','PRZYJETE',d.priority||'NORMALNY',+d.diagnosis_limit||0,+d.labor_rate||220,+d.diagnosis_fee||0,d.source||'nieznane',d.due_at||null);return{id:r.lastInsertRowid}})
 ipcMain.handle('orders:archive',(_event,id)=>{const db=getDb(),order=db.prepare('SELECT status FROM orders WHERE id=?').get(id);if(!order)return{ok:false,error:'Zlecenie nie istnieje.'};if(!['GOTOWE','WYDANE'].includes(order.status))return{ok:false,error:'Do archiwum można przenieść zlecenie gotowe lub wydane.'};db.prepare('UPDATE orders SET archived_at=CURRENT_TIMESTAMP WHERE id=?').run(id);return{ok:true}})
 ipcMain.handle('orders:restore',(_event,id)=>{const result=getDb().prepare("UPDATE orders SET archived_at=NULL,status=CASE WHEN status='WYDANE' THEN 'GOTOWE' ELSE status END,closed_at=CASE WHEN status='WYDANE' THEN NULL ELSE closed_at END WHERE id=?").run(id);return{ok:result.changes>0}})
-ipcMain.handle('orders:remove',(_event,id)=>{const db=getDb(),files=db.prepare("SELECT file_path FROM attachments WHERE order_id=? AND COALESCE(file_path,'')!=''").all(id);const result=db.prepare('DELETE FROM orders WHERE id=?').run(id);if(result.changes)for(const file of files)try{fs.unlinkSync(file.file_path)}catch{}return{ok:result.changes>0}})
+ipcMain.handle('orders:deletePreview',(_event,id)=>deletionPreview(getDb(),'order',id))
+ipcMain.handle('orders:remove',(_event,id)=>removeEntity(getDb(),'order',id,{unlink:file=>fs.unlinkSync(file)}))
 ipcMain.handle('intake:create',(_,d)=>{
   const db=getDb()
   const tx=db.transaction(()=>{

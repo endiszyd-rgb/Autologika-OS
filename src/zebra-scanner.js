@@ -12,12 +12,11 @@ export function analyzeScan(raw){
  const sdk=parseZebraSdkXml(raw); const text=normalizeScan(sdk?.text||raw), compact=text.replace(/\s+/g,'')
  const vin=(text.toUpperCase().match(/\b[A-HJ-NPR-Z0-9]{17}\b/)||[])[0]||''
  const base64=/^[A-Za-z0-9+/=_-]{40,}$/.test(compact), hex=/^(?:[0-9A-Fa-f]{2}){20,}$/.test(compact)
- return {raw:text,original:String(raw||''),length:text.length,byteLength:sdk?.bytes?.length||0,vin,kind:vin?'VIN':sdk?'ZEBRA/SNAPI':base64?'BASE64':hex?'HEX':'AZTEC/TEXT',capturedAt:new Date().toISOString(),sdk}
+ return {raw:text,original:String(raw||''),length:text.length,byteLength:sdk?.bytes?.length||0,vin,kind:vin?'VIN':sdk?'ZEBRA/SNAPI':hex?'HEX':base64?'BASE64':'AZTEC/TEXT',capturedAt:new Date().toISOString(),sdk}
 }
 export function createKeyboardWedge({onScan,timeout=90,minLength=4}={}){
  let buffer='',last=0,timer=null
  const flush=()=>{const v=buffer;buffer='';clearTimeout(timer);timer=null;if(v.length>=minLength)onScan?.(v)}
- const handler=e=>{if(e.ctrlKey||e.altKey||e.metaKey)return;const now=performance.now();if(last&&now-last>timeout*2)buffer='';last=now;if(e.key==='Enter'||e.key==='Tab'){if(buffer){e.preventDefault();flush()}return}if(e.key.length===1){buffer+=e.key;clearTimeout(timer);timer=setTimeout(flush,timeout)}}
+ const handler=e=>{if(e.ctrlKey||e.altKey||e.metaKey)return;const tag=String(e.target?.tagName||'').toLowerCase();if(e.target?.isContentEditable||['input','textarea','select'].includes(tag))return;const now=performance.now();if(last&&now-last>timeout*2)buffer='';last=now;if(e.key==='Enter'||e.key==='Tab'){if(buffer){e.preventDefault();flush()}return}if(e.key.length===1){buffer+=e.key;clearTimeout(timer);timer=setTimeout(flush,timeout)}}
  window.addEventListener('keydown',handler,true);return()=>{window.removeEventListener('keydown',handler,true);clearTimeout(timer)}
 }
-

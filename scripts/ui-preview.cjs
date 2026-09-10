@@ -206,8 +206,40 @@ app.on('browser-window-created', (_, win) => {
       await delay(200)
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.orderrow')].some(x=>x.textContent.includes('Gotowe'))`),true)
       console.log('ORDER_ARCHIVE_DELETE', 'archive, restore and permanent order deletion verified; vehicle retained')
-      await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Szybkie przyjęcie"]').click()`)
+      const vehicleOnlyCustomer=database.prepare("INSERT INTO customers(name) VALUES ('Klient Pojazdu UI')").run().lastInsertRowid
+      const vehicleOnly=database.prepare("INSERT INTO vehicles(customer_id,plate,make,model) VALUES (?,'PO DELETE','Toyota','Yaris')").run(vehicleOnlyCustomer).lastInsertRowid
+      const cascadeCustomer=database.prepare("INSERT INTO customers(name) VALUES ('Klient Kaskada UI')").run().lastInsertRowid
+      const cascadeVehicle=database.prepare("INSERT INTO vehicles(customer_id,plate,make,model) VALUES (?,'PO CASCADE','Ford','Focus')").run(cascadeCustomer).lastInsertRowid
+      const cascadeOrder=database.prepare("INSERT INTO orders(vehicle_id,title) VALUES (?,'Zlecenie do usunięcia')").run(cascadeVehicle).lastInsertRowid
+      await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Klienci / auta"]').click()`)
       await delay(400)
+      await win.webContents.executeJavaScript(`window.confirm=()=>true;document.querySelector('[aria-label="Usuń pojazd PO DELETE"]').click()`)
+      await delay(350)
+      assert.equal(database.prepare('SELECT COUNT(*) n FROM vehicles WHERE id=?').get(vehicleOnly).n,0)
+      assert.equal(database.prepare('SELECT COUNT(*) n FROM customers WHERE id=?').get(vehicleOnlyCustomer).n,1)
+      await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Usuń klienta Klient Kaskada UI"]').click()`)
+      await delay(350)
+      assert.equal(database.prepare('SELECT COUNT(*) n FROM customers WHERE id=?').get(cascadeCustomer).n,0)
+      assert.equal(database.prepare('SELECT COUNT(*) n FROM vehicles WHERE id=?').get(cascadeVehicle).n,0)
+      assert.equal(database.prepare('SELECT COUNT(*) n FROM orders WHERE id=?').get(cascadeOrder).n,0)
+      console.log('CUSTOMER_VEHICLE_DELETE','vehicle-only and full customer cascade deletion verified')
+      await win.webContents.executeJavaScript(`document.querySelector('nav button[title="VIN / AZTEC"]').click()`)
+      await delay(400)
+      await win.webContents.executeJavaScript(`{
+        const field=document.querySelector('.scanRaw.lab');
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(field,'WVWZZZ1JZXW000001');
+        field.dispatchEvent(new Event('input',{bubbles:true}));
+      }`)
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.scannerGrid button')].find(x=>x.textContent.includes('Analizuj RAW')).click()`)
+      await delay(350)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.scanResult b').textContent`),'WVWZZZ1JZXW000001')
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.scanSaved').classList.contains('ok')`),true)
+      await capture('zebra-scanner')
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.scannerGrid button')].find(x=>x.textContent.includes('Użyj w szybkim przyjęciu')).click()`)
+      await delay(400)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.scannerIntakeNotice').textContent.includes('WVWZZZ1JZXW000001')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('VIN')).querySelector('input').value`),'WVWZZZ1JZXW000001')
+      console.log('ZEBRA_SCAN_INTAKE','captured scan persisted and VIN transferred to quick intake')
       assert.equal(await win.webContents.executeJavaScript('window.scrollY'), 0)
       await capture('intake')
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Workflow"]').click()`)
