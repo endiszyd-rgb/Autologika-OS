@@ -10,6 +10,7 @@ const updater = require('./updater.cjs')
 const { findQuoteApproval, assertQuoteEditable } = require('./quote-approval.cjs')
 const { listAppointments, createAppointment, updateAppointment, removeAppointment } = require('./appointments.cjs')
 const { deletionPreview, removeEntity } = require('./entity-deletion.cjs')
+const { createCustomer, updateCustomer, createVehicle, updateVehicle } = require('./record-editing.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -364,11 +365,13 @@ ipcMain.handle('finance:analytics',()=>{
 })
 
 ipcMain.handle('customers:list',(_,q='')=>getDb().prepare(`SELECT c.*, COUNT(DISTINCT v.id) vehicles, COUNT(DISTINCT o.id) orders FROM customers c LEFT JOIN vehicles v ON v.customer_id=c.id LEFT JOIN orders o ON o.vehicle_id=v.id WHERE c.name LIKE ? OR COALESCE(c.phone,'') LIKE ? OR COALESCE(c.company,'') LIKE ? GROUP BY c.id ORDER BY c.created_at DESC`).all(`%${q}%`,`%${q}%`,`%${q}%`))
-ipcMain.handle('customers:create',(_,d)=>{const r=getDb().prepare('INSERT INTO customers(name,phone,email,company,notes) VALUES (?,?,?,?,?)').run(d.name,d.phone||'',d.email||'',d.company||'',d.notes||'');return{id:r.lastInsertRowid}})
+ipcMain.handle('customers:create',(_,d)=>createCustomer(getDb(),d))
+ipcMain.handle('customers:update',(_,{id,data})=>updateCustomer(getDb(),id,data))
 ipcMain.handle('customers:deletePreview',(_,id)=>deletionPreview(getDb(),'customer',id))
 ipcMain.handle('customers:remove',(_,id)=>removeEntity(getDb(),'customer',id,{unlink:file=>fs.unlinkSync(file)}))
 ipcMain.handle('vehicles:list',(_,customerId)=>customerId?getDb().prepare('SELECT * FROM vehicles WHERE customer_id=? ORDER BY created_at DESC').all(customerId):getDb().prepare(`SELECT v.*,c.name customer FROM vehicles v JOIN customers c ON c.id=v.customer_id ORDER BY v.created_at DESC`).all())
-ipcMain.handle('vehicles:create',(_,d)=>{const r=getDb().prepare('INSERT INTO vehicles(customer_id,plate,vin,make,model,generation,year,engine,power_hp,engine_code,mileage,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(d.customer_id,d.plate||'',d.vin||'',d.make||'',d.model||'',d.generation||'',d.year||null,d.engine||'',+d.power_hp||null,d.engine_code||'',d.mileage||0,d.notes||'');return{id:r.lastInsertRowid}})
+ipcMain.handle('vehicles:create',(_,d)=>createVehicle(getDb(),d))
+ipcMain.handle('vehicles:update',(_,{id,data})=>updateVehicle(getDb(),id,data))
 ipcMain.handle('vehicles:deletePreview',(_,id)=>deletionPreview(getDb(),'vehicle',id))
 ipcMain.handle('vehicles:remove',(_,id)=>removeEntity(getDb(),'vehicle',id,{unlink:file=>fs.unlinkSync(file)}))
 ipcMain.handle('vehicles:history',(_,id)=>getDb().prepare(`${orderSelect} WHERE o.vehicle_id=? ORDER BY o.opened_at DESC`).all(id))

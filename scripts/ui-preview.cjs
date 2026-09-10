@@ -213,11 +213,32 @@ app.on('browser-window-created', (_, win) => {
       const cascadeOrder=database.prepare("INSERT INTO orders(vehicle_id,title) VALUES (?,'Zlecenie do usunięcia')").run(cascadeVehicle).lastInsertRowid
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Klienci / auta"]').click()`)
       await delay(400)
-      await win.webContents.executeJavaScript(`window.confirm=()=>true;document.querySelector('[aria-label="Usuń pojazd PO DELETE"]').click()`)
+      await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Edytuj klienta Klient Pojazdu UI"]').click()`)
+      await delay(200)
+      await win.webContents.executeJavaScript(`{
+        const field=[...document.querySelectorAll('.modal label')].find(x=>x.textContent.includes('Firma')).querySelector('input');
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,'Warsztat Testowy');
+        field.dispatchEvent(new Event('input',{bubbles:true}));
+        [...document.querySelectorAll('.modal button')].find(x=>x.textContent==='Zapisz').click();
+      }`)
+      await delay(300)
+      assert.equal(database.prepare('SELECT company FROM customers WHERE id=?').get(vehicleOnlyCustomer).company,'Warsztat Testowy')
+      await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Edytuj pojazd PO DELETE"]').click()`)
+      await delay(200)
+      await win.webContents.executeJavaScript(`{
+        const field=[...document.querySelectorAll('.modal label')].find(x=>x.textContent.includes('Przebieg')).querySelector('input');
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,'76543');
+        field.dispatchEvent(new Event('input',{bubbles:true}));
+        [...document.querySelectorAll('.modal button')].find(x=>x.textContent==='Zapisz').click();
+      }`)
+      await delay(300)
+      assert.equal(database.prepare('SELECT mileage FROM vehicles WHERE id=?').get(vehicleOnly).mileage,76543)
+      console.log('CUSTOMER_VEHICLE_EDIT','customer company and vehicle mileage editing verified')
+      await win.webContents.executeJavaScript(`window.confirm=()=>true;[...document.querySelectorAll('[aria-label]')].find(x=>x.getAttribute('aria-label').includes('PO DELETE')&&x.classList.contains('recordDelete')).click()` )
       await delay(350)
       assert.equal(database.prepare('SELECT COUNT(*) n FROM vehicles WHERE id=?').get(vehicleOnly).n,0)
       assert.equal(database.prepare('SELECT COUNT(*) n FROM customers WHERE id=?').get(vehicleOnlyCustomer).n,1)
-      await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Usuń klienta Klient Kaskada UI"]').click()`)
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('[aria-label]')].find(x=>x.getAttribute('aria-label').includes('Klient Kaskada UI')&&x.classList.contains('recordDelete')).click()` )
       await delay(350)
       assert.equal(database.prepare('SELECT COUNT(*) n FROM customers WHERE id=?').get(cascadeCustomer).n,0)
       assert.equal(database.prepare('SELECT COUNT(*) n FROM vehicles WHERE id=?').get(cascadeVehicle).n,0)
