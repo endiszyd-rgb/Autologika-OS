@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.1 — 2026-09-10
+
+### Nowości
+
+- Nowe logo AutoLogika jako ikona programu, znak w menu oraz animowany ekran startowy.
+- Dekoder kodów AZTEC z polskich dowodów rejestracyjnych dla skanerów Zebra USB HID i CoreScanner/SNAPI.
+- Automatyczne uzupełnianie rejestracji, VIN-u, marki, modelu, roku, silnika, mocy oraz danych posiadacza w Szybkim przyjęciu.
+- Edycja i bezpieczne usuwanie klientów, pojazdów oraz aktywnych i archiwalnych zleceń.
+
+### Poprawki
+
+- Powiązano płatności, rentowność, akceptacje, checklistę wydania i zamknięcie zlecenia.
+- Dodano kaskadowy wybór prac i procedur oraz tworzenie własnych pozycji naprawy.
+- Rozbudowano Terminarz i obsługę wizyt przechodzących przez północ.
+
 ## 1.0.0 — 2026-09-09
 
 ### Nowości
@@ -25,4 +40,3 @@
 ## Historia rozwoju przed 1.0.0
 
 Wersje `0.20.x–0.40.3` były wydaniami developerskimi uruchamianymi z kodu źródłowego. Wprowadziły między innymi tryb offline, synchronizację Supabase, radar warsztatu, Workflow, katalog pojazdów, wyceny, procedury, płatności, archiwum zleceń oraz moduł dokumentacji technicznej.
-
