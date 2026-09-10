@@ -252,10 +252,32 @@ app.on('browser-window-created', (_, win) => {
       await capture('procedure-templates-1100')
       win.setSize(1500,940)
       await delay(200)
+      const monday = new Date()
+      monday.setDate(monday.getDate()-((monday.getDay()+6)%7))
+      monday.setHours(0,0,0,0)
+      const overnightStart = new Date(monday)
+      overnightStart.setDate(overnightStart.getDate()+1)
+      overnightStart.setHours(22,30,0,0)
+      const overnightEnd = new Date(overnightStart.getTime()+2*60*60*1000)
+      const overnight = require('../electron/appointments.cjs').createAppointment(require('../electron/db.cjs').getDb(),{
+        title:'Wizyta nocna UI',
+        start_at:overnightStart.toISOString(),
+        end_at:overnightEnd.toISOString(),
+        bay:'Stanowisko 1',
+        status:'PLAN'
+      })
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Terminarz 2.0"]').click()`)
       await delay(500)
       assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.plannerBoard')`),true)
+      const overnightSegments = await win.webContents.executeJavaScript(`[
+        ...document.querySelectorAll('[data-appointment-id="${overnight.id}"]')
+      ].map(x=>x.textContent)`)
+      assert.equal(overnightSegments.length,2)
+      assert.equal(overnightSegments[0].includes('24:00'),true)
+      assert.equal(overnightSegments[0].includes('1 h 30 min'),true)
+      assert.equal(overnightSegments[1].includes('30 min'),true)
       assert.equal((await inspect()).fatal,false)
+      console.log('SCHEDULE_OVERNIGHT','cross-day appointment rendered as two daily segments')
       await capture('schedule')
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Dokumentacja techniczna"]').click()`)
       await delay(500)

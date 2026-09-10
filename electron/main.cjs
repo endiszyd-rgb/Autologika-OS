@@ -8,7 +8,7 @@ const { getDb, createVersionBackup, databasePath } = require('./db.cjs')
 const cloudSync = require('./cloud-sync.cjs')
 const updater = require('./updater.cjs')
 const { findQuoteApproval, assertQuoteEditable } = require('./quote-approval.cjs')
-const { createAppointment, updateAppointment } = require('./appointments.cjs')
+const { listAppointments, createAppointment, updateAppointment, removeAppointment } = require('./appointments.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -435,10 +435,10 @@ ipcMain.handle('items:updateDescription',(_,{id,description})=>{getDb().prepare(
 ipcMain.handle('diagnostics:get',(_,orderId)=>getDb().prepare('SELECT * FROM diagnostics WHERE order_id=? ORDER BY id DESC LIMIT 1').get(orderId)||null)
 ipcMain.handle('diagnostics:save',(_,{orderId,data})=>{const db=getDb();const ex=db.prepare('SELECT id FROM diagnostics WHERE order_id=?').get(orderId);if(ex)db.prepare(`UPDATE diagnostics SET symptom_confirmed=?,dtcs=?,measurements=?,hypothesis=?,conclusion=?,recommendation=?,time_hours=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(data.symptom_confirmed||'',data.dtcs||'',data.measurements||'',data.hypothesis||'',data.conclusion||'',data.recommendation||'',+data.time_hours||0,ex.id);else db.prepare(`INSERT INTO diagnostics(order_id,symptom_confirmed,dtcs,measurements,hypothesis,conclusion,recommendation,time_hours) VALUES (?,?,?,?,?,?,?,?)`).run(orderId,data.symptom_confirmed||'',data.dtcs||'',data.measurements||'',data.hypothesis||'',data.conclusion||'',data.recommendation||'',+data.time_hours||0);return true})
 
-ipcMain.handle('appointments:list',(_,{from,to})=>getDb().prepare(`SELECT a.*,v.plate,v.make,v.model,c.name customer FROM appointments a LEFT JOIN vehicles v ON v.id=a.vehicle_id LEFT JOIN customers c ON c.id=v.customer_id WHERE datetime(a.start_at)<datetime(?) AND datetime(a.end_at)>datetime(?) ORDER BY a.start_at`).all(to,from))
+ipcMain.handle('appointments:list',(_,{from,to})=>listAppointments(getDb(),from,to))
 ipcMain.handle('appointments:create',(_,d)=>createAppointment(getDb(),d))
 ipcMain.handle('appointments:update',(_,{id,data})=>updateAppointment(getDb(),id,data))
-ipcMain.handle('appointments:remove',(_,id)=>{getDb().prepare('DELETE FROM appointments WHERE id=?').run(id);return true})
+ipcMain.handle('appointments:remove',(_,id)=>removeAppointment(getDb(),id))
 
 ipcMain.handle('knowledge:list',(_,q='')=>getDb().prepare(`SELECT * FROM knowledge_cases WHERE symptom LIKE ? OR COALESCE(dtcs,'') LIKE ? OR COALESCE(tags,'') LIKE ? OR COALESCE(vehicle,'') LIKE ? ORDER BY created_at DESC`).all(`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`))
 ipcMain.handle('knowledge:create',(_,d)=>{const r=getDb().prepare('INSERT INTO knowledge_cases(vehicle,engine,symptom,dtcs,measurements,cause,solution,tags,source_order_id) VALUES (?,?,?,?,?,?,?,?,?)').run(d.vehicle||'',d.engine||'',d.symptom,d.dtcs||'',d.measurements||'',d.cause||'',d.solution||'',d.tags||'',d.source_order_id||null);return{id:r.lastInsertRowid}})
