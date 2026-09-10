@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.3 — 2026-09-10
+
+### Poprawki
+
+- Adres publicznego repozytorium aktualizacji `endiszyd-rgb/Autologika-OS` jest zapisany bezpośrednio w module aktualizatora.
+- Aplikacja nie zależy już od usuwanej podczas pakowania sekcji `build.publish` i jawnie konfiguruje źródło GitHub Releases.
+
 ## 1.0.2 — 2026-09-10
 
 ### Poprawki

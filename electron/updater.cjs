@@ -2,9 +2,9 @@ const { app, BrowserWindow } = require('electron')
 const fs = require('fs')
 const path = require('path')
 const packageInfo = require('../package.json')
+const { resolveUpdateRepository } = require('./update-repository.cjs')
 
-const publishConfig = Array.isArray(packageInfo.build?.publish)?packageInfo.build.publish[0]:packageInfo.build?.publish
-const repository = {owner:String(publishConfig?.owner||''),repo:String(publishConfig?.repo||'')}
+const repository = resolveUpdateRepository(packageInfo)
 const configured = Boolean(repository.owner&&repository.repo&&!repository.owner.includes('GITHUB_OWNER')&&!repository.repo.includes('GITHUB_REPO'))
 const stateFile = () => path.join(app.getPath('userData'),'updater-state.json')
 const logFile = () => path.join(app.getPath('userData'),'logs','updater.log')
@@ -40,6 +40,7 @@ function init(options={}){
   if(!configured)return unavailable('Serwer aktualizacji nie został jeszcze skonfigurowany.')
   const electronUpdater=require('electron-updater')
   autoUpdater=electronUpdater.autoUpdater
+  autoUpdater.setFeedURL({provider:'github',owner:repository.owner,repo:repository.repo})
   autoUpdater.autoDownload=false
   autoUpdater.autoInstallOnAppQuit=false
   autoUpdater.allowDowngrade=false
