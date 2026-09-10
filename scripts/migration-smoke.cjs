@@ -16,11 +16,15 @@ app.whenReady().then(async()=>{
  const required=['catalog_work_id','catalog_variant_id','work_name','variant_name','customer_description','hours_snapshot','price_snapshot']
  for(const table of ['order_items','quote_items'])for(const column of required)if(!columns(table).has(column))throw new Error(`${table}.${column} missing`)
  for(const table of ['work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps'])db.prepare(`SELECT 1 FROM ${table} LIMIT 1`).get()
+ const inventoryColumns=['barcode','brand','category','description','image_url','lookup_source','lookup_url','cloud_id','version']
+ for(const column of inventoryColumns)if(!columns('inventory_parts').has(column))throw new Error(`inventory_parts.${column} missing`)
  if(db.pragma('user_version',{simple:true})!==SCHEMA_VERSION)throw new Error('schema version not saved')
  const customerColumn=db.prepare("PRAGMA table_info(vehicles)").all().find(column=>column.name==='customer_id')
  if(!customerColumn||customerColumn.notnull!==0)throw new Error('vehicles.customer_id is still required')
  const standalone=db.prepare("INSERT INTO vehicles(customer_id,plate,make) VALUES (NULL,'TEST 001','Test')").run()
  if(db.prepare('SELECT customer_id FROM vehicles WHERE id=?').get(standalone.lastInsertRowid).customer_id!==null)throw new Error('standalone vehicle not saved')
+ const inventory=db.prepare("INSERT INTO inventory_parts(barcode,name,stock) VALUES ('4006381333931','Filtr testowy',1)").run()
+ if(!db.prepare("SELECT 1 FROM sync_queue WHERE entity_type='inventory_parts' AND row_id=?").get(inventory.lastInsertRowid))throw new Error('inventory part not queued for cloud sync')
  if(db.prepare('SELECT value FROM legacy_marker').get().value!=='DANE-ZACHOWANE')throw new Error('legacy data lost')
  const migrationBackups=fs.readdirSync(path.join(dir,'backups')).filter(name=>name.includes('before-schema')&&name.endsWith('.db'))
  if(migrationBackups.length!==1)throw new Error(`expected one pre-migration backup, found ${migrationBackups.length}`)
@@ -28,6 +32,6 @@ app.whenReady().then(async()=>{
  if(fs.readdirSync(path.join(dir,'backups')).filter(name=>name.includes('before-schema')&&name.endsWith('.db')).length!==1)throw new Error('migration repeated')
  const updateBackup=await createVersionBackup({currentVersion:'1.0.0',targetVersion:'1.0.1'})
  if(!fs.existsSync(updateBackup.file)||!fs.existsSync(updateBackup.manifestPath))throw new Error('update backup or manifest missing')
- console.log(JSON.stringify({ok:true,db:path.join(dir,'autologika.db'),schemaVersion:SCHEMA_VERSION,migrationBackup:migrationBackups[0],updateBackup:path.basename(updateBackup.file),snapshotColumns:required.length,extendedTables:8}))
+ console.log(JSON.stringify({ok:true,db:path.join(dir,'autologika.db'),schemaVersion:SCHEMA_VERSION,migrationBackup:migrationBackups[0],updateBackup:path.basename(updateBackup.file),snapshotColumns:required.length,extendedTables:8,inventoryColumns:inventoryColumns.length}))
  app.quit()
 }).catch(error=>{console.error(error);app.exit(1)})

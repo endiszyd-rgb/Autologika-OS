@@ -56,6 +56,20 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Marka')).querySelector('select').value`),'Toyota')
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Model')).querySelector('select').value`),'Corolla')
       console.log('GLOBAL_AZTEC_INTAKE','AZTEC captured over an active input and redirected from settings to populated quick intake')
+      const inventoryDb=require('../electron/db.cjs').getDb()
+      inventoryDb.prepare(`INSERT INTO inventory_parts(barcode,part_no,name,brand,stock,min_stock,unit_cost,sell_price,location) VALUES (?,?,?,?,?,?,?,?,?)`).run('4006381333931','W 712/95','Filtr oleju','MANN-FILTER',4,2,24.5,49,'A-03')
+      await win.webContents.executeJavaScript(`{
+        const target=document.querySelector('input');target.focus();
+        for(const key of '4006381333931')target.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));
+        target.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));
+      }`)
+      await delay(650)
+      assert.equal((await inspect()).title,'Części i magazyn')
+      assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.partsWorkspace .stockCard.selected')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.stockLookupMessage')?.textContent.includes('Część jest już w Twoim magazynie')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.stockCard.selected')?.textContent.includes('Filtr oleju')`),true)
+      console.log('GLOBAL_PART_BARCODE','EAN captured globally and resolved directly from the local inventory')
+      await capture('parts-inventory-scan')
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Pulpit"]').click()`)
       await delay(350)
       // Test application-owned controls using their accessible labels.

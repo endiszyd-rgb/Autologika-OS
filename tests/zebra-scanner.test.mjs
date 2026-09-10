@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {analyzeScan,createKeyboardWedge,parseZebraSdkXml} from '../src/zebra-scanner.js'
+import {analyzeScan,createKeyboardWedge,parseZebraSdkXml,isProductBarcode,normalizeProductBarcode} from '../src/zebra-scanner.js'
 
 test('Zebra BarcodeEvent XML preserves RAW bytes and extracts VIN',()=>{
  const vin='WVWZZZ1JZXW000001'
@@ -36,4 +36,11 @@ test('global scanner captures an AZTEC payload from an input and restores its pr
  assert.equal(prevented,true)
  cleanup()
  Object.assign(globalThis,previous)
+})
+
+test('recognizes valid product barcodes from a Zebra keyboard wedge',()=>{
+ assert.equal(normalizeProductBarcode(']E04006381333931\r'),'4006381333931')
+ assert.equal(isProductBarcode(']E04006381333931\r'),true)
+ assert.equal(isProductBarcode('0049000006347'),false)
+ assert.equal(isProductBarcode('W71295'),false)
 })

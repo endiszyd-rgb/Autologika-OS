@@ -1,4 +1,12 @@
 export const normalizeScan=s=>String(s||'').replace(/[\r\n]+$/,'')
+export const normalizeProductBarcode=value=>normalizeScan(value).trim().replace(/^\][A-Za-z][0-9]/,'').replace(/[\t ]+/g,'')
+export function isProductBarcode(value=''){
+ const code=normalizeProductBarcode(value)
+ if(!/^\d{8}$|^\d{12,14}$/.test(code))return false
+ const digits=[...code].map(Number),check=digits.pop();let sum=0,weight=3
+ for(let i=digits.length-1;i>=0;i--){sum+=digits[i]*weight;weight=weight===3?1:3}
+ return (10-(sum%10))%10===check
+}
 const bytesToHex=b=>Array.from(b||[]).map(x=>x.toString(16).padStart(2,'0')).join('').toUpperCase()
 const bytesToText=b=>{try{return new TextDecoder('utf-8',{fatal:false}).decode(Uint8Array.from(b||[]))}catch{return ''}}
 export function parseZebraSdkXml(xml){

@@ -5,7 +5,7 @@ const { app } = require('electron')
 const { seedTechnicalReference } = require('./technical-seed.cjs')
 
 let db
-const SCHEMA_VERSION = 2
+const SCHEMA_VERSION = 3
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -87,7 +87,44 @@ function migrate(db,currentVersion=0) {
     }
     const foreignKeyErrors=db.pragma('foreign_key_check')
     if(foreignKeyErrors.length)throw new Error('Migracja pojazdów naruszyła spójność bazy danych.')
+    currentVersion=2
   }
+  if(currentVersion<3){
+    db.transaction(()=>{migrateSchemaV3(db);db.pragma('user_version = 3')})()
+  }
+}
+
+function migrateSchemaV3(db){
+  const columns=[['barcode','TEXT'],['brand','TEXT'],['category','TEXT'],['description','TEXT'],['image_url','TEXT'],['lookup_source','TEXT'],['lookup_url','TEXT'],['cloud_id','TEXT'],['deleted_at','TEXT'],['version','INTEGER NOT NULL DEFAULT 1']]
+  const existing=db.prepare('PRAGMA table_info(inventory_parts)').all().map(x=>x.name)
+  for(const [name,type] of columns)if(!existing.includes(name))db.exec(`ALTER TABLE inventory_parts ADD COLUMN ${name} ${type}`)
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_parts_barcode ON inventory_parts(barcode) WHERE barcode IS NOT NULL AND barcode!=''")
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_parts_cloud_id ON inventory_parts(cloud_id) WHERE cloud_id IS NOT NULL')
+  db.prepare('UPDATE inventory_parts SET cloud_id=lower(hex(randomblob(16))) WHERE cloud_id IS NULL').run()
+  db.prepare('UPDATE inventory_parts SET updated_at=COALESCE(updated_at,CURRENT_TIMESTAMP)').run()
+  db.exec(`
+    CREATE TRIGGER IF NOT EXISTS sync_inventory_parts_assign_cloud AFTER INSERT ON inventory_parts
+    WHEN NEW.cloud_id IS NULL BEGIN UPDATE inventory_parts SET cloud_id=lower(hex(randomblob(16))),updated_at=CURRENT_TIMESTAMP WHERE id=NEW.id; END;
+    CREATE TRIGGER IF NOT EXISTS sync_inventory_parts_insert AFTER INSERT ON inventory_parts
+    WHEN NEW.cloud_id IS NOT NULL AND COALESCE((SELECT value FROM sync_meta WHERE key='applying_remote'),'0')!='1'
+    BEGIN INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation) VALUES ('inventory_parts',NEW.id,NEW.cloud_id,'UPSERT'); END;
+    CREATE TRIGGER IF NOT EXISTS sync_inventory_parts_update AFTER UPDATE ON inventory_parts
+    WHEN COALESCE((SELECT value FROM sync_meta WHERE key='applying_remote'),'0')!='1'
+    BEGIN
+      UPDATE inventory_parts SET updated_at=CURRENT_TIMESTAMP,version=COALESCE(OLD.version,1)+1 WHERE id=NEW.id AND NEW.updated_at IS OLD.updated_at;
+      DELETE FROM sync_queue WHERE entity_type='inventory_parts' AND row_id=NEW.id;
+      INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation) VALUES ('inventory_parts',NEW.id,COALESCE(NEW.cloud_id,OLD.cloud_id),'UPSERT');
+    END;
+    CREATE TRIGGER IF NOT EXISTS sync_inventory_parts_delete AFTER DELETE ON inventory_parts
+    WHEN COALESCE((SELECT value FROM sync_meta WHERE key='applying_remote'),'0')!='1'
+    BEGIN
+      DELETE FROM sync_queue WHERE entity_type='inventory_parts' AND cloud_id=OLD.cloud_id;
+      INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation) VALUES ('inventory_parts',NULL,OLD.cloud_id,'DELETE');
+    END;
+  `)
+  db.exec(`INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation)
+    SELECT 'inventory_parts',p.id,p.cloud_id,'UPSERT' FROM inventory_parts p
+    WHERE NOT EXISTS (SELECT 1 FROM sync_queue q WHERE q.entity_type='inventory_parts' AND q.row_id=p.id)`)
 }
 
 function migrateSchemaV2(db){
@@ -487,8 +524,10 @@ function migrateSchemaV1(db) {
   ensureColumns('order_items',catalogSnapshotColumns)
   ensureColumns('quote_items',catalogSnapshotColumns)
   ensureColumns('work_procedure_runs',[['catalog_work_id','TEXT'],['catalog_variant_id','TEXT'],['technical_description','TEXT'],['technical_data_key','TEXT']])
+  ensureColumns('inventory_parts',[['barcode','TEXT'],['brand','TEXT'],['category','TEXT'],['description','TEXT'],['image_url','TEXT'],['lookup_source','TEXT'],['lookup_url','TEXT']])
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_parts_barcode ON inventory_parts(barcode) WHERE barcode IS NOT NULL AND barcode!=''")
 
-  const syncTables=['app_settings','customers','vehicles','orders','diagnostics','order_notes','job_part_orders','payments','appointments','suppliers','order_items','work_logs','communications','approvals','order_events','sales_refs','service_reminders_v2','attachments','signatures','work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps']
+  const syncTables=['app_settings','customers','vehicles','orders','diagnostics','order_notes','job_part_orders','payments','appointments','suppliers','inventory_parts','order_items','work_logs','communications','approvals','order_events','sales_refs','service_reminders_v2','attachments','signatures','work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps']
   for(const table of syncTables){
     const names=db.prepare(`PRAGMA table_info(${table})`).all().map(x=>x.name)
     if(!names.includes('cloud_id')) db.exec(`ALTER TABLE ${table} ADD COLUMN cloud_id TEXT`)
