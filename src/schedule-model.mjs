@@ -10,11 +10,19 @@ export function segmentOnDay(row,date) {
  return {start:clippedStart,end:clippedEnd,continuesBefore:start<dayStart,continuesAfter:end>dayEnd,endsAtDayBoundary:clippedEnd.getTime()===dayEnd.getTime(),minutes:Math.max(0,Math.round((clippedEnd-clippedStart)/60000))}
 }
 export function moveToDay(row,day) { const start=new Date(row.start_at),target=new Date(day); target.setHours(start.getHours(),start.getMinutes(),0,0); return {...row,start_at:target.toISOString(),end_at:new Date(target.getTime()+new Date(row.end_at).getTime()-start.getTime()).toISOString()} }
+export function overlappingAppointments(rows,candidate) {
+ if(!candidate||['ANULOWANY','ZAKONCZONY'].includes(candidate.status))return []
+ const start=new Date(candidate.start_at),end=new Date(candidate.end_at)
+ if(!candidate.bay||!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end<=start)return []
+ return rows.filter(row=>
+  row.id!==candidate.id&&
+  !['ANULOWANY','ZAKONCZONY'].includes(row.status)&&
+  row.bay===candidate.bay&&
+  start<new Date(row.end_at)&&new Date(row.start_at)<end
+ )
+}
 export function conflicts(rows) {
- const result=new Set(),active=rows.filter(x=>!['ANULOWANY','ZAKONCZONY'].includes(x.status))
- for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++){
-  const a=active[i],b=active[j]
-  if(a.bay===b.bay&&new Date(a.start_at)<new Date(b.end_at)&&new Date(b.start_at)<new Date(a.end_at)){result.add(a.id);result.add(b.id)}
- }
+ const result=new Set()
+ for(const row of rows)for(const overlap of overlappingAppointments(rows,row)){result.add(row.id);result.add(overlap.id)}
  return result
 }

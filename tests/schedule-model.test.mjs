@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {addDays,onDay,segmentOnDay,moveToDay,conflicts} from '../src/schedule-model.mjs'
+import {addDays,onDay,segmentOnDay,moveToDay,conflicts,overlappingAppointments} from '../src/schedule-model.mjs'
 
 test('overnight appointment is split into readable daily segments',()=>{
  const firstDay=new Date(2026,8,9),secondDay=addDays(firstDay,1)
@@ -30,4 +30,16 @@ test('collision detection ignores completed and cancelled visits',()=>{
  const base={start_at:'2026-09-09T08:00:00Z',end_at:'2026-09-09T10:00:00Z',bay:'Stanowisko 1'}
  const rows=[{...base,id:1,status:'PLAN'},{...base,id:2,status:'POTWIERDZONY'},{...base,id:3,status:'ZAKONCZONY'},{...base,id:4,status:'ANULOWANY'}]
  assert.deepEqual([...conflicts(rows)].sort(),[1,2])
+})
+
+test('appointment overlap preview excludes itself and touching boundaries',()=>{
+ const rows=[
+  {id:1,start_at:'2026-09-09T08:00:00Z',end_at:'2026-09-09T09:00:00Z',bay:'Stanowisko 1',status:'PLAN'},
+  {id:2,start_at:'2026-09-09T09:00:00Z',end_at:'2026-09-09T10:00:00Z',bay:'Stanowisko 1',status:'PLAN'},
+  {id:3,start_at:'2026-09-09T08:30:00Z',end_at:'2026-09-09T09:30:00Z',bay:'Stanowisko 2',status:'PLAN'},
+  {id:4,start_at:'2026-09-09T08:30:00Z',end_at:'2026-09-09T09:30:00Z',bay:'Stanowisko 1',status:'ZAKONCZONY'}
+ ]
+ const candidate={id:1,start_at:'2026-09-09T08:00:00Z',end_at:'2026-09-09T09:00:00Z',bay:'Stanowisko 1',status:'PLAN'}
+ assert.deepEqual(overlappingAppointments(rows,candidate),[])
+ assert.deepEqual(overlappingAppointments(rows,{...candidate,id:9,end_at:'2026-09-09T09:15:00Z'}).map(x=>x.id),[1,2])
 })

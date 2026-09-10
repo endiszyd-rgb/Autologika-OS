@@ -263,7 +263,7 @@ app.on('browser-window-created', (_, win) => {
       await delay(400)
       assert.equal(database.prepare("SELECT COUNT(*) n FROM vehicles WHERE plate='PO SOLO1' AND customer_id IS NULL").get().n,1)
       assert.equal(database.prepare('SELECT COUNT(*) n FROM customers').get().n,standaloneCustomersBefore)
-      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.standaloneVehicleRow')].some(x=>x.textContent.includes('PO SOLO1')&&x.textContent.includes('Bez w?a?ciciela'))`),true)
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.standaloneVehicleRow')].some(x=>x.textContent.includes('PO SOLO1')&&x.textContent.includes('Bez właściciela'))`),true)
       console.log('STANDALONE_VEHICLE','vehicle saved and displayed without creating or selecting a customer')
       await win.webContents.executeJavaScript(`window.confirm=()=>true;[...document.querySelectorAll('[aria-label]')].find(x=>x.getAttribute('aria-label').includes('PO DELETE')&&x.classList.contains('recordDelete')).click()` )
       await delay(350)
@@ -365,6 +365,15 @@ app.on('browser-window-created', (_, win) => {
         bay:'Stanowisko 1',
         status:'PLAN'
       })
+      const collisionStart = new Date(overnightStart.getTime()+30*60*1000)
+      const collisionEnd = new Date(collisionStart.getTime()+45*60*1000)
+      require('../electron/appointments.cjs').createAppointment(require('../electron/db.cjs').getDb(),{
+        title:'Nakładająca się wizyta UI',
+        start_at:collisionStart.toISOString(),
+        end_at:collisionEnd.toISOString(),
+        bay:'Stanowisko 1',
+        status:'POTWIERDZONY'
+      })
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Terminarz 2.0"]').click()`)
       await delay(500)
       assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.plannerBoard')`),true)
@@ -375,8 +384,16 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(overnightSegments[0].includes('24:00'),true)
       assert.equal(overnightSegments[0].includes('1 h 30 min'),true)
       assert.equal(overnightSegments[1].includes('30 min'),true)
+      assert.equal(overnightSegments[0].includes('Kolizja stanowiska'),true)
+      await win.webContents.executeJavaScript(`document.querySelector('[data-appointment-id="${overnight.id}"]').click()`)
+      await delay(150)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.plannerCollisionNotice')?.textContent.includes('Nakładająca się wizyta UI')`),true)
+      await win.webContents.executeJavaScript(`document.querySelector('.plannerModal button[type="submit"]').click()`)
+      await delay(100)
+      assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.plannerCollisionConfirm')`),true)
+      await win.webContents.executeJavaScript(`document.querySelector('.plannerModalHead>button').click()`)
       assert.equal((await inspect()).fatal,false)
-      console.log('SCHEDULE_OVERNIGHT','cross-day appointment rendered as two daily segments')
+      console.log('SCHEDULE_OVERNIGHT','cross-day appointment rendered as two daily segments; collision preview and confirmation verified')
       await capture('schedule')
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Dokumentacja techniczna"]').click()`)
       await delay(500)
