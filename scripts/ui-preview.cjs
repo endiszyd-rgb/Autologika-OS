@@ -10,7 +10,7 @@ const registrationSample = fs.readFileSync(path.join(__dirname, '..', 'tests', '
 fs.mkdirSync(output, { recursive: true })
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 const errors = []
-setTimeout(() => { console.error('UI smoke test timed out'); app.exit(1) }, 45000).unref()
+setTimeout(() => { console.error('UI smoke test timed out'); app.exit(1) }, 55000).unref()
 app.on('browser-window-created', (_, win) => {
   win.webContents.on('console-message', (_, level, message) => {
     if (level >= 3) errors.push(message)
@@ -44,6 +44,20 @@ app.on('browser-window-created', (_, win) => {
       await capture('dashboard-1100')
       win.setSize(1500, 940)
       await delay(300)
+      await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Ustawienia"]').click()`)
+      await delay(250)
+      await win.webContents.executeJavaScript(`{
+        const target=document.querySelector('input');target.focus();
+        for(const key of ${JSON.stringify(registrationSample)})target.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));
+        target.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));
+      }`)
+      await delay(600)
+      assert.equal((await inspect()).title,'Szybkie przyjęcie pojazdu')
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Marka')).querySelector('select').value`),'Toyota')
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Model')).querySelector('select').value`),'Corolla')
+      console.log('GLOBAL_AZTEC_INTAKE','AZTEC captured over an active input and redirected from settings to populated quick intake')
+      await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Pulpit"]').click()`)
+      await delay(350)
       // Test application-owned controls using their accessible labels.
       await win.webContents.executeJavaScript(`document.querySelector('.studioBlip').click()`)
       await delay(500)

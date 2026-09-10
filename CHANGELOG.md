@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.4 — 2026-09-10
+
+### Nowości
+
+- Skaner Zebra działa globalnie niezależnie od aktualnie otwartej zakładki.
+- Poprawny skan VIN lub AZTEC automatycznie otwiera Szybkie przyjęcie i uzupełnia dane klienta oraz pojazdu.
+
+### Poprawki
+
+- Długi ciąg AZTEC nie pozostaje już wpisany w aktywnym polu formularza.
+- Nierozpoznany skan jest zachowywany diagnostycznie i pokazuje czytelny komunikat bez niszczenia wpisanych danych.
+
 ## 1.0.3 — 2026-09-10
 
 ### Poprawki
