@@ -23,3 +23,16 @@ test('inventory part preserves barcode and supplier through cloud synchronizatio
  assert.equal(remote.barcode,'0049000006346')
  assert.equal(remote.supplier_id,1)
 })
+
+test('order item preserves its inventory source through cloud synchronization',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE inventory_parts(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE orders(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE order_items(id INTEGER PRIMARY KEY,order_id INTEGER,inventory_part_id INTEGER,name TEXT,cloud_id TEXT,updated_at TEXT); INSERT INTO inventory_parts VALUES(7,'inventory-cloud'); INSERT INTO orders VALUES(3,'order-cloud'); INSERT INTO order_items VALUES(11,3,7,'Filtr oleju','item-cloud','2026-09-11T10:00:00.000Z');`)
+ const payload=buildPayload(db,'order_items',db.prepare('SELECT * FROM order_items WHERE id=11').get())
+ assert.equal(payload.order_cloud_id,'order-cloud')
+ assert.equal(payload.inventory_part_cloud_id,'inventory-cloud')
+ assert.equal(payload.inventory_part_id,undefined)
+ applyPayload(db,'order_items','remote-item',{order_cloud_id:'order-cloud',inventory_part_cloud_id:'inventory-cloud',name:'Filtr kabinowy'},'2026-09-11T11:00:00.000Z')
+ const remote=db.prepare("SELECT * FROM order_items WHERE cloud_id='remote-item'").get()
+ assert.equal(remote.order_id,3)
+ assert.equal(remote.inventory_part_id,7)
+})

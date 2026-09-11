@@ -5,7 +5,7 @@ const { app } = require('electron')
 const { seedTechnicalReference } = require('./technical-seed.cjs')
 
 let db
-const SCHEMA_VERSION = 3
+const SCHEMA_VERSION = 4
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -91,7 +91,17 @@ function migrate(db,currentVersion=0) {
   }
   if(currentVersion<3){
     db.transaction(()=>{migrateSchemaV3(db);db.pragma('user_version = 3')})()
+    currentVersion=3
   }
+  if(currentVersion<4){
+    db.transaction(()=>{migrateSchemaV4(db);db.pragma('user_version = 4')})()
+  }
+}
+
+function migrateSchemaV4(db){
+  const existing=db.prepare('PRAGMA table_info(order_items)').all().map(x=>x.name)
+  if(!existing.includes('inventory_part_id'))db.exec('ALTER TABLE order_items ADD COLUMN inventory_part_id INTEGER')
+  db.exec('CREATE INDEX IF NOT EXISTS idx_order_items_inventory_part ON order_items(inventory_part_id)')
 }
 
 function migrateSchemaV3(db){

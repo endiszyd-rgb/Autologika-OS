@@ -15,6 +15,7 @@ app.whenReady().then(async()=>{
  const columns=table=>new Set(db.prepare(`PRAGMA table_info(${table})`).all().map(row=>row.name))
  const required=['catalog_work_id','catalog_variant_id','work_name','variant_name','customer_description','hours_snapshot','price_snapshot']
  for(const table of ['order_items','quote_items'])for(const column of required)if(!columns(table).has(column))throw new Error(`${table}.${column} missing`)
+ if(!columns('order_items').has('inventory_part_id'))throw new Error('order_items.inventory_part_id missing')
  for(const table of ['work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps'])db.prepare(`SELECT 1 FROM ${table} LIMIT 1`).get()
  const inventoryColumns=['barcode','brand','category','description','image_url','lookup_source','lookup_url','cloud_id','version']
  for(const column of inventoryColumns)if(!columns('inventory_parts').has(column))throw new Error(`inventory_parts.${column} missing`)
