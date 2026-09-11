@@ -5,7 +5,7 @@ const { app } = require('electron')
 const { seedTechnicalReference } = require('./technical-seed.cjs')
 
 let db
-const SCHEMA_VERSION = 4
+const SCHEMA_VERSION = 5
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -95,7 +95,27 @@ function migrate(db,currentVersion=0) {
   }
   if(currentVersion<4){
     db.transaction(()=>{migrateSchemaV4(db);db.pragma('user_version = 4')})()
+    currentVersion=4
   }
+  if(currentVersion<5){
+    db.transaction(()=>{migrateSchemaV5(db);db.pragma('user_version = 5')})()
+  }
+}
+
+function migrateSchemaV5(db){
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS barcode_lookup_cache (
+      barcode TEXT PRIMARY KEY,
+      status TEXT NOT NULL CHECK(status IN ('FOUND','MISS')),
+      source TEXT,
+      lookup_url TEXT,
+      payload_json TEXT,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_barcode_lookup_cache_expires ON barcode_lookup_cache(expires_at);
+  `)
 }
 
 function migrateSchemaV4(db){

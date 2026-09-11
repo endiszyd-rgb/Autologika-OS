@@ -13,6 +13,7 @@ const { deletionPreview, removeEntity } = require('./entity-deletion.cjs')
 const { createCustomer, updateCustomer, createVehicle, updateVehicle } = require('./record-editing.cjs')
 const { decodeRegistrationPayload } = require('./registration-decoder.cjs')
 const { normalizeBarcode, isGtin, lookupBarcodeOnline } = require('./part-catalog.cjs')
+const { readBarcodeCache, writeBarcodeHit, writeBarcodeMiss, pruneBarcodeCache } = require('./barcode-cache.cjs')
 const { issueInventoryPart, removeOrderItem } = require('./inventory-usage.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
@@ -579,7 +580,26 @@ ipcMain.handle('jobParts:batchStatus',(_,{ids,status,externalOrderNo='',expected
 
 ipcMain.handle('inventory:list',(_,q='')=>{const like=`%${String(q||'').trim()}%`;return getDb().prepare(`SELECT p.*,s.name supplier FROM inventory_parts p LEFT JOIN suppliers s ON s.id=p.supplier_id WHERE p.name LIKE ? OR COALESCE(p.part_no,'') LIKE ? OR COALESCE(p.barcode,'') LIKE ? OR COALESCE(p.brand,'') LIKE ? ORDER BY CASE WHEN p.stock<=p.min_stock THEN 0 ELSE 1 END,p.name`).all(like,like,like,like)})
 ipcMain.handle('inventory:findBarcode',(_,value)=>{const barcode=normalizeBarcode(value);return getDb().prepare(`SELECT p.*,s.name supplier FROM inventory_parts p LEFT JOIN suppliers s ON s.id=p.supplier_id WHERE p.barcode=?`).get(barcode)||null})
-ipcMain.handle('inventory:lookupBarcode',async(_,value)=>{const barcode=normalizeBarcode(value);if(!isGtin(barcode))throw new Error('Zeskanowany kod nie jest poprawnym EAN, UPC ani GTIN.');const local=getDb().prepare(`SELECT p.*,s.name supplier FROM inventory_parts p LEFT JOIN suppliers s ON s.id=p.supplier_id WHERE p.barcode=?`).get(barcode);if(local)return{found:true,source:'local',item:local};const online=await lookupBarcodeOnline((url,options)=>net.fetch(url,options),barcode,{details:true});return online.item?{found:true,source:online.item.lookup_source,item:online.item}:{found:false,source:'online',barcode,unavailable:!online.available}})
+ipcMain.handle('inventory:lookupBarcode',async(_,value)=>{
+  const barcode=normalizeBarcode(value)
+  if(!isGtin(barcode))throw new Error('Zeskanowany kod nie jest poprawnym EAN, UPC ani GTIN.')
+  const db=getDb()
+  const local=db.prepare(`SELECT p.*,s.name supplier FROM inventory_parts p LEFT JOIN suppliers s ON s.id=p.supplier_id WHERE p.barcode=?`).get(barcode)
+  if(local)return{found:true,source:'local',item:local}
+  pruneBarcodeCache(db)
+  const cached=readBarcodeCache(db,barcode)
+  if(cached)return cached
+  const online=await lookupBarcodeOnline((url,options)=>net.fetch(url,options),barcode,{details:true})
+  if(online.item){
+    writeBarcodeHit(db,barcode,online.item)
+    return{found:true,source:online.item.lookup_source,item:online.item,cached:false}
+  }
+  if(online.available){
+    writeBarcodeMiss(db,barcode)
+    return{found:false,source:'online',barcode,unavailable:false,cached:false}
+  }
+  return{found:false,source:'online',barcode,unavailable:true,cached:false,errors:online.errors}
+})
 ipcMain.handle('inventory:create',(_,d)=>{const db=getDb(),barcode=normalizeBarcode(d.barcode);if(!String(d.name||'').trim())throw new Error('Wpisz nazwę części.');if(barcode&&!isGtin(barcode))throw new Error('Kod kreskowy nie jest poprawnym EAN, UPC ani GTIN.');if(barcode&&db.prepare('SELECT id FROM inventory_parts WHERE barcode=?').get(barcode))throw new Error('Ten kod kreskowy jest już zapisany w magazynie.');const price=(+d.sell_price||0)||Math.round((+d.unit_cost||0)*(1+partMarkup(+d.unit_cost||0))*100)/100;const r=db.prepare('INSERT INTO inventory_parts(barcode,part_no,name,brand,category,description,image_url,lookup_source,lookup_url,stock,min_stock,unit_cost,sell_price,supplier_id,location,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(barcode||null,d.part_no||'',String(d.name).trim(),d.brand||'',d.category||'',d.description||'',d.image_url||'',d.lookup_source||'',d.lookup_url||'',+d.stock||0,+d.min_stock||0,+d.unit_cost||0,price,d.supplier_id||null,d.location||'',d.notes||'');return{id:r.lastInsertRowid,sell_price:price}})
 ipcMain.handle('inventory:update',(_,{id,data:d})=>{const db=getDb(),barcode=normalizeBarcode(d.barcode);if(!String(d.name||'').trim())throw new Error('Wpisz nazwę części.');if(barcode&&!isGtin(barcode))throw new Error('Kod kreskowy nie jest poprawnym EAN, UPC ani GTIN.');const duplicate=barcode&&db.prepare('SELECT id FROM inventory_parts WHERE barcode=? AND id<>?').get(barcode,id);if(duplicate)throw new Error('Ten kod kreskowy jest przypisany do innej części.');db.prepare(`UPDATE inventory_parts SET barcode=?,part_no=?,name=?,brand=?,category=?,description=?,image_url=?,lookup_source=?,lookup_url=?,min_stock=?,unit_cost=?,sell_price=?,supplier_id=?,location=?,notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(barcode||null,d.part_no||'',String(d.name).trim(),d.brand||'',d.category||'',d.description||'',d.image_url||'',d.lookup_source||'',d.lookup_url||'',+d.min_stock||0,+d.unit_cost||0,+d.sell_price||0,d.supplier_id||null,d.location||'',d.notes||'',id);return true})
 ipcMain.handle('inventory:adjust',(_,{id,delta})=>{getDb().prepare('UPDATE inventory_parts SET stock=MAX(0,stock+?),updated_at=CURRENT_TIMESTAMP WHERE id=?').run(+delta||0,id);return true})

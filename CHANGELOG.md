@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.9 — 2026-09-11
+
+### Nowości
+
+- Lokalna pamięć wyników wyszukiwania kodów EAN, UPC i GTIN w bazie SQLite.
+- Znalezione opisy części są dostępne bez internetu przez 180 dni.
+- Aplikacja rozpoznaje, czy wynik pochodzi z magazynu, lokalnej pamięci czy katalogu internetowego.
+
+### Poprawki
+
+- Brak produktu jest zapamiętywany przez 24 godziny, co ogranicza powtarzanie nieskutecznych zapytań do zewnętrznych baz.
+- Wygasłe i uszkodzone wpisy pamięci kodów są automatycznie usuwane.
+
 ## 1.0.8 — 2026-09-11
 
 ### Nowości
