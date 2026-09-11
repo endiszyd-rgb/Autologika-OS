@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.6 — 2026-09-11
+
+### Nowości
+
+- Własny magazyn części z obsługą kodów EAN, UPC i GTIN ze skanera Zebra oraz wyszukiwaniem nieznanych produktów online.
+- Wydawanie części z magazynu bezpośrednio do aktywnego zlecenia z automatycznym kosztem i ceną sprzedaży.
+- Terminarz ostrzega o kolizjach wizyt i wymaga świadomego potwierdzenia nakładającego się terminu.
+
+### Poprawki
+
+- Usunięcie pozycji zlecenia powiązanej z magazynem automatycznie zwraca wydaną ilość na stan.
+- Powiązanie pozycji zlecenia z kartą magazynową jest zachowywane podczas synchronizacji między urządzeniami.
+- Przed migracją bazy do schematu `4` aplikacja automatycznie tworzy kopię bezpieczeństwa.
+
 ## 1.0.4 — 2026-09-10
 
 ### Nowości
