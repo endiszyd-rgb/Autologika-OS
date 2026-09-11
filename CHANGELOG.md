@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.8 — 2026-09-11
+
+### Nowości
+
+- Przebudowany ekran Finanse i KPI z czytelnym podsumowaniem bieżącego miesiąca.
+- Osobne wskaźniki wartości zleceń, wpłat i należności pozostałych do rozliczenia.
+- Wykres obrotu z 30 dni, struktura sprzedaży, prognoza celu i progi rozwoju warsztatu.
+
+### Poprawki
+
+- Wykres finansowy ma prawidłową wysokość i nie wyświetla już dni jako pionowej listy.
+- Układ finansów jest responsywny dla szerokości 1500 i 1100 pikseli.
+
 ## 1.0.7 — 2026-09-11
 
 ### Poprawki
