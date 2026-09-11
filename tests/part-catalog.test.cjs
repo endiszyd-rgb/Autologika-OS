@@ -19,3 +19,24 @@ test('returns no match for an unknown valid barcode',async()=>{
   const fetchImpl=async()=>({ok:false,status:404})
   assert.equal(await lookupBarcodeOnline(fetchImpl,'0049000006346'),null)
 })
+
+test('uses UPCitemDB when the original provider is unavailable',async()=>{
+  const calls=[]
+  const fetchImpl=async url=>{
+    calls.push(url)
+    if(url.includes('upcitemdb.com'))return{ok:true,status:200,json:async()=>({code:'OK',total:1,items:[{title:'Klocki hamulcowe',brand:'ATE',category:'Auto Parts',model:'13.0460',description:'Komplet',images:['https://example.test/brakes.jpg']}]})}
+    return{ok:false,status:503}
+  }
+  const item=await lookupBarcodeOnline(fetchImpl,'0049000006346')
+  assert.equal(item.name,'Klocki hamulcowe')
+  assert.equal(item.lookup_source,'UPCitemDB')
+  assert.equal(calls.length,1)
+})
+
+test('provider outage returns a manual-entry result instead of a technical exception',async()=>{
+  const fetchImpl=async()=>({ok:false,status:503})
+  const result=await lookupBarcodeOnline(fetchImpl,'0049000006346',{details:true})
+  assert.equal(result.item,null)
+  assert.equal(result.available,false)
+  assert.equal(result.errors.length,3)
+})

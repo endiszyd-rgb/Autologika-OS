@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.7 — 2026-09-11
+
+### Poprawki
+
+- Informacje o aktualizacji są wyświetlane jako czytelny tekst zamiast surowych znaczników HTML.
+- Wyszukiwanie kodów korzysta z trzech baz: UPCitemDB, upc.dev i Open Products Facts.
+- Awaria zewnętrznej bazy nie blokuje dodania części; formularz ręczny otwiera się z już wpisanym kodem.
+- Każde zapytanie internetowe ma limit czasu, dzięki czemu skanowanie nie zawiesza interfejsu.
+
 ## 1.0.6 — 2026-09-11
 
 ### Nowości

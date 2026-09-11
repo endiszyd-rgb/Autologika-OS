@@ -3,6 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const packageInfo = require('../package.json')
 const { resolveUpdateRepository } = require('./update-repository.cjs')
+const { notesText } = require('./release-notes.cjs')
 
 const repository = resolveUpdateRepository(packageInfo)
 const configured = Boolean(repository.owner&&repository.repo&&!repository.owner.includes('GITHUB_OWNER')&&!repository.repo.includes('GITHUB_REPO'))
@@ -24,10 +25,6 @@ function notify(patch={}){
   status={...status,...patch,currentVersion:currentVersion(),configured}
   for(const win of BrowserWindow.getAllWindows())if(!win.isDestroyed())win.webContents.send('updater:status',status)
   return status
-}
-function notesText(notes){
-  if(Array.isArray(notes))return notes.map(x=>typeof x==='string'?x:x?.note||'').filter(Boolean).join('\n\n')
-  return String(notes||'')
 }
 function unavailable(message){return notify({state:'IDLE',message,canCheck:false,canDownload:false,canInstall:false})}
 
