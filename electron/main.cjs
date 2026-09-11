@@ -588,7 +588,7 @@ ipcMain.handle('inventory:lookupBarcode',async(_,value)=>{
   if(local)return{found:true,source:'local',item:local}
   pruneBarcodeCache(db)
   const cached=readBarcodeCache(db,barcode)
-  if(cached)return cached
+  if(cached&&(cached.found||cached.originalSource==='catalog-web-v1'))return cached
   const online=await lookupBarcodeOnline((url,options)=>net.fetch(url,options),barcode,{details:true})
   if(online.item){
     writeBarcodeHit(db,barcode,online.item)
@@ -615,6 +615,7 @@ ipcMain.handle('purchases:setStatus',(_,{id,status})=>{const db=getDb();const tx
 
 
 ipcMain.handle('system:copyText',(_,text)=>{clipboard.writeText(String(text||''));return true})
+ipcMain.handle('system:openExternal',async(_,value)=>{const url=new URL(String(value||''));if(!['https:','http:'].includes(url.protocol))throw new Error('Nieobsługiwany adres źródła.');await shell.openExternal(url.href);return true})
 ipcMain.handle('system:openPhone',(_,phone)=>{const p=String(phone||'').replace(/[^\d+]/g,''); if(!p)return false; shell.openExternal(`tel:${p}`); return true})
 ipcMain.handle('system:openSms',(_,{phone,body})=>{
   const p=String(phone||'').replace(/[^\d+]/g,''); if(!p)return false

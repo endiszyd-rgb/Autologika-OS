@@ -10,7 +10,7 @@ function readBarcodeCache(db,barcode,{now=Date.now()}={}){
     db.prepare('DELETE FROM barcode_lookup_cache WHERE barcode=?').run(row.barcode)
     return null
   }
-  if(row.status==='MISS')return{found:false,barcode:row.barcode,cached:true,source:'cache',cachedAt:row.updated_at}
+  if(row.status==='MISS')return{found:false,barcode:row.barcode,cached:true,source:'cache',originalSource:row.source||'',cachedAt:row.updated_at}
   try{
     const item=JSON.parse(row.payload_json||'')
     if(!item?.name)throw new Error('empty item')
@@ -30,12 +30,12 @@ function writeBarcodeHit(db,barcode,item,{now=Date.now(),ttlMs=HIT_TTL_MS}={}){
   return readBarcodeCache(db,barcode,{now})
 }
 
-function writeBarcodeMiss(db,barcode,{now=Date.now(),ttlMs=MISS_TTL_MS}={}){
+function writeBarcodeMiss(db,barcode,{now=Date.now(),ttlMs=MISS_TTL_MS,source='catalog-web-v1'}={}){
   const savedAt=iso(now),expiresAt=iso(Number(now)+ttlMs)
   db.prepare(`INSERT INTO barcode_lookup_cache(barcode,status,source,lookup_url,payload_json,expires_at,created_at,updated_at)
-    VALUES (?,'MISS','','','',?,?,?)
-    ON CONFLICT(barcode) DO UPDATE SET status='MISS',source='',lookup_url='',payload_json='',expires_at=excluded.expires_at,updated_at=excluded.updated_at`)
-    .run(String(barcode||''),expiresAt,savedAt,savedAt)
+    VALUES (?,'MISS',?,'','',?,?,?)
+    ON CONFLICT(barcode) DO UPDATE SET status='MISS',source=excluded.source,lookup_url='',payload_json='',expires_at=excluded.expires_at,updated_at=excluded.updated_at`)
+    .run(String(barcode||''),source,expiresAt,savedAt,savedAt)
   return readBarcodeCache(db,barcode,{now})
 }
 

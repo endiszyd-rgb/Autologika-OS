@@ -1,6 +1,6 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
-const {normalizeBarcode,isGtin,lookupBarcodeOnline}=require('../electron/part-catalog.cjs')
+const {normalizeBarcode,isGtin,mapWebSearch,lookupBarcodeOnline}=require('../electron/part-catalog.cjs')
 
 test('normalizes Zebra symbology prefixes and validates GTIN checksum',()=>{
   assert.equal(normalizeBarcode(']E04006381333931\r\n'),'4006381333931')
@@ -38,5 +38,28 @@ test('provider outage returns a manual-entry result instead of a technical excep
   const result=await lookupBarcodeOnline(fetchImpl,'0049000006346',{details:true})
   assert.equal(result.item,null)
   assert.equal(result.available,false)
-  assert.equal(result.errors.length,3)
+  assert.equal(result.errors.length,5)
+})
+
+test('maps an exact automotive web result when barcode catalogs have no match',()=>{
+  const html=`<div class="result results_links"><a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.test%2F28SKV013&amp;rut=x">ESEN SKV 28SKV013 - Parking sensor 5901947342091 | sklep</a><a class="result__snippet">EAN: <b>5901947342091</b>. Czujnik parkowania tył, 12 V.</a></div>`
+  const item=mapWebSearch(html,'5901947342091')
+  assert.equal(item.name,'ESEN SKV 28SKV013 - Parking sensor | sklep')
+  assert.equal(item.brand,'SKV')
+  assert.equal(item.part_no,'28SKV013')
+  assert.equal(item.lookup_url,'https://example.test/28SKV013')
+  assert.equal(item.web_candidate,true)
+})
+
+test('ignores web search results without the exact barcode',()=>{
+  const html='<a class="result__a" href="https://example.test/item">Podobny czujnik 28SKV013</a><a class="result__snippet">Inny produkt</a>'
+  assert.equal(mapWebSearch(html,'5901947342091'),null)
+})
+
+test('maps an automotive result from Brave search HTML',()=>{
+  const html=`5901947342091 <a href="https://www.auto-doc.test/esen-skv/13449639" class="result l1"><div class="site">AUTODOC</div><div class="title search-snippet-title" title="28SKV013 ESEN SKV Parking sensor Rear | AUTODOC">wynik</div></a>`
+  const item=mapWebSearch(html,'5901947342091')
+  assert.equal(item.part_no,'28SKV013')
+  assert.equal(item.brand,'ESEN SKV')
+  assert.equal(item.lookup_url,'https://www.auto-doc.test/esen-skv/13449639')
 })

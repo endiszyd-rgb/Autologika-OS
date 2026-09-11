@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.10 — 2026-09-11
+
+### Nowości
+
+- Wyszukiwanie części rozszerzone o wyniki WWW zawierające dokładny zeskanowany kod EAN, UPC lub GTIN.
+- Automatyczne uzupełnianie nazwy, producenta, numeru katalogowego, opisu i strony źródłowej znalezionej części.
+- Przycisk otwierający stronę źródłową bezpośrednio z formularza przed zapisaniem produktu w magazynie.
+
+### Poprawki
+
+- Kody części samochodowych nieobecne w ogólnych bazach produktów mogą zostać rozpoznane na stronach katalogów i sprzedawców.
+- Stare negatywne wyniki z wersji 1.0.9 są pomijane i wyszukiwane ponownie nową metodą.
+- Kandydat z internetu jest wyraźnie oznaczony jako wymagający porównania z opakowaniem.
+
 ## 1.0.9 — 2026-09-11
 
 ### Nowości
