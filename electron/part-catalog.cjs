@@ -94,6 +94,100 @@ function webBrand(title,partNo){
   return (after.match(/^\s*([A-Z][A-Z0-9-]{1,15}(?:\s+[A-Z][A-Z0-9-]{1,15})?)/)?.[1]||'').trim()
 }
 
+const LOOKUP_VERSION='catalog-web-v2'
+const VEHICLE_MAKES=['ALFA ROMEO','ASTON MARTIN','LAND ROVER','MERCEDES-BENZ','MERCEDES','VOLKSWAGEN','VAUXHALL','CHEVROLET','CHRYSLER','CITROEN','DACIA','DAEWOO','DAIHATSU','DODGE','FERRARI','FIAT','FORD','HONDA','HYUNDAI','INFINITI','ISUZU','IVECO','JAGUAR','JEEP','KIA','LANCIA','LEXUS','MAN','MAZDA','MINI','MITSUBISHI','NISSAN','OPEL','PEUGEOT','PORSCHE','RENAULT','ROVER','SAAB','SEAT','SKODA','SMART','SSANGYONG','SUBARU','SUZUKI','TESLA','TOYOTA','VOLVO','AUDI','BMW']
+
+function uniqueLines(values=[]){
+  const seen=new Set(),out=[]
+  for(const value of values.flatMap(value=>String(value||'').split(/[\n;]+/))){
+    const clean=decodeHtml(value).replace(/^[\s,|:–—-]+|[\s,|:–—-]+$/g,'').replace(/\s+/g,' ').trim()
+    const key=clean.toLocaleUpperCase('pl-PL')
+    if(clean.length>=2&&clean.length<=180&&!seen.has(key)){seen.add(key);out.push(clean)}
+  }
+  return out
+}
+
+function extractFitment(value=''){
+  const clean=decodeHtml(value).replace(/\s*[|–—]\s*(?:AUTODOC|eBay|Amazon|Allegro|sklep|prix|price).*$/i,'').trim()
+  const match=clean.match(/(?:\bpasuje\s+do\b|\bdo\b|\bfits?\b|\bfor\b|\bpour\b|\bfür\b|\bpro\b)\s+(.{3,260})$/i)
+  if(!match)return''
+  const raw=match[1].replace(/\([^)]*(?:price|prix|cena)[^)]*\)/gi,'').trim()
+  const chunks=raw.split(/[,;]+/).map(x=>x.trim()).filter(Boolean).slice(0,18)
+  const firstUpper=(chunks[0]||'').toUpperCase()
+  const make=VEHICLE_MAKES.find(name=>firstUpper.startsWith(name+' ')||firstUpper===name)||''
+  return uniqueLines(chunks.map((chunk,index)=>index>0&&make&&!VEHICLE_MAKES.some(name=>chunk.toUpperCase().startsWith(name+' '))?`${make} ${chunk}`:chunk)).join('\n')
+}
+
+function extractReferenceNumbers(value='',barcode='',partNo=''){
+  const text=decodeHtml(value),segments=[]
+  const label=/(?:num(?:er|ery)?\s+(?:oe|oem|referencyjne|zamiennik(?:ów|i)?)|cross(?:\s*reference)?|reference(?:\s*(?:number|numbers|no))?|référence(?:s)?\s*(?:oe|constructeur)?|vergleichsnummer|oe\s*(?:nr|no|number|numbers)?|oem\s*(?:nr|no|number|numbers)?)[\s:#-]*([^\n<>]{3,500})/gi
+  for(const match of text.matchAll(label))segments.push(match[1])
+  const excluded=new Set([normalizeBarcode(barcode),String(partNo||'').replace(/[^A-Z0-9]/gi,'').toUpperCase()])
+  const refs=[]
+  for(const segment of segments){
+    const numeric=segment.match(/\b\d{5,14}\b/g)||[]
+    const alphanumeric=segment.match(/\b(?=[A-Z0-9._/-]{5,24}\b)(?=[A-Z0-9._/-]*\d)(?=[A-Z0-9._/-]*[A-Z])[A-Z0-9][A-Z0-9._/-]{4,23}\b/gi)||[]
+    const tokens=[...numeric,...alphanumeric]
+    for(let token of tokens){
+      token=token.replace(/\s+/g,' ').replace(/^[._/-]+|[._/-]+$/g,'').trim()
+      const compact=token.replace(/[^A-Z0-9]/gi,'').toUpperCase()
+      if(!/\d/.test(token)||compact.length<5||excluded.has(compact)||/^(?:HTTP|WWW|EAN|GTIN|UPC)/i.test(token))continue
+      refs.push(token)
+    }
+  }
+  return uniqueLines(refs).slice(0,40).join('\n')
+}
+
+function jsonLdProducts(html=''){
+  const products=[]
+  const visit=value=>{
+    if(!value||typeof value!=='object')return
+    if(Array.isArray(value)){value.forEach(visit);return}
+    const type=Array.isArray(value['@type'])?value['@type'].join(' '):String(value['@type']||'')
+    if(/product/i.test(type))products.push(value)
+    Object.values(value).forEach(visit)
+  }
+  for(const match of String(html).matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)){
+    try{visit(JSON.parse(match[1].trim()))}catch{}
+  }
+  return products
+}
+
+function enrichPartFromHtml(item,html=''){
+  if(!item)return item
+  const products=jsonLdProducts(html),product=products[0]||{},brandValue=typeof product.brand==='object'?product.brand?.name:product.brand
+  const fitment=[]
+  const collectFit=value=>{
+    if(Array.isArray(value))return value.forEach(collectFit)
+    if(value&&typeof value==='object')fitment.push(value.name||value.model||'')
+    else fitment.push(value||'')
+  }
+  collectFit(product.isAccessoryOrSparePartFor)
+  const text=decodeHtml(String(html).replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<\/(?:div|p|li|tr|section|h\d)>/gi,'\n'))
+  const title=decodeHtml(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||product.name||item.name)
+  const pagePartNo=String(product.sku||product.mpn||product.productID||'').trim()
+  const references=extractReferenceNumbers(text,item.barcode,pagePartNo||item.part_no)
+  const vehicleFitment=uniqueLines([...fitment,extractFitment(title),extractFitment(item.name)]).join('\n')
+  return {...item,
+    name:String(product.name||item.name||'').trim(),
+    brand:String(brandValue||item.brand||'').trim(),
+    part_no:pagePartNo||item.part_no||'',
+    vehicle_fitment:vehicleFitment||item.vehicle_fitment||'',
+    cross_numbers:references||item.cross_numbers||'',
+    description:'',lookup_version:LOOKUP_VERSION
+  }
+}
+
+async function enrichWebCandidate(fetchImpl,item){
+  const base=enrichPartFromHtml(item,'')
+  if(!item?.lookup_url)return base
+  try{
+    const response=await fetchImpl(item.lookup_url,{headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36'},signal:AbortSignal.timeout(6000)})
+    if(response.ok)return enrichPartFromHtml(base,await response.text())
+  }catch{}
+  return base
+}
+
 function mapWebSearch(html,scannedCode){
   const barcode=normalizeBarcode(scannedCode),results=[]
   const pattern=/<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>([\s\S]*?)(?=<a[^>]*class="result__a"|$)/gi
@@ -126,11 +220,13 @@ function mapWebSearch(html,scannedCode){
     brand:webBrand(best.rawTitle,partNo),
     category:'Części samochodowe',
     part_no:partNo,
-    description:best.snippet.slice(0,700),
+    description:'',
+    vehicle_fitment:extractFitment(`${best.rawTitle} ${best.snippet}`),
+    cross_numbers:extractReferenceNumbers(best.snippet,barcode,partNo),
     image_url:'',
     lookup_source:'Wyszukiwanie WWW',
     lookup_url:best.url,
-    web_candidate:true
+    web_candidate:true,lookup_version:LOOKUP_VERSION
   }
 }
 
@@ -146,6 +242,7 @@ async function lookupBarcodeOnline(fetchImpl,value,{details=false}={}){
     {url:`https://world.openproductsfacts.org/api/v3/product/${encodeURIComponent(barcode)}?fields=code,product_name,brands,categories,generic_name,image_front_url`,map:mapOpenProductsFacts}
   ]
   let available=false
+  let fallbackItem=null
   const errors=[]
   for(const provider of providers){
     try{
@@ -154,11 +251,16 @@ async function lookupBarcodeOnline(fetchImpl,value,{details=false}={}){
       if(!response.ok){errors.push(`${new URL(provider.url).hostname}: HTTP ${response.status}`);continue}
       available=true
       const payload=provider.type==='text'?await response.text():await response.json()
-      const item=provider.map(payload,barcode)
-      if(item)return details?{item,available:true,errors}:item
+      let item=provider.map(payload,barcode)
+      if(item){
+        item={vehicle_fitment:'',cross_numbers:'',lookup_version:LOOKUP_VERSION,...item}
+        if(item.web_candidate){item=await enrichWebCandidate(fetchImpl,item);return details?{item,available:true,errors}:item}
+        fallbackItem??=item
+      }
     }catch(error){errors.push(error?.message||String(error))}
   }
+  if(fallbackItem)return details?{item:fallbackItem,available:true,errors}:fallbackItem
   return details?{item:null,available,errors}:null
 }
 
-module.exports={normalizeBarcode,isGtin,mapUpcDev,mapUpcItemDb,mapOpenProductsFacts,mapWebSearch,lookupBarcodeOnline}
+module.exports={LOOKUP_VERSION,normalizeBarcode,isGtin,mapUpcDev,mapUpcItemDb,mapOpenProductsFacts,mapWebSearch,extractFitment,extractReferenceNumbers,enrichPartFromHtml,lookupBarcodeOnline}

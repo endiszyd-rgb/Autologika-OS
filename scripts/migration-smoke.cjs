@@ -17,7 +17,7 @@ app.whenReady().then(async()=>{
  for(const table of ['order_items','quote_items'])for(const column of required)if(!columns(table).has(column))throw new Error(`${table}.${column} missing`)
  if(!columns('order_items').has('inventory_part_id'))throw new Error('order_items.inventory_part_id missing')
  for(const table of ['work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps'])db.prepare(`SELECT 1 FROM ${table} LIMIT 1`).get()
- const inventoryColumns=['barcode','brand','category','description','image_url','lookup_source','lookup_url','cloud_id','version']
+ const inventoryColumns=['barcode','brand','category','description','vehicle_fitment','cross_numbers','image_url','lookup_source','lookup_url','cloud_id','version']
  for(const column of inventoryColumns)if(!columns('inventory_parts').has(column))throw new Error(`inventory_parts.${column} missing`)
  if(db.pragma('user_version',{simple:true})!==SCHEMA_VERSION)throw new Error('schema version not saved')
  const customerColumn=db.prepare("PRAGMA table_info(vehicles)").all().find(column=>column.name==='customer_id')

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.11 — 2026-09-11
+
+### Nowości
+
+- Po zeskanowaniu części aplikacja automatycznie odczytuje numer katalogowy oraz markę lub producenta.
+- Karta części zawiera teraz pola „Pasuje do — marki i modele” oraz „Numery OE / zamienniki”.
+- Wyszukiwarka magazynu znajduje zapisane części także po modelu pojazdu i numerze krzyżowym.
+
+### Poprawki
+
+- Wyniki są wzbogacane z danych strukturalnych strony produktu, podpisanych sekcji OE/OEM oraz tytułu wyniku.
+- Pamięć starszych wyników jest odświeżana, aby pobrać nowe pola zgodności i numerów zamiennych.
+- Dane zgodności i numery krzyżowe synchronizują się między wersją PC i Android.
+
 ## 1.0.10 — 2026-09-11
 
 ### Nowości

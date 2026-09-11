@@ -1,6 +1,6 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
-const {normalizeBarcode,isGtin,mapWebSearch,lookupBarcodeOnline}=require('../electron/part-catalog.cjs')
+const {normalizeBarcode,isGtin,mapWebSearch,enrichPartFromHtml,lookupBarcodeOnline}=require('../electron/part-catalog.cjs')
 
 test('normalizes Zebra symbology prefixes and validates GTIN checksum',()=>{
   assert.equal(normalizeBarcode(']E04006381333931\r\n'),'4006381333931')
@@ -12,7 +12,10 @@ test('normalizes Zebra symbology prefixes and validates GTIN checksum',()=>{
 test('maps an online barcode result into an inventory draft',async()=>{
   const fetchImpl=async()=>({ok:true,status:200,json:async()=>({ok:true,data:{name:'Filtr oleju',brand:'MANN-FILTER',category:'Auto Parts',mpn:'W 712/95',description:'Filtr silnikowy',image_url:'https://example.test/filter.jpg'}})})
   const item=await lookupBarcodeOnline(fetchImpl,'0049000006346')
-  assert.deepEqual(item,{barcode:'0049000006346',name:'Filtr oleju',brand:'MANN-FILTER',category:'Auto Parts',part_no:'W 712/95',description:'Filtr silnikowy',image_url:'https://example.test/filter.jpg',lookup_source:'upc.dev',lookup_url:'https://upc.dev/v1/product/0049000006346'})
+  assert.equal(item.part_no,'W 712/95')
+  assert.equal(item.brand,'MANN-FILTER')
+  assert.equal(item.vehicle_fitment,'')
+  assert.equal(item.cross_numbers,'')
 })
 
 test('returns no match for an unknown valid barcode',async()=>{
@@ -20,7 +23,7 @@ test('returns no match for an unknown valid barcode',async()=>{
   assert.equal(await lookupBarcodeOnline(fetchImpl,'0049000006346'),null)
 })
 
-test('uses UPCitemDB when the original provider is unavailable',async()=>{
+test('keeps UPCitemDB as fallback while checking richer web results',async()=>{
   const calls=[]
   const fetchImpl=async url=>{
     calls.push(url)
@@ -30,7 +33,7 @@ test('uses UPCitemDB when the original provider is unavailable',async()=>{
   const item=await lookupBarcodeOnline(fetchImpl,'0049000006346')
   assert.equal(item.name,'Klocki hamulcowe')
   assert.equal(item.lookup_source,'UPCitemDB')
-  assert.equal(calls.length,1)
+  assert.equal(calls.length,5)
 })
 
 test('provider outage returns a manual-entry result instead of a technical exception',async()=>{
@@ -62,4 +65,29 @@ test('maps an automotive result from Brave search HTML',()=>{
   assert.equal(item.part_no,'28SKV013')
   assert.equal(item.brand,'ESEN SKV')
   assert.equal(item.lookup_url,'https://www.auto-doc.test/esen-skv/13449639')
+})
+
+test('extracts manufacturer, catalog number, vehicle fitment and cross references from a product page',()=>{
+  const html=`<html><head><title>Czujnik parkowania ESEN SKV do BMW Seria 1, Seria 2</title>
+    <script type="application/ld+json">{"@type":"Product","name":"Czujnik parkowania","sku":"28SKV013","brand":{"@type":"Brand","name":"ESEN SKV"},"isAccessoryOrSparePartFor":[{"@type":"Vehicle","name":"BMW Seria 1 E81"}]}</script></head>
+    <body><section>Numery OE: 66209261582, 9261582; 66202180149</section></body></html>`
+  const item=enrichPartFromHtml({barcode:'5901947342091',name:'wynik',brand:'',part_no:'',vehicle_fitment:'',cross_numbers:''},html)
+  assert.equal(item.name,'Czujnik parkowania')
+  assert.equal(item.brand,'ESEN SKV')
+  assert.equal(item.part_no,'28SKV013')
+  assert.match(item.vehicle_fitment,/BMW Seria 1 E81/)
+  assert.match(item.cross_numbers,/66209261582/)
+  assert.match(item.cross_numbers,/66202180149/)
+})
+
+test('enriches a web candidate with detail-page JSON-LD',async()=>{
+  const search=`<a class="result__a" href="https://example.test/product">ESEN SKV 28SKV013 sensor 5901947342091 for BMW Series 1, Series 2</a><a class="result__snippet">EAN 5901947342091</a>`
+  const page=`<script type="application/ld+json">{"@type":"Product","sku":"28SKV013","brand":{"name":"ESEN SKV"}}</script><p>OEM numbers: 66209261582 66202180149</p>`
+  let calls=0
+  const fetchImpl=async url=>{calls++;return url.includes('duckduckgo')?{ok:true,status:200,text:async()=>search}:url==='https://example.test/product'?{ok:true,status:200,text:async()=>page}:{ok:false,status:404}}
+  const item=await lookupBarcodeOnline(fetchImpl,'5901947342091')
+  assert.equal(item.brand,'ESEN SKV')
+  assert.match(item.vehicle_fitment,/BMW Series 1/)
+  assert.match(item.cross_numbers,/66209261582/)
+  assert.ok(calls>=3)
 })
