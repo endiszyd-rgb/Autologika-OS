@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.16 — 2026-09-12
+
+### Ulepszenia
+
+- Globalne wyszukiwanie `Ctrl+K` otwiera teraz bezpośrednio znaleziony profil klienta lub pojazdu.
+- Wyszukiwarka obejmuje aktywne, wydane i archiwalne zlecenia.
+- Wyniki z archiwum są jednoznacznie oznaczone i otwierają wskazane zlecenie.
+- Wyszukiwanie marek, modeli i nazw działa niezależnie od polskich oraz innych europejskich znaków diakrytycznych.
+
+### Testy
+
+- Dodano automatyczny przepływ `Ctrl+K` dla klienta, pojazdu oraz zarchiwizowanego zlecenia.
+
 ## 1.0.15 — 2026-09-12
 
 ### Poprawki
