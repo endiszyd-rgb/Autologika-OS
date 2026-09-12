@@ -1,5 +1,18 @@
 # Changelog
 
+## Następna wersja
+
+### Kompletność zlecenia
+
+- Widok przeglądu pokazuje siedem warunków potrzebnych do wydania pojazdu, wspólnych z checklistą zamknięcia.
+- Każdy brak otwiera właściwą zakładkę, a przycisk następnego kroku prowadzi do pierwszego nieukończonego etapu.
+
+### Centrum synchronizacji
+
+- Ustawienia pokazują ostatni wynik synchronizacji, liczbę oczekujących i błędnych zmian oraz podział kolejki według modułów.
+- Błędny rekord wyświetla przyczynę i pozwala ponowić wysyłkę bez usuwania lokalnych danych.
+- Stan synchronizacji odświeża się automatycznie podczas pracy w Ustawieniach.
+
 ## 1.0.19 — 2026-09-12
 
 ### Centrum zlecenia

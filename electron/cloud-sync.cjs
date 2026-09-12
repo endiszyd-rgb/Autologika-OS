@@ -10,7 +10,7 @@ const SYNC_TABLES = ['app_settings','customers','suppliers','inventory_parts','v
 const events = new EventEmitter()
 let running = false, timer = null
 function configPath(){ return path.join(app.getPath('userData'),'cloud-sync.json') }
-function defaultConfig(){ return { enabled:false,url:'',key:'',intervalSeconds:30,deviceName:os.hostname(),deviceId:crypto.randomUUID(),lastSync:'',workshopId:'',accessToken:'',refreshToken:'',expiresAt:0,user:null } }
+function defaultConfig(){ return { enabled:false,url:'',key:'',intervalSeconds:30,deviceName:os.hostname(),deviceId:crypto.randomUUID(),lastSync:'',lastResult:null,workshopId:'',accessToken:'',refreshToken:'',expiresAt:0,user:null } }
 function normalizeUrl(value=''){return String(value||'').trim().replace(/\/+(rest|auth|storage)\/v1\/?$/i,'').replace(/\/+$/,'')}
 function keyKind(key=''){const k=String(key||'').trim();if(k.startsWith('sb_publishable_'))return 'publishable';if(k.startsWith('eyJ'))return 'legacy-anon';if(k.startsWith('sb_secret_'))return 'secret';return k?'unknown':'empty'}
 function loadConfig(){ try{return {...defaultConfig(),...JSON.parse(fs.readFileSync(configPath(),'utf8'))}}catch{const c=defaultConfig();saveConfig(c);return c} }
@@ -83,8 +83,16 @@ async function scanRemoteApprovals(c=loadConfig(),db=getDb()){
   }
   return changed;
 }
-async function syncNow(){if(running)return {ok:false,busy:true};let c=loadConfig();if(!isConfigured(c))return {ok:false,error:'Skonfiguruj URL i anon/publishable key Supabase.'};if(!c.accessToken)return {ok:false,error:'Zaloguj się do Autologika Cloud.'};running=true;try{const db=getDb();let pushed=await pushQueue(c,db);c=loadConfig();const pulled=await pullChanges(c,db);c=loadConfig();const remoteApprovals=await scanRemoteApprovals(c,db);if(remoteApprovals.length)pushed+=await pushQueue(c,db);const result={ok:true,pushed,pulled,remoteApprovals,at:new Date().toISOString(),pending:db.prepare('SELECT COUNT(*) c FROM sync_queue').get().c};events.emit('sync-complete',result);return result}catch(e){return {ok:false,error:String(e.message||e),at:new Date().toISOString()}}finally{running=false}}
-function status(){const c=loadConfig(),db=getDb();return {configured:isConfigured(c),loggedIn:!!c.accessToken,email:c.user?.email||'',workshopId:c.workshopId||c.user?.id||'',enabled:c.enabled,running,pending:db.prepare('SELECT COUNT(*) c FROM sync_queue').get().c,lastSync:c.lastSync||'',deviceName:c.deviceName,deviceId:c.deviceId,intervalSeconds:c.intervalSeconds,url:c.url}}
+function queueState(db){
+ const queue=db.prepare(`SELECT id,entity_type,row_id,operation,queued_at,attempts,last_error FROM sync_queue ORDER BY CASE WHEN last_error IS NOT NULL AND last_error!='' THEN 0 ELSE 1 END,id LIMIT 20`).all()
+ const groups=db.prepare(`SELECT entity_type,COUNT(*) total,SUM(CASE WHEN last_error IS NOT NULL AND last_error!='' THEN 1 ELSE 0 END) failed FROM sync_queue GROUP BY entity_type ORDER BY total DESC,entity_type`).all()
+ const totals=db.prepare(`SELECT COUNT(*) pending,SUM(CASE WHEN last_error IS NOT NULL AND last_error!='' THEN 1 ELSE 0 END) failed,MIN(queued_at) oldest FROM sync_queue`).get()
+ return {pending:Number(totals?.pending||0),failed:Number(totals?.failed||0),oldestPending:totals?.oldest||'',queue,groups:groups.map(row=>({...row,total:Number(row.total||0),failed:Number(row.failed||0)}))}
+}
+function rememberResult(result){try{saveConfig({lastResult:{ok:!!result.ok,error:result.error||'',pushed:Number(result.pushed||0),pulled:Number(result.pulled||0),pending:Number(result.pending||0),at:result.at||new Date().toISOString()}})}catch{}return result}
+async function syncNow(){if(running)return {ok:false,busy:true};let c=loadConfig();if(!isConfigured(c))return rememberResult({ok:false,error:'Skonfiguruj URL i anon/publishable key Supabase.',at:new Date().toISOString()});if(!c.accessToken)return rememberResult({ok:false,error:'Zaloguj się do Autologika Cloud.',at:new Date().toISOString()});running=true;try{const db=getDb();let pushed=await pushQueue(c,db);c=loadConfig();const pulled=await pullChanges(c,db);c=loadConfig();const remoteApprovals=await scanRemoteApprovals(c,db);if(remoteApprovals.length)pushed+=await pushQueue(c,db);const result={ok:true,pushed,pulled,remoteApprovals,at:new Date().toISOString(),pending:db.prepare('SELECT COUNT(*) c FROM sync_queue').get().c};rememberResult(result);events.emit('sync-complete',result);return result}catch(e){const db=getDb(),result={ok:false,error:String(e.message||e),at:new Date().toISOString(),pending:db.prepare('SELECT COUNT(*) c FROM sync_queue').get().c};return rememberResult(result)}finally{running=false}}
+function status(){const c=loadConfig(),db=getDb();return {configured:isConfigured(c),loggedIn:!!c.accessToken,email:c.user?.email||'',workshopId:c.workshopId||c.user?.id||'',enabled:c.enabled,running,lastSync:c.lastSync||'',lastResult:c.lastResult||null,deviceName:c.deviceName,deviceId:c.deviceId,intervalSeconds:c.intervalSeconds,url:c.url,...queueState(db)}}
+async function retryPending(id){const db=getDb(),row=db.prepare('SELECT id FROM sync_queue WHERE id=?').get(Number(id));if(!row)return {ok:false,error:'Ta zmiana nie oczekuje już na wysłanie.'};db.prepare('UPDATE sync_queue SET attempts=0,last_error=NULL WHERE id=?').run(row.id);return syncNow()}
 function startAuto(){stopAuto();const c=loadConfig();if(c.enabled&&isConfigured(c)&&c.accessToken){timer=setInterval(()=>syncNow().catch(()=>{}),c.intervalSeconds*1000);setTimeout(()=>syncNow().catch(()=>{}),2500)}}
 function stopAuto(){if(timer){clearInterval(timer);timer=null}}
 
@@ -104,4 +112,4 @@ async function pullRemoteApproval(approvalId){
   return {ok:true,...r,status:local?.status||r.status,customer_note:local?.note||r.customer_note||'',decided_at:local?.decided_at||r.decided_at};
 }
 
-module.exports={loadConfig,saveConfig,publicConfig,status,syncNow,startAuto,stopAuto,login,signup,logout,account,testConnection,createRemoteApproval,pullRemoteApproval,scanRemoteApprovals,on:(name,fn)=>events.on(name,fn),_testing:{buildPayload,applyPayload,reconcileOrderTotals}}
+module.exports={loadConfig,saveConfig,publicConfig,status,syncNow,retryPending,startAuto,stopAuto,login,signup,logout,account,testConnection,createRemoteApproval,pullRemoteApproval,scanRemoteApprovals,on:(name,fn)=>events.on(name,fn),_testing:{buildPayload,applyPayload,reconcileOrderTotals,queueState}}

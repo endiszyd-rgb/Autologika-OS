@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {_testing:{buildPayload,applyPayload,reconcileOrderTotals}}=require('../electron/cloud-sync.cjs')
+const {_testing:{buildPayload,applyPayload,reconcileOrderTotals,queueState}}=require('../electron/cloud-sync.cjs')
 
 test('standalone vehicle keeps a null customer through cloud synchronization',()=>{
  const db=new DatabaseSync(':memory:')
@@ -63,4 +63,15 @@ test('recalculates order profitability after remote item changes',()=>{
  db.exec(`CREATE TABLE orders(id INTEGER PRIMARY KEY,parts_cost REAL,parts_sale REAL,other_cost REAL,other_sale REAL); CREATE TABLE order_items(id INTEGER PRIMARY KEY,order_id INTEGER,kind TEXT,qty REAL,unit_cost REAL,unit_price REAL); INSERT INTO orders VALUES(3,999,999,999,999); INSERT INTO order_items VALUES(1,3,'CZESC',2,40,85); INSERT INTO order_items VALUES(2,3,'USLUGA_ZEW',1,60,100);`)
  reconcileOrderTotals(db)
  assert.deepEqual({...db.prepare('SELECT parts_cost,parts_sale,other_cost,other_sale FROM orders WHERE id=3').get()},{parts_cost:80,parts_sale:170,other_cost:60,other_sale:100})
+})
+
+test('sync queue status groups pending changes and exposes failed records',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE sync_queue(id INTEGER PRIMARY KEY,entity_type TEXT,row_id INTEGER,operation TEXT,queued_at TEXT,attempts INTEGER,last_error TEXT); INSERT INTO sync_queue VALUES(1,'orders',8,'UPSERT','2026-09-12T10:00:00Z',0,NULL),(2,'job_part_orders',12,'UPSERT','2026-09-12T10:01:00Z',2,'Cloud 400: invalid payload'),(3,'orders',9,'DELETE','2026-09-12T10:02:00Z',0,NULL);`)
+ const state=queueState(db)
+ assert.equal(state.pending,3)
+ assert.equal(state.failed,1)
+ assert.equal(state.oldestPending,'2026-09-12T10:00:00Z')
+ assert.deepEqual(state.groups.map(row=>[row.entity_type,row.total,row.failed]),[['orders',2,0],['job_part_orders',1,1]])
+ assert.equal(state.queue[0].id,2)
 })
