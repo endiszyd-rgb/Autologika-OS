@@ -493,7 +493,27 @@ app.on('browser-window-created', (_, win) => {
       await delay(300)
       assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.commandPalette')`), true)
       await capture('search')
-      await win.webContents.executeJavaScript(`document.querySelector('.paletteShade').dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));document.querySelector('nav button[title="Pulpit"]').click()`)
+      await win.webContents.executeJavaScript(`document.querySelector('.paletteShade').dispatchEvent(new MouseEvent('mousedown',{bubbles:true}))`)
+      database.prepare("UPDATE orders SET status='WYDANE',archived_at=CURRENT_TIMESTAMP WHERE id=(SELECT o.id FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE v.plate='PO 3WN90')").run()
+      await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Należności"]').click()`)
+      await delay(350)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.debtorsTable tbody tr').length>0`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.debtorsTable').textContent.includes('Pozostało')`),true)
+      await capture('debtors')
+      await win.webContents.executeJavaScript(`document.querySelector('.debtorsTable tbody button').click()`)
+      await delay(350)
+      assert.equal((await inspect()).title,'Centrum zlecenia')
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.centerHero').textContent.includes('PO 3WN90')`),true)
+      const auditPages=['Do uwagi','Diagnostyka','Baza wiedzy','Asystent wiedzy','Pracownicy','Autologika Care','Dokumenty']
+      for(const title of auditPages){
+        await win.webContents.executeJavaScript(`document.querySelector('nav button[title=${JSON.stringify(title)}]').click()`)
+        await delay(300)
+        const state=await inspect()
+        assert.equal(state.fatal,false,title)
+        assert.equal(state.overflow,false,title)
+      }
+      console.log('NAVIGATION_AUDIT',`${auditPages.length+1} previously uncovered views rendered without errors; debtors open the linked order`)
+      await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Pulpit"]').click()`)
       await delay(400)
       // Verify the empty state using the same isolated database.
       require('../electron/db.cjs').getDb().prepare('DELETE FROM orders').run()

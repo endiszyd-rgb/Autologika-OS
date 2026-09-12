@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.15 — 2026-09-12
+
+### Poprawki
+
+- Naprawiono zakładkę Należności, która korzystała z nieistniejącej kolumny i mogła nie pokazywać zaległych płatności.
+- Saldo jest obliczane z tego samego zakresu finansowego co wartość zlecenia i prawidłowo uwzględnia płatności częściowe.
+- Z należności można przejść bezpośrednio do właściwego zlecenia, także gdy auto zostało już wydane lub zlecenie znajduje się w archiwum.
+- Klient nieprzypisany do pojazdu jest wyświetlany czytelnym opisem zamiast pustej wartości.
+
+### Testy spójności
+
+- Rozszerzono test interfejsu o wszystkie wcześniej nieobjęte nim główne zakładki oraz przepływ należność → zlecenie.
+
 ## 1.0.14 — 2026-09-12
 
 ### Nowości

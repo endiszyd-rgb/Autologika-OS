@@ -17,6 +17,7 @@ const { readBarcodeCache, writeBarcodeHit, writeBarcodeMiss, pruneBarcodeCache }
 const { issueInventoryPart, removeOrderItem } = require('./inventory-usage.cjs')
 const { documentHtml: renderProtocolDocument } = require('./protocol-document.cjs')
 const { customerProfile } = require('./customer-profile.cjs')
+const { listDebtors } = require('./debtors.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -732,17 +733,7 @@ ipcMain.handle('serviceReminders:add',(_,{vehicleId,orderId,data})=>{
 ipcMain.handle('serviceReminders:close',(_,id)=>{getDb().prepare(`UPDATE service_reminders_v2 SET status='DONE' WHERE id=?`).run(id);return true})
 
 ipcMain.handle('debtors:list',()=>{
-  const db=getDb()
-  return db.prepare(`${orderSelect},
-    COALESCE((SELECT SUM(amount) FROM payments p WHERE p.order_id=o.id),0) paid,
-    ROUND(o.total-COALESCE((SELECT SUM(amount) FROM payments p WHERE p.order_id=o.id),0),2) balance
-    FROM orders o
-    JOIN vehicles v ON v.id=o.vehicle_id
-    LEFT JOIN customers c ON c.id=v.customer_id
-    WHERE ROUND(o.total-COALESCE((SELECT SUM(amount) FROM payments p WHERE p.order_id=o.id),0),2)>0.01
-      AND o.status IN ('GOTOWE','WYDANE')
-    ORDER BY balance DESC,o.opened_at`)
-    .all()
+  return listDebtors(getDb())
 })
 
 ipcMain.handle('templates:list',()=>getDb().prepare(`SELECT * FROM message_templates WHERE active=1 ORDER BY id`).all())
