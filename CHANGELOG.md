@@ -1,6 +1,6 @@
 # Changelog
 
-## Następna wersja
+## 1.0.17 — 2026-09-12
 
 ### Wyszukiwanie części po kodzie
 
