@@ -2,6 +2,13 @@
 
 ## Następna wersja
 
+### Wyszukiwanie części po kodzie
+
+- Dodano odporniejsze wyszukiwanie przez DuckDuckGo Lite, używane także wtedy, gdy Brave ogranicza automatyczne zapytania.
+- Wynik automatycznie uzupełnia czytelną nazwę części, producenta, numer katalogowy, pasujące pojazdy oraz znalezione numery OE i zamienników.
+- Katalogi motoryzacyjne mają pierwszeństwo przed ogólnymi ofertami marketplace, a dopasowanie pojazdów jest oczyszczane z cen i danych technicznych produktu.
+- W formularzu można wymusić ponowne pobranie danych bez czekania na wygaśnięcie lokalnej pamięci wyniku.
+
 ### Autologika Care
 
 - Połączono przypomnienia z Centrum zlecenia, profilu pojazdu i ekranu Autologika Care w jeden synchronizowany rejestr.

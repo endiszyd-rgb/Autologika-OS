@@ -94,7 +94,30 @@ function webBrand(title,partNo){
   return (after.match(/^\s*([A-Z][A-Z0-9-]{1,15}(?:\s+[A-Z][A-Z0-9-]{1,15})?)/)?.[1]||'').trim()
 }
 
-const LOOKUP_VERSION='catalog-web-v2'
+function cleanPartName(title='',barcode='',partNo='',brand=''){
+  let value=decodeHtml(title)
+  if(barcode)value=value.replaceAll(String(barcode),' ')
+  value=value.replace(/\s*[|–—-]\s*(?:AUTODOC|eBay|Amazon|Allegro|Motora|sklep).*$/i,' ').replace(/\s*\.{3}\s*/g,' ')
+  const partIndex=partNo?value.toUpperCase().indexOf(String(partNo).toUpperCase()):-1
+  if(partIndex>=0&&partIndex<50)value=value.slice(partIndex+String(partNo).length)
+  for(const prefix of [partNo,brand]){
+    if(!prefix)continue
+    const escaped=String(prefix).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')
+    value=value.replace(new RegExp('^\\s*'+escaped+'\\s*[-–—|:]?\\s*','i'),'')
+  }
+  value=value.replace(/^\s*[-–—|:]\s*/,'').replace(/\s+(?:for|fits?|pour|für|do)\s+.*$/i,'').split(',')[0].replace(/\s+/g,' ').trim()
+  const replacements=[
+    [/\bparking sensor\b/i,'Czujnik parkowania'],[/\bultrasonic sensor\b/i,'Czujnik ultradźwiękowy'],
+    [/\boil filter\b/i,'Filtr oleju'],[/\bair filter\b/i,'Filtr powietrza'],[/\bcabin filter\b/i,'Filtr kabinowy'],
+    [/\bfuel filter\b/i,'Filtr paliwa'],[/\bbrake pads?\b/i,'Klocki hamulcowe'],[/\bbrake disc\b/i,'Tarcza hamulcowa'],
+    [/\bwheel bearing\b/i,'Łożysko koła'],[/\bshock absorber\b/i,'Amortyzator'],[/\bcontrol arm\b/i,'Wahacz']
+  ]
+  for(const [pattern,replacement] of replacements)value=value.replace(pattern,replacement)
+  value=value.replace(/\s+rear\b/i,' — tył').replace(/\s+front\b/i,' — przód').replace(/\s+left\b/i,' — lewa').replace(/\s+right\b/i,' — prawa')
+  return value.trim()
+}
+
+const LOOKUP_VERSION='catalog-web-v3'
 const VEHICLE_MAKES=['ALFA ROMEO','ASTON MARTIN','LAND ROVER','MERCEDES-BENZ','MERCEDES','VOLKSWAGEN','VAUXHALL','CHEVROLET','CHRYSLER','CITROEN','DACIA','DAEWOO','DAIHATSU','DODGE','FERRARI','FIAT','FORD','HONDA','HYUNDAI','INFINITI','ISUZU','IVECO','JAGUAR','JEEP','KIA','LANCIA','LEXUS','MAN','MAZDA','MINI','MITSUBISHI','NISSAN','OPEL','PEUGEOT','PORSCHE','RENAULT','ROVER','SAAB','SEAT','SKODA','SMART','SSANGYONG','SUBARU','SUZUKI','TESLA','TOYOTA','VOLVO','AUDI','BMW']
 
 function uniqueLines(values=[]){
@@ -115,8 +138,20 @@ function extractFitment(value=''){
   const chunks=raw.split(/[,;]+/).map(x=>x.trim()).filter(Boolean).slice(0,18)
   const firstUpper=(chunks[0]||'').toUpperCase()
   const make=VEHICLE_MAKES.find(name=>firstUpper.startsWith(name+' ')||firstUpper===name)||''
-  return uniqueLines(chunks.map((chunk,index)=>index>0&&make&&!VEHICLE_MAKES.some(name=>chunk.toUpperCase().startsWith(name+' '))?`${make} ${chunk}`:chunk)).join('\n')
+  if(!make)return''
+  const models=[]
+  for(let chunk of chunks){
+    const embeddedBarcode=barcodeFromText(chunk)
+    if(embeddedBarcode)chunk=chunk.replace(new RegExp(`\\b${embeddedBarcode}\\b.*$`),'')
+    chunk=chunk.replace(/\s*[|–—-]\s*(?:AUTODOC|eBay|Amazon|Allegro|Motora|sklep).*$/i,'').replace(/\s+(?:rear|front|tył|przód)\s*$/i,'').replace(/\s+za\s+\d[\d.,]*\s*(?:PLN|EUR|CZK).*$/i,'').trim()
+    if(!chunk||/(?:\bEAN\b|article number|numer artykułu|submit a review|ultrasonic sensor|parking sensor|napięcie|voltage|weight|producent|manufacturer|brand:)/i.test(chunk))continue
+    if(!VEHICLE_MAKES.some(name=>chunk.toUpperCase().startsWith(name+' ')||chunk.toUpperCase()===name))chunk=`${make} ${chunk}`
+    if(chunk.toUpperCase()!==make&&chunk.length<=100)models.push(chunk)
+  }
+  return uniqueLines(models).join('\n')
 }
+
+function barcodeFromText(value=''){return String(value).match(/\b\d{8,14}\b/)?.[0]||''}
 
 function extractReferenceNumbers(value='',barcode='',partNo=''){
   const text=decodeHtml(value),segments=[]
@@ -198,6 +233,8 @@ function mapWebSearch(html,scannedCode){
     if(!url||!evidence.includes(barcode))continue
     let score=rawTitle.includes(barcode)?8:4
     if(/autodoc|motora|autoparts|auto-?teile|ucando|częś|czujnik|sensor|filter|brake|pompa|pump|bearing|łożysk/i.test(`${url} ${evidence}`))score+=3
+    if(/autodoc|motora|ucando|czesciauto24|europarts|autodily/i.test(url))score+=6
+    if(/ebay|amazon|allegro/i.test(url))score-=3
     if(/google\.|duckduckgo\.|facebook\.|youtube\./i.test(url))score-=10
     results.push({url,rawTitle,snippet,score})
   }
@@ -206,23 +243,38 @@ function mapWebSearch(html,scannedCode){
     const url=decodeHtml(match[1]),rawTitle=decodeHtml(match[2]),evidence=`${rawTitle} ${url}`
     let score=3
     if(/autodoc|motora|autoparts|auto-?teile|ucando|częś|czujnik|sensor|filter|brake|pompa|pump|bearing|łożysk/i.test(evidence))score+=5
+    if(/autodoc|motora|ucando|czesciauto24|europarts|autodily/i.test(url))score+=6
+    if(/ebay|amazon|allegro/i.test(url))score-=3
     if(/google\.|duckduckgo\.|facebook\.|youtube\./i.test(url))score-=10
     results.push({url,rawTitle,snippet:'',score})
+  }
+  const litePattern=/<a[^>]*href=["']([^"']+)["'][^>]*class=["'][^"']*result-link[^"']*["'][^>]*>([\s\S]*?)<\/a>([\s\S]*?)(?=<a[^>]*class=["'][^"']*result-link|$)/gi
+  for(const match of String(html||'').matchAll(litePattern)){
+    const url=unwrapSearchUrl(match[1]),rawTitle=decodeHtml(match[2])
+    const snippet=decodeHtml(match[3].match(/class=["'][^"']*result-snippet[^"']*["'][^>]*>([\s\S]*?)<\/td>/i)?.[1]||'')
+    const evidence=`${rawTitle} ${snippet}`
+    if(!url||!evidence.includes(barcode))continue
+    let score=rawTitle.includes(barcode)?8:5
+    if(/autodoc|motora|autoparts|auto-?teile|ucando|cz[eę]ści|czujnik|sensor|filter|brake|pompa|pump|bearing|łożysk/i.test(`${url} ${evidence}`))score+=3
+    if(/autodoc|motora|ucando|czesciauto24|europarts|autodily/i.test(url))score+=6
+    if(/ebay|amazon|allegro/i.test(url))score-=3
+    results.push({url,rawTitle,snippet,score})
   }
   const best=results.sort((a,b)=>b.score-a.score)[0]
   if(!best||best.score<4)return null
   const name=best.rawTitle.replaceAll(barcode,'').replace(/\s*[|–—]\s*(?:eBay.*|AUTODOC.*)$/i,'').replace(/\s*\.{3}\s*$/,'').replace(/\s+/g,' ').trim()
   if(!name)return null
   const partNo=webPartNumber(best.rawTitle,barcode)
+  const brand=webBrand(best.rawTitle,partNo)
   return {
     barcode,
-    name,
-    brand:webBrand(best.rawTitle,partNo),
+    name:cleanPartName(name,barcode,partNo,brand)||name,
+    brand,
     category:'Części samochodowe',
     part_no:partNo,
     description:'',
-    vehicle_fitment:extractFitment(`${best.rawTitle} ${best.snippet}`),
-    cross_numbers:extractReferenceNumbers(best.snippet,barcode,partNo),
+    vehicle_fitment:uniqueLines(results.flatMap(result=>[extractFitment(result.rawTitle),extractFitment(result.snippet)])).join('\n'),
+    cross_numbers:extractReferenceNumbers(results.map(result=>result.snippet).join('\n'),barcode,partNo),
     image_url:'',
     lookup_source:'Wyszukiwanie WWW',
     lookup_url:best.url,
@@ -236,6 +288,7 @@ async function lookupBarcodeOnline(fetchImpl,value,{details=false}={}){
   const headers={Accept:'application/json','Content-Type':'application/json','User-Agent':'AutologikaOS/1.0.7 (https://github.com/endiszyd-rgb/Autologika-OS)'}
   const providers=[
     {url:`https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(barcode)}`,map:mapUpcItemDb},
+    {url:`https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(barcode)}`,map:mapWebSearch,type:'text',headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36','Accept-Language':'pl-PL,pl;q=0.9'}},
     {url:`https://search.brave.com/search?q=${encodeURIComponent(`"${barcode}"`)}&source=web`,map:mapWebSearch,type:'text',headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36'}},
     {url:`https://html.duckduckgo.com/html/?q=${encodeURIComponent(`"${barcode}"`)}`,map:mapWebSearch,type:'text',headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36'}},
     {url:`https://upc.dev/v1/product/${encodeURIComponent(barcode)}`,map:mapUpcDev},
@@ -263,4 +316,4 @@ async function lookupBarcodeOnline(fetchImpl,value,{details=false}={}){
   return details?{item:null,available,errors}:null
 }
 
-module.exports={LOOKUP_VERSION,normalizeBarcode,isGtin,mapUpcDev,mapUpcItemDb,mapOpenProductsFacts,mapWebSearch,extractFitment,extractReferenceNumbers,enrichPartFromHtml,lookupBarcodeOnline}
+module.exports={LOOKUP_VERSION,normalizeBarcode,isGtin,mapUpcDev,mapUpcItemDb,mapOpenProductsFacts,mapWebSearch,cleanPartName,extractFitment,extractReferenceNumbers,enrichPartFromHtml,lookupBarcodeOnline}

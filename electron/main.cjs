@@ -599,14 +599,16 @@ ipcMain.handle('jobParts:batchStatus',(_,{ids,status,externalOrderNo='',expected
 
 ipcMain.handle('inventory:list',(_,q='')=>{const like=`%${String(q||'').trim()}%`;return getDb().prepare(`SELECT p.*,s.name supplier FROM inventory_parts p LEFT JOIN suppliers s ON s.id=p.supplier_id WHERE p.name LIKE ? OR COALESCE(p.part_no,'') LIKE ? OR COALESCE(p.barcode,'') LIKE ? OR COALESCE(p.brand,'') LIKE ? OR COALESCE(p.vehicle_fitment,'') LIKE ? OR COALESCE(p.cross_numbers,'') LIKE ? ORDER BY CASE WHEN p.stock<=p.min_stock THEN 0 ELSE 1 END,p.name`).all(like,like,like,like,like,like)})
 ipcMain.handle('inventory:findBarcode',(_,value)=>{const barcode=normalizeBarcode(value);return getDb().prepare(`SELECT p.*,s.name supplier FROM inventory_parts p LEFT JOIN suppliers s ON s.id=p.supplier_id WHERE p.barcode=?`).get(barcode)||null})
-ipcMain.handle('inventory:lookupBarcode',async(_,value)=>{
+ipcMain.handle('inventory:lookupBarcode',async(_,request)=>{
+  const value=typeof request==='object'&&request!==null?request.value:request
+  const force=Boolean(typeof request==='object'&&request?.force)
   const barcode=normalizeBarcode(value)
   if(!isGtin(barcode))throw new Error('Zeskanowany kod nie jest poprawnym EAN, UPC ani GTIN.')
   const db=getDb()
   const local=db.prepare(`SELECT p.*,s.name supplier FROM inventory_parts p LEFT JOIN suppliers s ON s.id=p.supplier_id WHERE p.barcode=?`).get(barcode)
   if(local)return{found:true,source:'local',item:local}
   pruneBarcodeCache(db)
-  const cached=readBarcodeCache(db,barcode)
+  const cached=force?null:readBarcodeCache(db,barcode)
   if(cached?.found&&cached.item?.lookup_version===LOOKUP_VERSION)return cached
   if(cached&&!cached.found&&cached.originalSource===LOOKUP_VERSION)return cached
   const online=await lookupBarcodeOnline((url,options)=>net.fetch(url,options),barcode,{details:true})
@@ -615,7 +617,7 @@ ipcMain.handle('inventory:lookupBarcode',async(_,value)=>{
     return{found:true,source:online.item.lookup_source,item:online.item,cached:false}
   }
   if(online.available){
-    writeBarcodeMiss(db,barcode)
+    writeBarcodeMiss(db,barcode,{source:LOOKUP_VERSION})
     return{found:false,source:'online',barcode,unavailable:false,cached:false}
   }
   return{found:false,source:'online',barcode,unavailable:true,cached:false,errors:online.errors}

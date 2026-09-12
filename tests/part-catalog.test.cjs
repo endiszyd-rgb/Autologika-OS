@@ -1,6 +1,6 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
-const {normalizeBarcode,isGtin,mapWebSearch,enrichPartFromHtml,lookupBarcodeOnline}=require('../electron/part-catalog.cjs')
+const {normalizeBarcode,isGtin,mapWebSearch,cleanPartName,enrichPartFromHtml,lookupBarcodeOnline}=require('../electron/part-catalog.cjs')
 
 test('normalizes Zebra symbology prefixes and validates GTIN checksum',()=>{
   assert.equal(normalizeBarcode(']E04006381333931\r\n'),'4006381333931')
@@ -33,7 +33,7 @@ test('keeps UPCitemDB as fallback while checking richer web results',async()=>{
   const item=await lookupBarcodeOnline(fetchImpl,'0049000006346')
   assert.equal(item.name,'Klocki hamulcowe')
   assert.equal(item.lookup_source,'UPCitemDB')
-  assert.equal(calls.length,5)
+  assert.equal(calls.length,6)
 })
 
 test('provider outage returns a manual-entry result instead of a technical exception',async()=>{
@@ -41,17 +41,33 @@ test('provider outage returns a manual-entry result instead of a technical excep
   const result=await lookupBarcodeOnline(fetchImpl,'0049000006346',{details:true})
   assert.equal(result.item,null)
   assert.equal(result.available,false)
-  assert.equal(result.errors.length,5)
+  assert.equal(result.errors.length,6)
 })
 
 test('maps an exact automotive web result when barcode catalogs have no match',()=>{
   const html=`<div class="result results_links"><a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.test%2F28SKV013&amp;rut=x">ESEN SKV 28SKV013 - Parking sensor 5901947342091 | sklep</a><a class="result__snippet">EAN: <b>5901947342091</b>. Czujnik parkowania tył, 12 V.</a></div>`
   const item=mapWebSearch(html,'5901947342091')
-  assert.equal(item.name,'ESEN SKV 28SKV013 - Parking sensor | sklep')
+  assert.equal(item.name,'Czujnik parkowania')
   assert.equal(item.brand,'SKV')
   assert.equal(item.part_no,'28SKV013')
   assert.equal(item.lookup_url,'https://example.test/28SKV013')
   assert.equal(item.web_candidate,true)
+})
+
+test('maps DuckDuckGo Lite results into clean autofill fields',()=>{
+  const html=`<tr><td><a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fwww.autodoc.co.uk%2Fesen-skv%2F13449639&amp;rut=x" class='result-link'>28SKV013 ESEN SKV Parking sensor Rear, Ultrasonic Sensor for BMW 1 Series, 2 Series - Autodoc</a></td></tr>
+  <tr><td class='result-snippet'>ESEN SKV 28SKV013 Parking sensor for BMW 1 Series, 2 Series Rear, Ultrasonic Sensor Article number: 28SKV013 EAN: <b>5901947342091</b></td></tr>`
+  const item=mapWebSearch(html,'5901947342091')
+  assert.equal(item.name,'Czujnik parkowania — tył')
+  assert.equal(item.brand,'ESEN SKV')
+  assert.equal(item.part_no,'28SKV013')
+  assert.equal(item.vehicle_fitment,'BMW 1 Series\nBMW 2 Series')
+  assert.equal(item.lookup_url,'https://www.autodoc.co.uk/esen-skv/13449639')
+})
+
+test('cleans common catalog titles for readable Polish inventory names',()=>{
+  assert.equal(cleanPartName('W 712/95 MANN-FILTER Oil filter for VW Golf | AUTODOC','','W 712/95','MANN-FILTER'),'Filtr oleju')
+  assert.equal(cleanPartName('28SKV013 ESEN SKV Parking sensor Rear, Ultrasonic Sensor for BMW','','28SKV013','ESEN SKV'),'Czujnik parkowania — tył')
 })
 
 test('ignores web search results without the exact barcode',()=>{
