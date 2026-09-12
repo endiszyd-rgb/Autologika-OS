@@ -1,4 +1,6 @@
-const RAW_WORK_CATALOG = [
+import {WORK_CATALOG_EXPANSION} from './work-catalog-expansion.js'
+
+const BASE_WORK_CATALOG = [
   {
     "group": "Serwis okresowy i eksploatacja",
     "jobs": [
@@ -2550,6 +2552,8 @@ const RAW_WORK_CATALOG = [
 }
 
 ]
+
+const RAW_WORK_CATALOG=[...BASE_WORK_CATALOG,...WORK_CATALOG_EXPANSION]
 
 const slug=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,42)||'pozycja'
 const stableHash=value=>{let hash=2166136261;for(const char of String(value)){hash^=char.codePointAt(0);hash=Math.imul(hash,16777619)}return (hash>>>0).toString(36)}
