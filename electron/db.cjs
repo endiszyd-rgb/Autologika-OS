@@ -6,7 +6,7 @@ const { seedTechnicalReference } = require('./technical-seed.cjs')
 const { migrateLegacyServiceReminders } = require('./service-reminders.cjs')
 
 let db
-const SCHEMA_VERSION = 7
+const SCHEMA_VERSION = 8
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -108,6 +108,31 @@ function migrate(db,currentVersion=0) {
   }
   if(currentVersion<7){
     db.transaction(()=>{migrateSchemaV7(db);db.pragma('user_version = 7')})()
+    currentVersion=7
+  }
+  if(currentVersion<8){
+    db.transaction(()=>{migrateSchemaV8(db);db.pragma('user_version = 8')})()
+  }
+}
+
+function migrateSchemaV8(db){
+  const ensureColumns=(table,columns)=>{
+    const existing=db.prepare(`PRAGMA table_info(${table})`).all().map(row=>row.name)
+    for(const [name,type] of columns)if(!existing.includes(name))db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`)
+  }
+  ensureColumns('order_items',[['oe_number','TEXT']])
+  ensureColumns('job_part_orders',[['oe_number','TEXT'],['inventory_part_id','INTEGER'],['vehicle_snapshot','TEXT'],['supplier_name','TEXT']])
+
+  const legacyParts=db.prepare(`SELECT j.id,j.vehicle_snapshot,j.supplier_name,s.name supplier,
+    v.id vehicle_id,v.plate,v.vin,v.make,v.model,v.generation,v.year,v.engine,v.engine_code
+    FROM job_part_orders j
+    JOIN orders o ON o.id=j.order_id
+    JOIN vehicles v ON v.id=o.vehicle_id
+    LEFT JOIN suppliers s ON s.id=j.supplier_id`).all()
+  const update=db.prepare('UPDATE job_part_orders SET supplier_name=?,vehicle_snapshot=? WHERE id=?')
+  for(const row of legacyParts){
+    const snapshot=row.vehicle_snapshot||JSON.stringify({vehicle_id:row.vehicle_id,plate:row.plate||'',vin:row.vin||'',make:row.make||'',model:row.model||'',generation:row.generation||'',year:row.year||'',engine:row.engine||'',engine_code:row.engine_code||''})
+    update.run(row.supplier_name||row.supplier||'',snapshot,row.id)
   }
 }
 
@@ -673,4 +698,4 @@ function seed(db) {
     .run(o.lastInsertRowid,v.lastInsertRowid,'Diagnostyka braku mocy',start.toISOString(),end.toISOString(),'Stanowisko 1','PLAN')
 }
 
-module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION }
+module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8 }

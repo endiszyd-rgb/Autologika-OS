@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.19 — 2026-09-12
+
+### Centrum zlecenia
+
+- Naprawiono nieskończone ładowanie Centrum zlecenia po aktualizacji z wersji 1.0.17 do 1.0.18.
+- Migracja schematu 7 → 8 uzupełnia kolumny numeru OE, źródłowej części, migawki pojazdu i nazwy dostawcy w istniejących bazach.
+- Starsze zamówienia części otrzymują zachowaną nazwę dostawcy oraz migawkę przypisanego pojazdu.
+- W przypadku błędu odczytu Centrum pokazuje jego treść i przycisk ponowienia zamiast pozostawać na animacji ładowania.
+
 ## 1.0.18 — 2026-09-12
 
 ### Numery OE na liście zamówień
