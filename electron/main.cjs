@@ -15,6 +15,7 @@ const { decodeRegistrationPayload } = require('./registration-decoder.cjs')
 const { LOOKUP_VERSION, normalizeBarcode, isGtin, lookupBarcodeOnline } = require('./part-catalog.cjs')
 const { readBarcodeCache, writeBarcodeHit, writeBarcodeMiss, pruneBarcodeCache } = require('./barcode-cache.cjs')
 const { issueInventoryPart, removeOrderItem } = require('./inventory-usage.cjs')
+const { documentHtml: renderProtocolDocument } = require('./protocol-document.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -513,31 +514,44 @@ ipcMain.handle('attachments:pick',async(_,{orderId,category='PRZYJECIE'}={})=>{c
 ipcMain.handle('attachments:remove',(_,id)=>{const db=getDb();const a=db.prepare('SELECT * FROM attachments WHERE id=?').get(id);if(a){try{if(a.file_path)fs.unlinkSync(a.file_path)}catch{}db.prepare("UPDATE attachments SET file_path='',deleted_at=CURRENT_TIMESTAMP WHERE id=?").run(id)}return true})
 ipcMain.handle('attachments:open',(_,id)=>{const a=getDb().prepare('SELECT * FROM attachments WHERE id=?').get(id);if(a)shell.openPath(a.file_path);return true})
 
-function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function signatureSvg(sig){
-  if(!sig?.points_json)return ''
+let protocolLogoCache
+function protocolLogoDataUri(){
+  if(protocolLogoCache!==undefined)return protocolLogoCache
+  const candidates=[
+    path.join(app.getAppPath(),'dist','brand','autologika-logo.png'),
+    path.join(__dirname,'..','dist','brand','autologika-logo.png'),
+    path.join(__dirname,'..','public','brand','autologika-logo.png')
+  ]
+  const logoPath=candidates.find(candidate=>fs.existsSync(candidate))
+  protocolLogoCache=logoPath?`data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`:''
+  return protocolLogoCache
+}
+ipcMain.handle('orders:exportPdf',async(_,{id,type='order'})=>{
+  const db=getDb(),o=db.prepare(`${orderSelect} WHERE o.id=?`).get(id)
+  if(!o)return{canceled:true}
+  const items=db.prepare('SELECT * FROM order_items WHERE order_id=? ORDER BY id').all(id)
+  const diag=db.prepare('SELECT * FROM diagnostics WHERE order_id=? ORDER BY id DESC LIMIT 1').get(id)
+  const notes=db.prepare('SELECT * FROM order_notes WHERE order_id=?').get(id)
+  const signature=db.prepare('SELECT * FROM signatures WHERE order_id=? ORDER BY created_at DESC,id DESC LIMIT 1').get(id)
+  const qcRows=db.prepare('SELECT * FROM order_qc WHERE order_id=? AND deleted_at IS NULL ORDER BY id').all(id)
+  const html=renderProtocolDocument(o,items,diag,notes,type,signature,qcRows,{logoDataUri:protocolLogoDataUri()})
+  const tempHtml=path.join(app.getPath('temp'),`autologika-protocol-${process.pid}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}.html`)
+  const window=new BrowserWindow({show:false,webPreferences:{sandbox:true}})
   try{
-    const pts=JSON.parse(sig.points_json)
-    if(!Array.isArray(pts)||pts.length<2)return ''
-    const poly=pts.map(p=>`${Number(p[0]||0).toFixed(1)},${Number(p[1]||0).toFixed(1)}`).join(' ')
-    return `<div class="sigbox"><div class="muted">Podpis klienta — ${esc(sig.signed_by||'Klient')}</div><svg viewBox="0 0 620 170" preserveAspectRatio="xMidYMid meet"><polyline points="${poly}" fill="none" stroke="#182028" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="muted">${esc(sig.created_at||'')}</div></div>`
-  }catch{return ''}
-}
-function documentHtml(o,items,diag,notes,type,signature,qcRows=[]){
-  const works=items.filter(x=>x.kind==='ROBOCIZNA')
-  const saleItems=items.filter(x=>x.kind!=='ROBOCIZNA')
-  const rows=saleItems.map(x=>`<tr><td><b>${esc(x.name)}</b>${x.part_no?`<small>${esc(x.part_no)}</small>`:''}</td><td>${esc(x.kind)}</td><td class="num">${Number(x.qty||0).toFixed(1)}</td><td class="num">${Number(x.unit_price||0).toFixed(2)} zł</td><td class="num"><b>${(x.qty*x.unit_price).toFixed(2)} zł</b></td></tr>`).join('')
-  const workRows=works.map((x,i)=>`<section class="work"><div class="workNo">${String(i+1).padStart(2,'0')}</div><div><h3>${esc(x.work_name||x.name)}</h3>${x.variant_name?`<small>${esc(x.variant_name)}</small>`:''}<p>${esc(x.customer_description||x.notes||'Zakres wykonanej pracy nie został opisany.')}</p><div class="workMeta">Czas rozliczeniowy: ${Number(x.hours_snapshot??x.qty??0).toFixed(1)} h <span>•</span> Wartość: ${Number(x.price_snapshot??(x.qty*x.unit_price)).toFixed(2)} zł</div></div></section>`).join('')
-  const title=type==='intake'?'KARTA PRZYJĘCIA POJAZDU':type==='release'?'PROTOKÓŁ WYKONANIA I WYDANIA':'ZLECENIE SERWISOWE'
-  const docCode=`AL/${new Date().getFullYear()}/${String(o.id).padStart(5,'0')}`
-  const qcDone=qcRows.filter(x=>x.checked).length, qcHtml=qcRows.length?`<div class="qcDoc">${qcRows.map(x=>`<div class="${x.checked?'ok':'no'}"><b>${x.checked?'✓':'○'}</b><span>${esc(x.label)}</span></div>`).join('')}</div>`:''
-  const special=type==='intake'?`<div class="sectionTitle">ZGŁOSZENIE KLIENTA</div><div class="note">${esc(o.complaint||'Brak opisu zgłoszenia.')}</div><div class="sectionTitle">STAN / UWAGI PRZY PRZYJĘCIU</div><div class="note">${esc(notes?.intake_notes||'Brak dodatkowych uwag.')}</div><div class="infoLine"><b>Uzgodniony limit diagnostyki</b><strong>${Number(o.diagnosis_limit||0).toFixed(2)} zł</strong></div>${signatureSvg(signature)||'<div class="signRow"><div>Podpis / potwierdzenie klienta</div><div>Przyjął pojazd</div></div>'}`:type==='release'?`<div class="sectionTitle">WYNIK DIAGNOSTYKI / PRZYCZYNA</div><div class="note">${esc(diag?.conclusion||'Nie zapisano osobnego wniosku diagnostycznego.')}</div>${works.length?`<div class="sectionTitle">WYKONANE PRACE</div>${workRows}`:''}<div class="sectionTitle">KONTROLA JAKOŚCI · ${qcDone}/${qcRows.length||0}</div>${qcHtml}<div class="note">${esc(notes?.qc_notes||'Brak dodatkowych uwag kontroli jakości.')}</div><div class="sectionTitle">ZALECENIA DLA KLIENTA</div><div class="note recommendation">${esc(notes?.release_notes||diag?.recommendation||'Brak dodatkowych zaleceń.')}</div>${signatureSvg(signature)||'<div class="signRow"><div>Odbiór pojazdu / klient</div><div>Wydał pojazd</div></div>'}`:''
-  return `<!doctype html><html><head><meta charset="utf-8"><style>
-  @page{size:A4;margin:13mm 14mm 15mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#172026;font-size:10.5px;line-height:1.45;margin:0}.header{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end;padding:0 0 13px;border-bottom:4px solid #c99a22}.brand{font-size:28px;font-weight:900;letter-spacing:1.8px}.brand i{color:#c99a22;font-style:normal}.claim{color:#68747b;font-size:9px;letter-spacing:.5px;margin-top:2px}.doc{text-align:right}.doc b{display:block;font-size:13px}.doc span{color:#68747b}.vehicle{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:8px;margin:13px 0}.cell{background:#f3f5f5;border:1px solid #e1e5e5;border-radius:5px;padding:8px 10px}.cell small,.sectionTitle{display:block;color:#758087;font-size:7.8px;font-weight:700;letter-spacing:1.1px}.cell b{font-size:12px}.sectionTitle{margin:15px 0 6px;color:#916b0d;border-bottom:1px solid #ded4bb;padding-bottom:4px}.note{white-space:pre-wrap;border-left:3px solid #c99a22;background:#f7f7f5;padding:9px 11px;min-height:35px}.recommendation{background:#fff8e8}.work{display:grid;grid-template-columns:31px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid #e5e7e7;break-inside:avoid}.workNo{width:27px;height:27px;border-radius:50%;background:#172026;color:white;text-align:center;line-height:27px;font-size:9px;font-weight:bold}.work h3{margin:0 0 3px;font-size:11.5px}.work p{margin:0;color:#3d484e;white-space:pre-wrap}.workMeta{margin-top:5px;color:#7a858a;font-size:8.5px}.workMeta span{color:#c99a22;margin:0 5px}table{width:100%;border-collapse:collapse;margin-top:3px}th{background:#172026;color:#fff;font-size:8px;letter-spacing:.5px;text-align:left;padding:6px}td{border-bottom:1px solid #e1e4e4;padding:6px}td small{display:block;color:#7c858a}.num{text-align:right}.summary{margin:13px 0 0 auto;width:48%;border-top:2px solid #172026}.summary div{display:flex;justify-content:space-between;padding:4px 2px}.summary .grand{font-size:16px;font-weight:900;border-top:1px solid #cfd4d4;margin-top:3px;padding-top:8px}.summary .grand b{color:#916b0d}.infoLine{display:flex;justify-content:space-between;margin-top:10px;padding:8px 10px;background:#f3f5f5}.signRow{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:38px}.signRow div{border-top:1px solid #879096;padding-top:5px;text-align:center;color:#68747b}.sigbox{margin-top:20px;border:1px solid #d8dddd;padding:8px}.sigbox svg{width:100%;height:95px;background:#fff}.muted{color:#758087}.qcDoc{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:5px 0 8px}.qcDoc div{display:flex;gap:7px;align-items:center;padding:6px 8px;border:1px solid #e1e5e5;border-radius:4px}.qcDoc .ok b{color:#27835d}.qcDoc .no{color:#8a5d18;background:#fff8e8}.footer{margin-top:15px;padding-top:7px;border-top:1px solid #e1e4e4;color:#81898d;font-size:7.8px;display:flex;justify-content:space-between}
-  </style></head><body><header class="header"><div><div class="brand">AUTO<i>LOGIKA</i></div><div class="claim">DIAGNOSTYKA • MECHANIKA • ELEKTRONIKA • PROGRAMOWANIE</div></div><div class="doc"><b>${title}</b><span>${docCode} · ${new Date().toLocaleDateString('pl-PL')}</span></div></header><section class="vehicle"><div class="cell"><small>POJAZD</small><b>${esc(o.plate)} · ${esc(o.make)} ${esc(o.model)}</b><div>VIN: ${esc(o.vin||'—')}</div></div><div class="cell"><small>KLIENT</small><b>${esc(o.customer||'—')}</b><div>${esc(o.phone||'')}</div></div><div class="cell"><small>PRZEBIEG / ZLECENIE</small><b>${esc(o.mileage||'—')} km</b><div>#${o.id} · ${esc(o.title||'')}</div></div></section>${special}${saleItems.length?`<div class="sectionTitle">CZĘŚCI / MATERIAŁY / USŁUGI</div><table><thead><tr><th>POZYCJA</th><th>TYP</th><th class="num">ILOŚĆ</th><th class="num">CENA</th><th class="num">RAZEM</th></tr></thead><tbody>${rows}</tbody></table>`:''}<div class="summary"><div><span>Robocizna</span><b>${Number((works.reduce((a,x)=>a+x.qty*x.unit_price,0))||o.labor_hours*o.labor_rate||0).toFixed(2)} zł</b></div><div><span>Diagnostyka</span><b>${Number(o.diagnosis_fee||0).toFixed(2)} zł</b></div><div><span>Rabat</span><b>− ${Number(o.discount||0).toFixed(2)} zł</b></div><div class="grand"><span>RAZEM</span><b>${Number(o.total||0).toFixed(2)} zł</b></div></div><footer class="footer"><span>Autologika · dokument wygenerowany w Autologika OS</span><span>${docCode}</span></footer></body></html>`
-}
-
-ipcMain.handle('orders:exportPdf',async(_,{id,type='order'})=>{const db=getDb();const o=db.prepare(`${orderSelect} WHERE o.id=?`).get(id);if(!o)return{canceled:true};const items=db.prepare('SELECT * FROM order_items WHERE order_id=? ORDER BY id').all(id);const diag=db.prepare('SELECT * FROM diagnostics WHERE order_id=? ORDER BY id DESC LIMIT 1').get(id);const notes=db.prepare('SELECT * FROM order_notes WHERE order_id=?').get(id);const signature=db.prepare('SELECT * FROM signatures WHERE order_id=? ORDER BY created_at DESC,id DESC LIMIT 1').get(id);const qcRows=db.prepare('SELECT * FROM order_qc WHERE order_id=? AND deleted_at IS NULL ORDER BY id').all(id);const html=documentHtml(o,items,diag,notes,type,signature,qcRows);const w=new BrowserWindow({show:false,webPreferences:{sandbox:true}});await w.loadURL('data:text/html;charset=utf-8,'+encodeURIComponent(html));const suffix=type==='intake'?'Przyjecie':type==='release'?'Wydanie':'Zlecenie';const {filePath,canceled}=await dialog.showSaveDialog({defaultPath:`Autologika_${suffix}_${o.id}_${o.plate||'auto'}.pdf`,filters:[{name:'PDF',extensions:['pdf']}]});if(canceled||!filePath){w.destroy();return{canceled:true}}const pdf=await w.webContents.printToPDF({printBackground:true,pageSize:'A4'});fs.writeFileSync(filePath,pdf);w.destroy();return{canceled:false,filePath}})
+    fs.writeFileSync(tempHtml,html,'utf8')
+    await window.loadFile(tempHtml)
+    await window.webContents.executeJavaScript("Promise.all(Array.from(document.images).map(image=>image.decode?image.decode().catch(()=>{}):Promise.resolve()))")
+    const suffix=type==='intake'?'Przyjecie':type==='release'?'Wydanie':'Zlecenie'
+    const {filePath,canceled}=await dialog.showSaveDialog({defaultPath:`Autologika_${suffix}_${o.id}_${o.plate||'auto'}.pdf`,filters:[{name:'PDF',extensions:['pdf']}]})
+    if(canceled||!filePath)return{canceled:true}
+    const pdf=await window.webContents.printToPDF({printBackground:true,pageSize:'A4',preferCSSPageSize:true})
+    fs.writeFileSync(filePath,pdf)
+    return{canceled:false,filePath}
+  }finally{
+    if(!window.isDestroyed())window.destroy()
+    try{fs.unlinkSync(tempHtml)}catch{}
+  }
+})
 
 ipcMain.handle('system:dbPath',()=>databasePath())
 ipcMain.handle('system:backup',async()=>{const src=path.join(app.getPath('userData'),'autologika.db');const {filePath,canceled}=await dialog.showSaveDialog({defaultPath:`autologika-backup-${new Date().toISOString().slice(0,10)}.db`,filters:[{name:'SQLite database',extensions:['db']}]});if(canceled||!filePath)return{canceled:true};fs.copyFileSync(src,filePath);return{canceled:false,filePath}})
