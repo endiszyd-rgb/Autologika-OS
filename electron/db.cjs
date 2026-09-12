@@ -571,9 +571,11 @@ function migrateSchemaV1(db) {
     ['customer_description','TEXT'],['technical_description','TEXT'],['hours_snapshot','REAL'],['price_snapshot','REAL']
   ]
   ensureColumns('order_items',catalogSnapshotColumns)
+  ensureColumns('order_items',[['oe_number','TEXT']])
   ensureColumns('quote_items',catalogSnapshotColumns)
   ensureColumns('work_procedure_runs',[['catalog_work_id','TEXT'],['catalog_variant_id','TEXT'],['technical_description','TEXT'],['technical_data_key','TEXT']])
   ensureColumns('inventory_parts',[['barcode','TEXT'],['brand','TEXT'],['category','TEXT'],['description','TEXT'],['image_url','TEXT'],['lookup_source','TEXT'],['lookup_url','TEXT']])
+  ensureColumns('job_part_orders',[['oe_number','TEXT'],['inventory_part_id','INTEGER'],['vehicle_snapshot','TEXT']])
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_parts_barcode ON inventory_parts(barcode) WHERE barcode IS NOT NULL AND barcode!=''")
 
   const syncTables=['app_settings','customers','vehicles','orders','diagnostics','order_notes','job_part_orders','payments','appointments','suppliers','inventory_parts','order_items','work_logs','communications','approvals','order_events','sales_refs','service_reminders_v2','attachments','signatures','work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps']

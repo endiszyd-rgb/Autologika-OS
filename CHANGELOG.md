@@ -1,5 +1,13 @@
 # Changelog
 
+## Następna wersja
+
+### Numery OE na liście zamówień
+
+- Dodawanie części do zlecenia pokazuje dokładny pojazd, silnik i VIN, dla których wybierany jest numer OE.
+- Formularz podpowiada pasujące pozycje z własnej bazy części i przenosi ich numer katalogowy, producenta, ceny, dostawcę oraz numery OE lub zamienników.
+- Wybrany numer OE jest zapisywany razem z migawką pojazdu, widoczny na liście zamówień i kopiowany na listę dla dostawcy.
+- Po oznaczeniu części jako zamontowanej numer OE przechodzi także do pozycji zlecenia.
 ## 1.0.17 — 2026-09-12
 
 ### Wyszukiwanie części po kodzie

@@ -71,7 +71,7 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Model')).querySelector('select').value`),'Corolla')
       console.log('GLOBAL_AZTEC_INTAKE','AZTEC captured over an active input and redirected from settings to populated quick intake')
       const inventoryDb=require('../electron/db.cjs').getDb()
-      inventoryDb.prepare(`INSERT INTO inventory_parts(barcode,part_no,name,brand,stock,min_stock,unit_cost,sell_price,location) VALUES (?,?,?,?,?,?,?,?,?)`).run('4006381333931','W 712/95','Filtr oleju','MANN-FILTER',4,2,24.5,49,'A-03')
+      inventoryDb.prepare(`INSERT INTO inventory_parts(barcode,part_no,name,brand,vehicle_fitment,cross_numbers,stock,min_stock,unit_cost,sell_price,location) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run('4006381333931','W 712/95','Filtr oleju','MANN-FILTER','BMW 320d','11428507683\n11427854445',4,2,24.5,49,'A-03')
       await win.webContents.executeJavaScript(`{
         const target=document.querySelector('input');target.focus();
         for(const key of '4006381333931')target.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));
@@ -114,6 +114,26 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(inventoryDb.prepare('SELECT stock FROM inventory_parts WHERE id=?').get(issuedItem.inventory_part_id).stock,4)
       inventoryDb.prepare('DELETE FROM orders WHERE id=?').run(temporaryOrder)
       console.log('INVENTORY_ISSUE','part issued to an active order and restored after removing the order item')
+      await win.webContents.executeJavaScript(`document.querySelectorAll('.partsTabs button')[1].click()`)
+      await delay(350)
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('button')].find(x=>x.textContent.includes('+ Część do zlecenia')).click()`)
+      await delay(250)
+      await win.webContents.executeJavaScript(`{
+        const select=[...document.querySelectorAll('.modal select')].find(x=>x.closest('label')?.textContent.startsWith('Zlecenie'));
+        const option=[...select.options].find(x=>x.textContent.includes('BMW 320d'));
+        select.value=option.value;select.dispatchEvent(new Event('change',{bubbles:true}));
+      }`)
+      await delay(250)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.vehicleOrderContext')?.textContent.includes('BMW 320d')`),true)
+      await win.webContents.executeJavaScript(`document.querySelector('.vehiclePartMatches button').click()`)
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.modal label')].find(x=>x.textContent.startsWith('Numer OE')).querySelector('input').value`),'11428507683')
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.modal button')].find(x=>x.textContent.includes('Dodaj do zamówień')).click()`)
+      await delay(400)
+      const oeOrderPart=inventoryDb.prepare("SELECT oe_number,vehicle_snapshot FROM job_part_orders WHERE name='Filtr oleju' ORDER BY id DESC LIMIT 1").get()
+      assert.equal(oeOrderPart.oe_number,'11428507683')
+      assert.equal(JSON.parse(oeOrderPart.vehicle_snapshot).make,'BMW')
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.oeTag')?.textContent`),'OE 11428507683')
+      console.log('ORDER_PART_OE','matching inventory part saved with OE number and vehicle snapshot')
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Pulpit"]').click()`)
       await delay(350)
       // Test application-owned controls using their accessible labels.
