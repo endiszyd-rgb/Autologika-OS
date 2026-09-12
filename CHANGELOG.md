@@ -1,6 +1,6 @@
 # Changelog
 
-## Następna wersja
+## 1.0.18 — 2026-09-12
 
 ### Numery OE na liście zamówień
 
