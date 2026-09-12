@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.14 — 2026-09-12
+
+### Nowości
+
+- Kliknięcie klienta otwiera profil Customer 360 z jego pojazdami, historią zleceń i ostatnimi płatnościami.
+- Profil pokazuje łączną wartość historii, wpłaconą kwotę, saldo do rozliczenia, marżę oraz liczbę aktywnych zleceń.
+- Z karty klienta można przejść bezpośrednio do profilu pojazdu lub wybranego zlecenia.
+
+### Poprawki
+
+- Rozliczenia klienta uwzględniają częściowe płatności i wszystkie przypisane do niego pojazdy.
+- Pojazdy bez właściciela pozostają poza historią i podsumowaniem klientów.
+
 ## 1.0.11 — 2026-09-11
 
 ### Nowości

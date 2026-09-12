@@ -16,6 +16,7 @@ const { LOOKUP_VERSION, normalizeBarcode, isGtin, lookupBarcodeOnline } = requir
 const { readBarcodeCache, writeBarcodeHit, writeBarcodeMiss, pruneBarcodeCache } = require('./barcode-cache.cjs')
 const { issueInventoryPart, removeOrderItem } = require('./inventory-usage.cjs')
 const { documentHtml: renderProtocolDocument } = require('./protocol-document.cjs')
+const { customerProfile } = require('./customer-profile.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -375,6 +376,7 @@ ipcMain.handle('finance:analytics',()=>{
 })
 
 ipcMain.handle('customers:list',(_,q='')=>getDb().prepare(`SELECT c.*, COUNT(DISTINCT v.id) vehicles, COUNT(DISTINCT o.id) orders FROM customers c LEFT JOIN vehicles v ON v.customer_id=c.id LEFT JOIN orders o ON o.vehicle_id=v.id WHERE c.name LIKE ? OR COALESCE(c.phone,'') LIKE ? OR COALESCE(c.company,'') LIKE ? GROUP BY c.id ORDER BY c.created_at DESC`).all(`%${q}%`,`%${q}%`,`%${q}%`))
+ipcMain.handle('customers:profile',(_,id)=>customerProfile(getDb(),id))
 ipcMain.handle('customers:create',(_,d)=>createCustomer(getDb(),d))
 ipcMain.handle('customers:update',(_,{id,data})=>updateCustomer(getDb(),id,data))
 ipcMain.handle('customers:deletePreview',(_,id)=>deletionPreview(getDb(),'customer',id))
