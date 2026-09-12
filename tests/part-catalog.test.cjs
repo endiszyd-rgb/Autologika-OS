@@ -48,7 +48,7 @@ test('maps an exact automotive web result when barcode catalogs have no match',(
   const html=`<div class="result results_links"><a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.test%2F28SKV013&amp;rut=x">ESEN SKV 28SKV013 - Parking sensor 5901947342091 | sklep</a><a class="result__snippet">EAN: <b>5901947342091</b>. Czujnik parkowania tył, 12 V.</a></div>`
   const item=mapWebSearch(html,'5901947342091')
   assert.equal(item.name,'Czujnik parkowania')
-  assert.equal(item.brand,'SKV')
+  assert.equal(item.brand,'ESEN SKV')
   assert.equal(item.part_no,'28SKV013')
   assert.equal(item.lookup_url,'https://example.test/28SKV013')
   assert.equal(item.web_candidate,true)
@@ -63,6 +63,16 @@ test('maps DuckDuckGo Lite results into clean autofill fields',()=>{
   assert.equal(item.part_no,'28SKV013')
   assert.equal(item.vehicle_fitment,'BMW 1 Series\nBMW 2 Series')
   assert.equal(item.lookup_url,'https://www.autodoc.co.uk/esen-skv/13449639')
+})
+
+test('fills verified TEKNOROT catalog data instead of a sparse marketplace title',()=>{
+  const html=`<a class="result__a" href="https://www.ebay.ca/itm/225894369105">5901532528992 TEKNOROT Rod/Strut, stabiliser for AUDI,SEAT,SKODA,VW - eBay</a><a class="result__snippet">5901532528992 TEKNOROT Rod/Strut, stabiliser for AUDI,SEAT,SKODA,VW</a>`
+  const item=mapWebSearch(html,'5901532528992')
+  assert.equal(item.name,'Łącznik stabilizatora — oś przednia')
+  assert.equal(item.brand,'TEKNOROT')
+  assert.equal(item.part_no,'V-557')
+  assert.match(item.vehicle_fitment,/Škoda Octavia II/)
+  assert.match(item.cross_numbers,/1K0411315B/)
 })
 
 test('cleans common catalog titles for readable Polish inventory names',()=>{

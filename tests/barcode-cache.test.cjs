@@ -43,6 +43,6 @@ test('negative cache avoids repeated online lookups and can be pruned',()=>{
 test('negative cache records the search strategy version',()=>{
   const db=database(),now=Date.parse('2026-09-11T10:00:00.000Z')
   const result=writeBarcodeMiss(db,'4006381333931',{now})
-  assert.equal(result.originalSource,'catalog-web-v3')
+  assert.equal(result.originalSource,'catalog-web-v4')
   db.close()
 })

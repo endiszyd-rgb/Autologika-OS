@@ -30,7 +30,7 @@ function writeBarcodeHit(db,barcode,item,{now=Date.now(),ttlMs=HIT_TTL_MS}={}){
   return readBarcodeCache(db,barcode,{now})
 }
 
-function writeBarcodeMiss(db,barcode,{now=Date.now(),ttlMs=MISS_TTL_MS,source='catalog-web-v3'}={}){
+function writeBarcodeMiss(db,barcode,{now=Date.now(),ttlMs=MISS_TTL_MS,source='catalog-web-v4'}={}){
   const savedAt=iso(now),expiresAt=iso(Number(now)+ttlMs)
   db.prepare(`INSERT INTO barcode_lookup_cache(barcode,status,source,lookup_url,payload_json,expires_at,created_at,updated_at)
     VALUES (?,'MISS',?,'','',?,?,?)

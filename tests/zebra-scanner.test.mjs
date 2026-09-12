@@ -38,6 +38,24 @@ test('global scanner captures an AZTEC payload from an input and restores its pr
  Object.assign(globalThis,previous)
 })
 
+test('global scanner completes a barcode inside an input without an Enter suffix',async()=>{
+ let handler,scanned=''
+ const previous={window:globalThis.window,HTMLInputElement:globalThis.HTMLInputElement,HTMLTextAreaElement:globalThis.HTMLTextAreaElement,Event:globalThis.Event}
+ const prototype={};Object.defineProperty(prototype,'value',{get(){return this._value||''},set(value){this._value=String(value)}})
+ globalThis.window={addEventListener:(_name,fn)=>{handler=fn},removeEventListener:()=>{}}
+ globalThis.HTMLInputElement={prototype};globalThis.HTMLTextAreaElement={prototype}
+ globalThis.Event=class{constructor(type,options){this.type=type;this.bubbles=options?.bubbles}}
+ const input=Object.create(prototype);Object.assign(input,{tagName:'INPUT',value:'',selectionStart:0,selectionEnd:0,dispatchEvent:()=>{},setSelectionRange:()=>{}})
+ const cleanup=createKeyboardWedge({onScan:value=>{scanned=value},timeout:15,minLength:8,captureEditable:true})
+ const payload='5901532528992'
+ for(const key of payload){handler({key,target:input,preventDefault(){},stopPropagation(){}});input.value+=key}
+ await new Promise(resolve=>setTimeout(resolve,35))
+ assert.equal(scanned,payload)
+ assert.equal(input.value,'')
+ cleanup()
+ Object.assign(globalThis,previous)
+})
+
 test('recognizes valid product barcodes from a Zebra keyboard wedge',()=>{
  assert.equal(normalizeProductBarcode(']E04006381333931\r'),'4006381333931')
  assert.equal(isProductBarcode(']E04006381333931\r'),true)

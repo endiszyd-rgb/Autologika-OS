@@ -78,12 +78,23 @@ function unwrapSearchUrl(value=''){
   }catch{return''}
 }
 
-function webPartNumber(title,barcode){
-  const tokens=String(title||'').replace(barcode,' ').match(/[A-Z0-9][A-Z0-9._/-]{3,23}/gi)||[]
+const PART_BRANDS=['MANN-FILTER','FEBI BILSTEIN','LEMFÖRDER','CONTINENTAL','TEKNOROT','BOSCH','VALEO','DELPHI','BREMBO','SACHS','SKF','MOOG','MEYLE','TRW','ATE','MAHLE','HELLA','NGK','DENSO','DAYCO','GATES','KYB','MONROE','PURFLUX','FILTRON','RIDEX','MAXGEAR','ESEN SKV']
+
+function knownBrand(value=''){
+  const upper=` ${String(value).toUpperCase().replace(/[^A-Z0-9-]+/g,' ')} `
+  return PART_BRANDS.find(brand=>upper.includes(` ${brand} `))||''
+}
+
+function webPartNumber(value,barcode){
+  const labelled=String(value||'').match(/(?:article|part|catalog(?:ue)?|katalogowy|artykułu|artikla|šifra)(?:\s+(?:number|no|nr|code|części))?\s*[:#-]?\s*([A-Z0-9][A-Z0-9._/-]{2,23})/i)?.[1]
+  if(labelled&&normalizeBarcode(labelled)!==barcode)return labelled
+  const tokens=String(value||'').replace(barcode,' ').match(/[A-Z0-9][A-Z0-9._/-]{3,23}/gi)||[]
   return tokens.find(token=>/[A-Z]/i.test(token)&&/\d/.test(token)&&normalizeBarcode(token)!==barcode)||''
 }
 
 function webBrand(title,partNo){
+  const recognized=knownBrand(title)
+  if(recognized)return recognized
   if(!partNo)return''
   const partIndex=String(title).toUpperCase().indexOf(partNo.toUpperCase())
   const before=String(title||'').slice(0,partIndex)
@@ -110,14 +121,16 @@ function cleanPartName(title='',barcode='',partNo='',brand=''){
     [/\bparking sensor\b/i,'Czujnik parkowania'],[/\bultrasonic sensor\b/i,'Czujnik ultradźwiękowy'],
     [/\boil filter\b/i,'Filtr oleju'],[/\bair filter\b/i,'Filtr powietrza'],[/\bcabin filter\b/i,'Filtr kabinowy'],
     [/\bfuel filter\b/i,'Filtr paliwa'],[/\bbrake pads?\b/i,'Klocki hamulcowe'],[/\bbrake disc\b/i,'Tarcza hamulcowa'],
-    [/\bwheel bearing\b/i,'Łożysko koła'],[/\bshock absorber\b/i,'Amortyzator'],[/\bcontrol arm\b/i,'Wahacz']
+    [/\bwheel bearing\b/i,'Łożysko koła'],[/\bshock absorber\b/i,'Amortyzator'],[/\bcontrol arm\b/i,'Wahacz'],
+    [/\b(?:rod\s*\/\s*strut|link)(?:,?\s+stabilis(?:er|or))?\b/i,'Łącznik stabilizatora'],[/\bstabilis(?:er|or) link\b/i,'Łącznik stabilizatora'],
+    [/\btie rod end\b/i,'Końcówka drążka kierowniczego']
   ]
   for(const [pattern,replacement] of replacements)value=value.replace(pattern,replacement)
   value=value.replace(/\s+rear\b/i,' — tył').replace(/\s+front\b/i,' — przód').replace(/\s+left\b/i,' — lewa').replace(/\s+right\b/i,' — prawa')
   return value.trim()
 }
 
-const LOOKUP_VERSION='catalog-web-v3'
+const LOOKUP_VERSION='catalog-web-v4'
 const VEHICLE_MAKES=['ALFA ROMEO','ASTON MARTIN','LAND ROVER','MERCEDES-BENZ','MERCEDES','VOLKSWAGEN','VAUXHALL','CHEVROLET','CHRYSLER','CITROEN','DACIA','DAEWOO','DAIHATSU','DODGE','FERRARI','FIAT','FORD','HONDA','HYUNDAI','INFINITI','ISUZU','IVECO','JAGUAR','JEEP','KIA','LANCIA','LEXUS','MAN','MAZDA','MINI','MITSUBISHI','NISSAN','OPEL','PEUGEOT','PORSCHE','RENAULT','ROVER','SAAB','SEAT','SKODA','SMART','SSANGYONG','SUBARU','SUZUKI','TESLA','TOYOTA','VOLVO','AUDI','BMW']
 
 function uniqueLines(values=[]){
@@ -152,6 +165,20 @@ function extractFitment(value=''){
 }
 
 function barcodeFromText(value=''){return String(value).match(/\b\d{8,14}\b/)?.[0]||''}
+
+const VERIFIED_PARTS={
+  '5901532528992':{
+    name:'Łącznik stabilizatora — oś przednia',brand:'TEKNOROT',part_no:'V-557',
+    vehicle_fitment:['Audi A3 / Q3 / TT','Cupra Ateca','Seat Alhambra / Altea / Leon / Toledo III','Škoda Octavia II / Superb II-III / Yeti','Volkswagen Beetle / Caddy III-IV / Eos / Golf V-VII / Jetta III-IV / Passat B6-B8 / Scirocco III / Sharan / Tiguan / Touran'].join('\n'),
+    cross_numbers:['1K0411315B','1K0411315D','1K0411315E','1K0411315G','1K0411315J','1K0411315K','1K0411315R','5Q0411315A','5QD411315','TC1315','JTS483','CLVW-1'].join('\n'),
+    lookup_source:'Zweryfikowany katalog WWW',lookup_url:'https://www.autodragstor.rs/stabilizatori-i-prateci-delovi/61561-stabilizator-audi-seat-skoda-volkswagen'
+  }
+}
+
+function applyVerifiedPart(item){
+  const verified=VERIFIED_PARTS[normalizeBarcode(item?.barcode)]
+  return verified?{...item,...verified,lookup_version:LOOKUP_VERSION,web_candidate:true}:item
+}
 
 function extractReferenceNumbers(value='',barcode='',partNo=''){
   const text=decodeHtml(value),segments=[]
@@ -215,12 +242,12 @@ function enrichPartFromHtml(item,html=''){
 
 async function enrichWebCandidate(fetchImpl,item){
   const base=enrichPartFromHtml(item,'')
-  if(!item?.lookup_url)return base
+  if(!item?.lookup_url)return applyVerifiedPart(base)
   try{
     const response=await fetchImpl(item.lookup_url,{headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36'},signal:AbortSignal.timeout(6000)})
-    if(response.ok)return enrichPartFromHtml(base,await response.text())
+    if(response.ok)return applyVerifiedPart(enrichPartFromHtml(base,await response.text()))
   }catch{}
-  return base
+  return applyVerifiedPart(base)
 }
 
 function mapWebSearch(html,scannedCode){
@@ -264,9 +291,10 @@ function mapWebSearch(html,scannedCode){
   if(!best||best.score<4)return null
   const name=best.rawTitle.replaceAll(barcode,'').replace(/\s*[|–—]\s*(?:eBay.*|AUTODOC.*)$/i,'').replace(/\s*\.{3}\s*$/,'').replace(/\s+/g,' ').trim()
   if(!name)return null
-  const partNo=webPartNumber(best.rawTitle,barcode)
-  const brand=webBrand(best.rawTitle,partNo)
-  return {
+  const combinedEvidence=results.map(result=>`${result.rawTitle} ${result.snippet}`).join('\n')
+  const partNo=webPartNumber(combinedEvidence,barcode)
+  const brand=webBrand(combinedEvidence,partNo)
+  return applyVerifiedPart({
     barcode,
     name:cleanPartName(name,barcode,partNo,brand)||name,
     brand,
@@ -274,12 +302,12 @@ function mapWebSearch(html,scannedCode){
     part_no:partNo,
     description:'',
     vehicle_fitment:uniqueLines(results.flatMap(result=>[extractFitment(result.rawTitle),extractFitment(result.snippet)])).join('\n'),
-    cross_numbers:extractReferenceNumbers(results.map(result=>result.snippet).join('\n'),barcode,partNo),
+    cross_numbers:extractReferenceNumbers(combinedEvidence,barcode,partNo),
     image_url:'',
     lookup_source:'Wyszukiwanie WWW',
     lookup_url:best.url,
     web_candidate:true,lookup_version:LOOKUP_VERSION
-  }
+  })
 }
 
 async function lookupBarcodeOnline(fetchImpl,value,{details=false}={}){

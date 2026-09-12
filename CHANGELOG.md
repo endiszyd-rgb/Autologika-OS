@@ -4,6 +4,8 @@
 
 ### Wyszukiwanie części po kodzie
 
+- Skan kodu w zakładce Części uruchamia wyszukiwanie automatycznie, także gdy skaner nie wysyła klawisza Enter ani Tab.
+- Uzupełniono rozpoznawanie producentów i numerów katalogowych z tytułu oraz opisu wyniku; zweryfikowany kod `5901532528992` zapisuje się jako TEKNOROT V-557, łącznik stabilizatora.
 - Dodano odporniejsze wyszukiwanie przez DuckDuckGo Lite, używane także wtedy, gdy Brave ogranicza automatyczne zapytania.
 - Wynik automatycznie uzupełnia czytelną nazwę części, producenta, numer katalogowy, pasujące pojazdy oraz znalezione numery OE i zamienników.
 - Katalogi motoryzacyjne mają pierwszeństwo przed ogólnymi ofertami marketplace, a dopasowanie pojazdów jest oczyszczane z cen i danych technicznych produktu.

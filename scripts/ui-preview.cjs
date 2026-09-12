@@ -87,9 +87,8 @@ app.on('browser-window-created', (_, win) => {
       await capture('parts-inventory-scan')
       const lookupVersion=require('../electron/part-catalog.cjs').LOOKUP_VERSION
       require('../electron/barcode-cache.cjs').writeBarcodeHit(inventoryDb,'5901947342091',{barcode:'5901947342091',part_no:'28SKV013',name:'Czujnik parkowania — tył',brand:'ESEN SKV',category:'Części samochodowe',vehicle_fitment:'BMW 1 Series\nBMW 2 Series',cross_numbers:'66209261613\n9261602',lookup_source:'Wyszukiwanie WWW',lookup_url:'https://example.test/28SKV013',lookup_version:lookupVersion,web_candidate:true})
-      await win.webContents.executeJavaScript(`{const input=document.querySelector('.stockScan input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'5901947342091');input.dispatchEvent(new Event('input',{bubbles:true}));}`)
-      await win.webContents.executeJavaScript(`document.querySelector('.stockScan button').click()`)
-      await delay(350)
+      await win.webContents.executeJavaScript(`{const input=document.querySelector('.stockScan input');input.focus();for(const key of '5901947342091')input.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));}`)
+      await delay(450)
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.stockModal label')].find(x=>x.textContent.startsWith('Nazwa części')).querySelector('input').value`),'Czujnik parkowania — tył')
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.stockModal label')].find(x=>x.textContent.startsWith('Numer katalogowy')).querySelector('input').value`),'28SKV013')
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.stockModal label')].find(x=>x.textContent.startsWith('Marka / producent')).querySelector('input').value`),'ESEN SKV')
