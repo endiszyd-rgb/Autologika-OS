@@ -4,7 +4,8 @@ const fs = require('fs')
 const http = require('http')
 const os = require('os')
 const crypto = require('crypto')
-const { getDb, createVersionBackup, databasePath } = require('./db.cjs')
+const { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION } = require('./db.cjs')
+const { databaseHealth } = require('./database-health.cjs')
 const cloudSync = require('./cloud-sync.cjs')
 const updater = require('./updater.cjs')
 const { findQuoteApproval, assertQuoteEditable } = require('./quote-approval.cjs')
@@ -560,10 +561,12 @@ ipcMain.handle('orders:exportPdf',async(_,{id,type='order'})=>{
 })
 
 ipcMain.handle('system:dbPath',()=>databasePath())
-ipcMain.handle('system:backup',async()=>{const src=path.join(app.getPath('userData'),'autologika.db');const {filePath,canceled}=await dialog.showSaveDialog({defaultPath:`autologika-backup-${new Date().toISOString().slice(0,10)}.db`,filters:[{name:'SQLite database',extensions:['db']}]});if(canceled||!filePath)return{canceled:true};fs.copyFileSync(src,filePath);return{canceled:false,filePath}})
+ipcMain.handle('system:backup',async()=>{const {filePath,canceled}=await dialog.showSaveDialog({defaultPath:`autologika-backup-${new Date().toISOString().slice(0,10)}.db`,filters:[{name:'SQLite database',extensions:['db']}]});if(canceled||!filePath)return{canceled:true};await getDb().backup(filePath);if(!fs.existsSync(filePath)||fs.statSync(filePath).size===0)throw new Error('Kopia bazy nie została utworzona poprawnie.');return{canceled:false,filePath}})
 async function autoBackupDb(){const dir=path.join(app.getPath('userData'),'backups');fs.mkdirSync(dir,{recursive:true});const day=new Date().toISOString().slice(0,10);const dst=path.join(dir,`autologika-auto-${day}.db`);if(!fs.existsSync(dst)){await getDb().backup(dst);const files=fs.readdirSync(dir).filter(x=>/^autologika-auto-\d{4}-\d{2}-\d{2}\.db$/.test(x)).sort().reverse();for(const old of files.slice(14)){try{fs.unlinkSync(path.join(dir,old))}catch{}}}return {dir,file:dst,exists:fs.existsSync(dst)}}
 ipcMain.handle('system:autoBackup',()=>autoBackupDb())
 ipcMain.handle('system:autoBackupStatus',()=>{const dir=path.join(app.getPath('userData'),'backups');const files=fs.existsSync(dir)?fs.readdirSync(dir).filter(x=>x.startsWith('autologika-auto-')).sort().reverse():[];return {dir,count:files.length,last:files[0]||''}})
+ipcMain.handle('system:health',()=>databaseHealth(getDb(),{dbPath:databasePath(),backupDir:backupDirectory(),schemaVersion:SCHEMA_VERSION}))
+ipcMain.handle('system:openBackupFolder',async()=>{const dir=backupDirectory();fs.mkdirSync(dir,{recursive:true});const error=await shell.openPath(dir);if(error)throw new Error(error);return true})
 
 async function prepareUpdateInstall({currentVersion,targetVersion}){
   cloudSync.stopAuto()

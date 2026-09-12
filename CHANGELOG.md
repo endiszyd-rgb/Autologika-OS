@@ -13,6 +13,12 @@
 - Błędny rekord wyświetla przyczynę i pozwala ponowić wysyłkę bez usuwania lokalnych danych.
 - Stan synchronizacji odświeża się automatycznie podczas pracy w Ustawieniach.
 
+### Kondycja danych i kopie
+
+- Ustawienia kontrolują integralność SQLite, klucze obce, wersję i najważniejsze kolumny schematu.
+- Panel pokazuje rozmiar bazy i WAL, liczbę rekordów, wiek ostatniej kopii oraz historię kopii zapasowych.
+- Ręczny backup korzysta z mechanizmu kopii SQLite, dzięki czemu obejmuje także transakcje znajdujące się w aktywnym pliku WAL.
+
 ## 1.0.19 — 2026-09-12
 
 ### Centrum zlecenia
