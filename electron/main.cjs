@@ -18,6 +18,7 @@ const { issueInventoryPart, removeOrderItem } = require('./inventory-usage.cjs')
 const { documentHtml: renderProtocolDocument } = require('./protocol-document.cjs')
 const { customerProfile } = require('./customer-profile.cjs')
 const { listDebtors } = require('./debtors.cjs')
+const { listServiceReminders, createServiceReminder, setServiceReminderStatus } = require('./service-reminders.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -475,9 +476,10 @@ ipcMain.handle('knowledge:list',(_,q='')=>getDb().prepare(`SELECT * FROM knowled
 ipcMain.handle('knowledge:create',(_,d)=>{const r=getDb().prepare('INSERT INTO knowledge_cases(vehicle,engine,symptom,dtcs,measurements,cause,solution,tags,source_order_id) VALUES (?,?,?,?,?,?,?,?,?)').run(d.vehicle||'',d.engine||'',d.symptom,d.dtcs||'',d.measurements||'',d.cause||'',d.solution||'',d.tags||'',d.source_order_id||null);return{id:r.lastInsertRowid}})
 ipcMain.handle('knowledge:fromOrder',(_,orderId)=>{const db=getDb();const o=db.prepare(`${orderSelect} WHERE o.id=?`).get(orderId);const d=db.prepare('SELECT * FROM diagnostics WHERE order_id=? ORDER BY id DESC LIMIT 1').get(orderId);if(!o||!d)return{ok:false,error:'Brak zlecenia lub diagnostyki'};const r=db.prepare('INSERT INTO knowledge_cases(vehicle,engine,symptom,dtcs,measurements,cause,solution,tags,source_order_id) VALUES (?,?,?,?,?,?,?,?,?)').run(`${o.make} ${o.model}`,o.engine||'',o.complaint||o.title,d.dtcs||'',d.measurements||'',d.conclusion||'',d.recommendation||'',o.make||'',orderId);return{ok:true,id:r.lastInsertRowid}})
 
-ipcMain.handle('reminders:list',()=>getDb().prepare(`SELECT r.*,v.plate,v.make,v.model,c.name customer FROM reminders r JOIN vehicles v ON v.id=r.vehicle_id LEFT JOIN customers c ON c.id=v.customer_id WHERE done=0 ORDER BY COALESCE(due_date,'9999-12-31')`).all())
-ipcMain.handle('reminders:create',(_,d)=>{const r=getDb().prepare('INSERT INTO reminders(vehicle_id,title,due_date,due_mileage) VALUES (?,?,?,?)').run(d.vehicle_id,d.title,d.due_date||null,d.due_mileage||null);return{id:r.lastInsertRowid}})
-ipcMain.handle('reminders:done',(_,id)=>{getDb().prepare('UPDATE reminders SET done=1 WHERE id=?').run(id);return true})
+ipcMain.handle('reminders:list',()=>listServiceReminders(getDb()))
+ipcMain.handle('reminders:create',(_,d)=>createServiceReminder(getDb(),{vehicleId:d.vehicle_id,data:d}))
+ipcMain.handle('reminders:done',(_,id)=>setServiceReminderStatus(getDb(),id,'DONE'))
+ipcMain.handle('reminders:reopen',(_,id)=>setServiceReminderStatus(getDb(),id,'OPEN'))
 
 ipcMain.handle('worklog:list',(_,orderId)=>getDb().prepare('SELECT * FROM work_logs WHERE order_id=? ORDER BY started_at DESC').all(orderId))
 ipcMain.handle('worklog:active',()=>getDb().prepare(`SELECT w.*,o.title,v.plate,v.make,v.model FROM work_logs w JOIN orders o ON o.id=w.order_id JOIN vehicles v ON v.id=o.vehicle_id WHERE w.ended_at IS NULL ORDER BY w.started_at DESC`).all())
@@ -721,16 +723,15 @@ ipcMain.handle('salesRefs:add',(_,{orderId,data})=>{
   return {id:r.lastInsertRowid}
 })
 
-ipcMain.handle('serviceReminders:listForVehicle',(_,vehicleId)=>getDb().prepare(`SELECT * FROM service_reminders_v2 WHERE vehicle_id=? ORDER BY status,due_date,due_mileage`).all(vehicleId))
+ipcMain.handle('serviceReminders:listForVehicle',(_,vehicleId)=>listServiceReminders(getDb(),{vehicleId,includeDone:true}))
 ipcMain.handle('serviceReminders:add',(_,{vehicleId,orderId,data})=>{
   const db=getDb()
-  const r=db.prepare(`INSERT INTO service_reminders_v2(vehicle_id,order_id,title,due_date,due_mileage,note,status) VALUES (?,?,?,?,?,?,'OPEN')`)
-    .run(vehicleId,orderId||null,data.title||'Następna obsługa',data.due_date||null,+data.due_mileage||null,data.note||'')
+  const r=createServiceReminder(db,{vehicleId,orderId,data})
   if(orderId) db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
     .run(orderId,'REMINDER','Utworzono przypomnienie serwisowe',`${data.title||'Następna obsługa'}${data.due_date?` · ${data.due_date}`:''}${data.due_mileage?` · ${data.due_mileage} km`:''}`)
-  return {id:r.lastInsertRowid}
+  return r
 })
-ipcMain.handle('serviceReminders:close',(_,id)=>{getDb().prepare(`UPDATE service_reminders_v2 SET status='DONE' WHERE id=?`).run(id);return true})
+ipcMain.handle('serviceReminders:close',(_,id)=>setServiceReminderStatus(getDb(),id,'DONE'))
 
 ipcMain.handle('debtors:list',()=>{
   return listDebtors(getDb())

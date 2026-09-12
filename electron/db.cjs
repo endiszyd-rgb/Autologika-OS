@@ -3,9 +3,10 @@ const path = require('path')
 const fs = require('fs')
 const { app } = require('electron')
 const { seedTechnicalReference } = require('./technical-seed.cjs')
+const { migrateLegacyServiceReminders } = require('./service-reminders.cjs')
 
 let db
-const SCHEMA_VERSION = 6
+const SCHEMA_VERSION = 7
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -103,7 +104,15 @@ function migrate(db,currentVersion=0) {
   }
   if(currentVersion<6){
     db.transaction(()=>{migrateSchemaV6(db);db.pragma('user_version = 6')})()
+    currentVersion=6
   }
+  if(currentVersion<7){
+    db.transaction(()=>{migrateSchemaV7(db);db.pragma('user_version = 7')})()
+  }
+}
+
+function migrateSchemaV7(db){
+  migrateLegacyServiceReminders(db)
 }
 
 function migrateSchemaV6(db){

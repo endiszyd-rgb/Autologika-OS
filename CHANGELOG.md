@@ -1,5 +1,14 @@
 # Changelog
 
+## Następna wersja
+
+### Autologika Care
+
+- Połączono przypomnienia z Centrum zlecenia, profilu pojazdu i ekranu Autologika Care w jeden synchronizowany rejestr.
+- Przypomnienia są automatycznie klasyfikowane jako zaległe, bliskie lub zaplanowane według daty i aktualnego przebiegu pojazdu.
+- Z przypomnienia można przejść bezpośrednio do cyfrowego profilu pojazdu albo powiązanego zlecenia.
+- Starsze przypomnienia są automatycznie przenoszone do nowego rejestru podczas aktualizacji bazy.
+
 ## 1.0.16 — 2026-09-12
 
 ### Ulepszenia
