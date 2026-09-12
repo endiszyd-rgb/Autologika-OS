@@ -19,6 +19,12 @@
 - Panel pokazuje rozmiar bazy i WAL, liczbę rekordów, wiek ostatniej kopii oraz historię kopii zapasowych.
 - Ręczny backup korzysta z mechanizmu kopii SQLite, dzięki czemu obejmuje także transakcje znajdujące się w aktywnym pliku WAL.
 
+### Centrum priorytetów
+
+- Ekran „Do uwagi” grupuje oczekiwanie, kontakt, decyzje, spóźnione części i ważne obserwacje pojazdu.
+- Lista nadaje pierwszeństwo sprawom krytycznym, udostępnia filtry i wyszukiwanie oraz odświeża się automatycznie.
+- Licznik spraw jest stale widoczny w bocznej nawigacji i górnym pasku aplikacji.
+
 ## 1.0.19 — 2026-09-12
 
 ### Centrum zlecenia

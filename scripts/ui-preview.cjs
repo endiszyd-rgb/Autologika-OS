@@ -598,7 +598,15 @@ app.on('browser-window-created', (_, win) => {
       await delay(250)
       assert.equal(await win.webContents.executeJavaScript("document.querySelectorAll('.careCard').length"),2)
       console.log('AUTOLOGIKA_CARE','shared service reminders ranked by urgency, vehicle deep link and completion verified')
-      const auditPages=['Do uwagi','Diagnostyka','Baza wiedzy','Asystent wiedzy','Pracownicy','Dokumenty']
+      await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Do uwagi"]').click()`)
+      await delay(350)
+      assert.equal(await win.webContents.executeJavaScript("!!document.querySelector('.attentionCenter')"),true)
+      assert.equal(await win.webContents.executeJavaScript("document.querySelectorAll('.attentionFilters button').length"),6)
+      assert.equal(await win.webContents.executeJavaScript("document.querySelectorAll('.attentionItem').length>0"),true)
+      assert.equal(await win.webContents.executeJavaScript("!!document.querySelector('.attentionLauncher.hasAttention')"),true)
+      await capture('attention-center')
+      console.log('ATTENTION_CENTER','priority queue, persistent counter and operational filters verified')
+      const auditPages=['Diagnostyka','Baza wiedzy','Asystent wiedzy','Pracownicy','Dokumenty']
       for(const title of auditPages){
         await win.webContents.executeJavaScript(`document.querySelector('nav button[title=${JSON.stringify(title)}]').click()`)
         await delay(300)
@@ -606,7 +614,7 @@ app.on('browser-window-created', (_, win) => {
         assert.equal(state.fatal,false,title)
         assert.equal(state.overflow,false,title)
       }
-      console.log('NAVIGATION_AUDIT',`${auditPages.length+1} previously uncovered views rendered without errors; debtors open the linked order`)
+      console.log('NAVIGATION_AUDIT',`${auditPages.length+2} previously uncovered views rendered without errors; debtors open the linked order`)
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Pulpit"]').click()`)
       await delay(400)
       // Verify the empty state using the same isolated database.
