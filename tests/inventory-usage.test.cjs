@@ -9,7 +9,7 @@ function database(){
   CREATE TABLE suppliers(id INTEGER PRIMARY KEY,name TEXT);
   CREATE TABLE inventory_parts(id INTEGER PRIMARY KEY,supplier_id INTEGER,name TEXT,part_no TEXT,location TEXT,stock REAL,unit_cost REAL,sell_price REAL,updated_at TEXT);
   CREATE TABLE orders(id INTEGER PRIMARY KEY,status TEXT,archived_at TEXT,parts_cost REAL DEFAULT 0,parts_sale REAL DEFAULT 0,other_cost REAL DEFAULT 0,other_sale REAL DEFAULT 0);
-  CREATE TABLE order_items(id INTEGER PRIMARY KEY,order_id INTEGER,kind TEXT,name TEXT,qty REAL,unit_cost REAL,unit_price REAL,part_no TEXT,supplier TEXT,notes TEXT,customer_description TEXT,inventory_part_id INTEGER);
+  CREATE TABLE order_items(id INTEGER PRIMARY KEY,order_id INTEGER,kind TEXT,name TEXT,qty REAL,unit_cost REAL,unit_price REAL,part_no TEXT,oe_number TEXT,supplier TEXT,notes TEXT,customer_description TEXT,inventory_part_id INTEGER);
   CREATE TABLE order_events(id INTEGER PRIMARY KEY,order_id INTEGER,event_type TEXT,title TEXT,details TEXT);
   INSERT INTO suppliers VALUES(1,'Moto Dostawca');
   INSERT INTO inventory_parts VALUES(7,1,'Filtr oleju','W 712/95','A-03',4,24.5,49,NULL);
@@ -21,7 +21,7 @@ function database(){
 
 test('wydanie części zmniejsza stan i dodaje wycenioną pozycję do zlecenia',()=>{
  const db=database()
- const result=issueInventoryPart(db,{inventoryPartId:7,orderId:3,qty:2})
+ const result=issueInventoryPart(db,{inventoryPartId:7,orderId:3,qty:2,oeNumber:'11428507683'})
  assert.equal(result.remaining,2)
  assert.equal(db.prepare('SELECT stock FROM inventory_parts WHERE id=7').get().stock,2)
  const item=db.prepare('SELECT * FROM order_items WHERE id=?').get(result.id)
@@ -30,6 +30,7 @@ test('wydanie części zmniejsza stan i dodaje wycenioną pozycję do zlecenia',
  assert.equal(item.qty,2)
  assert.equal(item.unit_cost,24.5)
  assert.equal(item.unit_price,49)
+ assert.equal(item.oe_number,'11428507683')
  const order=db.prepare('SELECT parts_cost,parts_sale FROM orders WHERE id=3').get()
  assert.equal(order.parts_cost,49)
  assert.equal(order.parts_sale,98)

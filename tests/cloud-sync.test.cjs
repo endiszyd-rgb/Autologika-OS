@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {_testing:{buildPayload,applyPayload}}=require('../electron/cloud-sync.cjs')
+const {_testing:{buildPayload,applyPayload,reconcileOrderTotals}}=require('../electron/cloud-sync.cjs')
 
 test('standalone vehicle keeps a null customer through cloud synchronization',()=>{
  const db=new DatabaseSync(':memory:')
@@ -39,4 +39,28 @@ test('order item preserves its inventory source through cloud synchronization',(
  const remote=db.prepare("SELECT * FROM order_items WHERE cloud_id='remote-item'").get()
  assert.equal(remote.order_id,3)
  assert.equal(remote.inventory_part_id,7)
+})
+
+test('ordered part maps its inventory source and OE data between devices',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE suppliers(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE inventory_parts(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE orders(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE job_part_orders(id INTEGER PRIMARY KEY,order_id INTEGER,supplier_id INTEGER,inventory_part_id INTEGER,name TEXT,oe_number TEXT,vehicle_snapshot TEXT,cloud_id TEXT,updated_at TEXT); INSERT INTO suppliers VALUES(2,'supplier-cloud'); INSERT INTO inventory_parts VALUES(7,'inventory-cloud'); INSERT INTO orders VALUES(3,'order-cloud'); INSERT INTO job_part_orders VALUES(12,3,2,7,'Filtr oleju','11428507683','{"make":"BMW"}','job-part-cloud','2026-09-12T10:00:00.000Z');`)
+ const payload=buildPayload(db,'job_part_orders',db.prepare('SELECT * FROM job_part_orders WHERE id=12').get())
+ assert.equal(payload.order_cloud_id,'order-cloud')
+ assert.equal(payload.supplier_cloud_id,'supplier-cloud')
+ assert.equal(payload.inventory_part_cloud_id,'inventory-cloud')
+ assert.equal(payload.inventory_part_id,undefined)
+ assert.equal(payload.oe_number,'11428507683')
+ applyPayload(db,'job_part_orders','remote-job-part',{order_cloud_id:'order-cloud',supplier_cloud_id:'supplier-cloud',inventory_part_cloud_id:'inventory-cloud',name:'Filtr kabinowy',oe_number:'64319313519',vehicle_snapshot:'{"make":"BMW"}'},'2026-09-12T11:00:00.000Z')
+ const remote=db.prepare("SELECT * FROM job_part_orders WHERE cloud_id='remote-job-part'").get()
+ assert.equal(remote.order_id,3)
+ assert.equal(remote.supplier_id,2)
+ assert.equal(remote.inventory_part_id,7)
+ assert.equal(remote.oe_number,'64319313519')
+})
+
+test('recalculates order profitability after remote item changes',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE orders(id INTEGER PRIMARY KEY,parts_cost REAL,parts_sale REAL,other_cost REAL,other_sale REAL); CREATE TABLE order_items(id INTEGER PRIMARY KEY,order_id INTEGER,kind TEXT,qty REAL,unit_cost REAL,unit_price REAL); INSERT INTO orders VALUES(3,999,999,999,999); INSERT INTO order_items VALUES(1,3,'CZESC',2,40,85); INSERT INTO order_items VALUES(2,3,'USLUGA_ZEW',1,60,100);`)
+ reconcileOrderTotals(db)
+ assert.deepEqual({...db.prepare('SELECT parts_cost,parts_sale,other_cost,other_sale FROM orders WHERE id=3').get()},{parts_cost:80,parts_sale:170,other_cost:60,other_sale:100})
 })

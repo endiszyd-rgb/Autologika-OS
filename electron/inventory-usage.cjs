@@ -14,8 +14,9 @@ function syncOrderTotals(db,orderId){
     .run(sums.parts_cost,sums.parts_sale,sums.other_cost,sums.other_sale,orderId)
 }
 
-function issueInventoryPart(db,{inventoryPartId,orderId,qty}){
+function issueInventoryPart(db,{inventoryPartId,orderId,qty,oeNumber=''}){
   const partId=Number(inventoryPartId),targetOrderId=Number(orderId),amount=number(qty)
+  const oe=String(oeNumber||'').trim()
   if(!Number.isInteger(partId)||partId<=0)throw new Error('Nie wybrano części z magazynu.')
   if(!Number.isInteger(targetOrderId)||targetOrderId<=0)throw new Error('Nie wybrano zlecenia.')
   if(amount<=0)throw new Error('Ilość wydawanej części musi być większa od zera.')
@@ -31,9 +32,9 @@ function issueInventoryPart(db,{inventoryPartId,orderId,qty}){
     const changed=db.prepare('UPDATE inventory_parts SET stock=stock-?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND stock>=?').run(amount,partId,amount)
     if(changed.changes!==1)throw new Error('Stan magazynowy zmienił się w trakcie operacji. Spróbuj ponownie.')
     const result=db.prepare(`INSERT INTO order_items(
-      order_id,kind,name,qty,unit_cost,unit_price,part_no,supplier,notes,customer_description,inventory_part_id
-    ) VALUES (?,'CZESC',?,?,?,?,?,?,?,?,?)`).run(
-      targetOrderId,part.name,amount,number(part.unit_cost),number(part.sell_price),part.part_no||'',part.supplier||'',
+      order_id,kind,name,qty,unit_cost,unit_price,part_no,oe_number,supplier,notes,customer_description,inventory_part_id
+    ) VALUES (?,'CZESC',?,?,?,?,?,?,?,?,?,?)`).run(
+      targetOrderId,part.name,amount,number(part.unit_cost),number(part.sell_price),part.part_no||'',oe,part.supplier||'',
       `Wydano z magazynu${part.location?` · ${part.location}`:''}`,
       `${part.name}${part.part_no?` (${part.part_no})`:''}`,
       partId

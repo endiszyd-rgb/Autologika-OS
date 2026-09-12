@@ -8,6 +8,13 @@
 - Formularz podpowiada pasujące pozycje z własnej bazy części i przenosi ich numer katalogowy, producenta, ceny, dostawcę oraz numery OE lub zamienników.
 - Wybrany numer OE jest zapisywany razem z migawką pojazdu, widoczny na liście zamówień i kopiowany na listę dla dostawcy.
 - Po oznaczeniu części jako zamontowanej numer OE przechodzi także do pozycji zlecenia.
+
+### Zgodność modułów
+
+- Powiązanie części zamawianej z magazynem jest synchronizowane przez stabilny identyfikator chmurowy zamiast lokalnego numeru SQLite.
+- Po pobraniu zmian z innego urządzenia koszty i sprzedaż części są ponownie wyliczane z pozycji zlecenia.
+- Wydanie części z magazynu wymaga numeru OE, pokazuje wybrany pojazd i zapisuje OE w pozycji zlecenia.
+- Ręcznie dodawane pozycje części również obsługują numer OE, widoczny następnie w zestawieniu zlecenia.
 ## 1.0.17 — 2026-09-12
 
 ### Wyszukiwanie części po kodzie
