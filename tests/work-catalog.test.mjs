@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {WORK_CATALOG,catalogRows} from '../src/work-catalog.js'
+import {CATALOG_DIAGNOSTIC_ADDITIONS} from '../src/work-catalog-diagnostics.js'
 import {procedureFor} from '../src/work-procedures.js'
 
 test('every catalog variant has a stable complete definition',()=>{
@@ -21,6 +22,17 @@ test('every catalog variant has a stable complete definition',()=>{
   assert.ok(procedure.qc.length)
   assert.ok(procedure.tools.length)
  }
+})
+
+test('every work group includes its detailed diagnostic addition',()=>{
+ assert.equal(Object.keys(CATALOG_DIAGNOSTIC_ADDITIONS).length,WORK_CATALOG.length)
+ for(const group of WORK_CATALOG){
+  const addition=CATALOG_DIAGNOSTIC_ADDITIONS[group.group]
+  assert.ok(addition,`missing diagnostic definition for ${group.group}`)
+  assert.ok(group.jobs.some(job=>job.name===addition.name),`missing ${addition.name} in ${group.group}`)
+ }
+ const emissions=WORK_CATALOG.find(group=>group.group==='EGR, DPF/GPF i emisje spalin')
+ assert.ok(emissions.jobs.some(job=>job.name==='Diagnostyka czujnika różnicy ciśnień'))
 })
 
 test('expanded workshop domains provide tailored procedures',()=>{

@@ -25,6 +25,12 @@
 - Lista nadaje pierwszeństwo sprawom krytycznym, udostępnia filtry i wyszukiwanie oraz odświeża się automatycznie.
 - Licznik spraw jest stale widoczny w bocznej nawigacji i górnym pasku aplikacji.
 
+### Szablony i katalog prac
+
+- Własne szablony są dostępne podczas dodawania pracy bezpośrednio w Centrum zlecenia.
+- Wybrany szablon przenosi do zlecenia robociznę, opis, procedurę, checklisty, części i materiały.
+- Każda z 48 grup katalogu otrzymała dodatkową szczegółową pozycję diagnostyczną; katalog zawiera teraz 339 prac i 1063 warianty.
+
 ## 1.0.19 — 2026-09-12
 
 ### Centrum zlecenia
