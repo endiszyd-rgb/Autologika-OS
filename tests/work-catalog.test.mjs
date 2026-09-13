@@ -2,13 +2,14 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {WORK_CATALOG,catalogRows} from '../src/work-catalog.js'
 import {CATALOG_DIAGNOSTIC_ADDITIONS} from '../src/work-catalog-diagnostics.js'
+import {CATALOG_SPECIALIST_ADDITIONS} from '../src/work-catalog-specialist.js'
 import {procedureFor} from '../src/work-procedures.js'
 
 test('every catalog variant has a stable complete definition',()=>{
  const rows=catalogRows(),ids=new Set()
  assert.ok(WORK_CATALOG.length>=48)
- assert.ok(WORK_CATALOG.reduce((count,group)=>count+group.jobs.length,0)>=291)
- assert.ok(rows.length>=871)
+ assert.ok(WORK_CATALOG.reduce((count,group)=>count+group.jobs.length,0)>=470)
+ assert.ok(rows.length>=1590)
  for(const {job,variant} of rows){
   assert.match(job.id,/^work_/)
   assert.match(variant.id,/^variant_/)
@@ -21,6 +22,15 @@ test('every catalog variant has a stable complete definition',()=>{
   assert.ok(procedure.steps.length)
   assert.ok(procedure.qc.length)
   assert.ok(procedure.tools.length)
+ }
+})
+
+test('every group includes three additional specialist jobs',()=>{
+ assert.equal(Object.keys(CATALOG_SPECIALIST_ADDITIONS).length,WORK_CATALOG.length)
+ for(const group of WORK_CATALOG){
+  const additions=CATALOG_SPECIALIST_ADDITIONS[group.group]
+  assert.equal(additions?.length,3,`missing specialist additions for ${group.group}`)
+  for(const name of additions)assert.ok(group.jobs.some(job=>job.name===name),`missing ${name} in ${group.group}`)
  }
 })
 

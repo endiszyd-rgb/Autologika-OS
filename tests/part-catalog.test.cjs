@@ -85,6 +85,11 @@ test('ignores web search results without the exact barcode',()=>{
   assert.equal(mapWebSearch(html,'5901947342091'),null)
 })
 
+test('ignores generic barcode pages even when they contain the exact code',()=>{
+  const html=`<a class="result__a" href="https://example.test/ean/5901947342091">EAN lookup 5901947342091 - barcode database</a><a class="result__snippet">Search any product code and compare prices online.</a>`
+  assert.equal(mapWebSearch(html,'5901947342091'),null)
+})
+
 test('maps an automotive result from Brave search HTML',()=>{
   const html=`5901947342091 <a href="https://www.auto-doc.test/esen-skv/13449639" class="result l1"><div class="site">AUTODOC</div><div class="title search-snippet-title" title="28SKV013 ESEN SKV Parking sensor Rear | AUTODOC">wynik</div></a>`
   const item=mapWebSearch(html,'5901947342091')
@@ -160,4 +165,16 @@ test('merges complementary catalog results without losing OE and fitment data',(
   assert.match(item.cross_numbers,/5Q0407151B/)
   assert.equal(item.image_url,'https://example.test/image.jpg')
   assert.equal(item.lookup_confidence,'wysoka')
+})
+
+test('does not merge fields from conflicting manufacturers or part numbers',()=>{
+  const item=mergePartCandidates([
+    {barcode:'5901947342091',name:'Czujnik parkowania',brand:'BOSCH',part_no:'0 263 003 001',category:'Części samochodowe',vehicle_fitment:'BMW Seria 3',cross_numbers:'66209261582',lookup_source:'Katalog A',lookup_url:'https://autodoc.test/a',web_candidate:true,evidence_score:20},
+    {barcode:'5901947342091',name:'Filtr oleju',brand:'MANN-FILTER',part_no:'W 712/95',category:'Części samochodowe',vehicle_fitment:'Volkswagen Golf',cross_numbers:'04E115561H',image_url:'https://example.test/wrong.jpg',lookup_source:'Katalog B',web_candidate:true,evidence_score:5}
+  ],'5901947342091')
+  assert.equal(item.brand,'BOSCH')
+  assert.equal(item.part_no,'0 263 003 001')
+  assert.doesNotMatch(item.vehicle_fitment,/Volkswagen/)
+  assert.doesNotMatch(item.cross_numbers,/04E115561H/)
+  assert.equal(item.image_url,'')
 })

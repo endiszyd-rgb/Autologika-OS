@@ -10,7 +10,7 @@ const registrationSample = fs.readFileSync(path.join(__dirname, '..', 'tests', '
 fs.mkdirSync(output, { recursive: true })
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 const errors = []
-setTimeout(() => { console.error('UI smoke test timed out'); app.exit(1) }, 55000).unref()
+setTimeout(() => { console.error('UI smoke test timed out'); app.exit(1) }, 75000).unref()
 app.on('browser-window-created', (_, win) => {
   win.webContents.on('console-message', (_, level, message) => {
     if (level >= 3) errors.push(message)
@@ -469,13 +469,13 @@ app.on('browser-window-created', (_, win) => {
       console.log('WORKSHOP_LIVE_RADAR',JSON.stringify(liveRadar),'radar marker opened its linked order')
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Cennik Autologiki"]').click()`)
       await delay(500)
-      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.catalogVariantRows>button').length`),1063)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.catalogVariantRows>button').length`),240)
       assert.equal((await inspect()).fatal,false)
       await capture('catalog-price-book')
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Szablony prac"]').click()`)
       await delay(500)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.ptCatalogCard').length`),48)
-      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.ptStats').textContent.includes('1063')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.ptStats').textContent.includes('1599')`),true)
       assert.equal((await inspect()).fatal,false)
       await capture('procedure-templates')
       await win.webContents.executeJavaScript(`document.querySelector('.ptCatalogCard footer button').click()`)

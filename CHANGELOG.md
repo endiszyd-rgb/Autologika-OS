@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.0.27 — 2026-09-13
+
+### Pewniejsze wyszukiwanie części
+
+- Wynik WWW musi teraz zawierać wiarygodne sygnały motoryzacyjne, a strony będące wyłącznie wyszukiwarkami EAN są odrzucane.
+- Dane różnych producentów lub numerów katalogowych nie są już łączone w jedną część.
+- Karta produktu jest dodatkowo sprawdzana pod kątem zgodności zeskanowanego GTIN, a słabe pojedyncze wyniki nie trafiają automatycznie do formularza.
+- Pamięć wyszukiwania otrzymała nową wersję, dzięki czemu wcześniejsze błędne wyniki zostaną sprawdzone ponownie.
+
+### Większy katalog prac
+
+- Dodano 134 specjalistyczne czynności we wszystkich 48 grupach katalogu.
+- Katalog zawiera teraz 473 prace i 1599 wariantów z czasem, ceną, opisem klienta oraz procedurą.
+- Dodano m.in. próby przelewowe, testy dymem, diagnostykę NOx, pomiary oscyloskopowe, adaptacje DSG, kalibracje ADAS i pomiary układów HV.
+- Cennik pokazuje początkowo 240 pozycji oraz podpowiada użycie grup i wyszukiwarki, co zachowuje płynność przy dużej liczbie szablonów.
+
 ## 1.0.26 — 2026-09-13
 
 ### Dokładniejsze dane części po skanowaniu

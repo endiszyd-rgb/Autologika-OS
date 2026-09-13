@@ -71,3 +71,4 @@
 @media (max-width: 1050px) { .ptCatalogGrid, .ptCustomGrid { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .ptHero { grid-template-columns: 1fr; } .ptStats { grid-row: auto; } .ptToolbar { grid-template-columns: 1fr; } .ptCatalogGrid, .ptCustomGrid, .ptPreviewGrid { grid-template-columns: 1fr; } .ptPreviewList.warning { grid-column: auto; } }
 @media (prefers-reduced-motion: reduce) { .procedureTemplates * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; } }
+.catalogResultHint{margin:10px 0;padding:10px 12px;border:1px solid #3d4c3c;border-radius:9px;background:#111a12;color:#aab8a7;font-size:11px}

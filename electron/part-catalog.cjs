@@ -130,8 +130,31 @@ function cleanPartName(title='',barcode='',partNo='',brand=''){
   return value.trim()
 }
 
-const LOOKUP_VERSION='catalog-web-v5'
+const LOOKUP_VERSION='catalog-web-v6'
 const VEHICLE_MAKES=['ALFA ROMEO','ASTON MARTIN','LAND ROVER','MERCEDES-BENZ','MERCEDES','VOLKSWAGEN','VAUXHALL','CHEVROLET','CHRYSLER','CITROEN','DACIA','DAEWOO','DAIHATSU','DODGE','FERRARI','FIAT','FORD','HONDA','HYUNDAI','INFINITI','ISUZU','IVECO','JAGUAR','JEEP','KIA','LANCIA','LEXUS','MAN','MAZDA','MINI','MITSUBISHI','NISSAN','OPEL','PEUGEOT','PORSCHE','RENAULT','ROVER','SAAB','SEAT','SKODA','SMART','SSANGYONG','SUBARU','SUZUKI','TESLA','TOYOTA','VOLVO','AUDI','BMW']
+const AUTOMOTIVE_WORDS=/(?:auto(?:motive|parts?)?|samochod|vehicle|częś|czes|spare part|oe\b|oem\b|brake|hamul|filter|filtr|sensor|czujnik|bearing|łożysk|lozysk|suspension|zawiesze|engine|silnik|clutch|sprzęg|sprzeg|gearbox|skrzyni|stabilis|wahacz|amortyz|shock absorber|ignition|zapłon|zaplon|radiator|chłodnic|chlodnic|exhaust|wydech|steering|kierownic|wheel|koł|kol)/i
+const CATALOG_DOMAINS=/(?:autodoc|auto-doc|motora|autoparts|auto-parts|auto-?teile|ucando|czesciauto24|europarts|autodily|trodo|mister-auto|spareto|iparts|intercars|motointegrator|daparto|partsource)/i
+
+function normalizedIdentity(value=''){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/gi,'').toUpperCase()}
+function automotiveSignals(item={}){
+  const text=`${item.name||''} ${item.category||''} ${item.description||''} ${item.brand||''}`
+  let signals=0
+  if(knownBrand(item.brand||text))signals+=2
+  if(AUTOMOTIVE_WORDS.test(text))signals+=2
+  if(CATALOG_DOMAINS.test(item.lookup_url||''))signals+=2
+  if(item.part_no&&/[0-9]/.test(item.part_no))signals++
+  if(item.vehicle_fitment)signals+=2
+  if(item.cross_numbers)signals++
+  return signals
+}
+
+function compatibleParts(primary,item){
+  const primaryBrand=normalizedIdentity(primary.brand),itemBrand=normalizedIdentity(item.brand)
+  if(primaryBrand&&itemBrand&&primaryBrand!==itemBrand)return false
+  const primaryNo=normalizedIdentity(primary.part_no),itemNo=normalizedIdentity(item.part_no)
+  if(primaryNo&&itemNo&&primaryNo!==itemNo)return false
+  return true
+}
 
 function uniqueLines(values=[]){
   const seen=new Set(),out=[]
@@ -253,10 +276,12 @@ function additionalProperties(product={}){
 }
 
 function mergePartCandidates(candidates=[],barcode=''){
-  const items=candidates.filter(item=>item&&item.name)
+  const items=candidates.filter(item=>item&&item.name&&automotiveSignals(item)>=2)
   if(!items.length)return null
   const score=item=>{
     let points=item.web_candidate?8:2
+    points+=Number(item.evidence_score||0)
+    if(item.detail_barcode_verified)points+=12
     if(item.brand)points+=knownBrand(item.brand)?7:3
     if(item.part_no)points+=6
     if(item.vehicle_fitment)points+=4
@@ -267,21 +292,23 @@ function mergePartCandidates(candidates=[],barcode=''){
     return points
   }
   const ranked=[...items].sort((a,b)=>score(b)-score(a))
+  const compatible=ranked.filter(item=>compatibleParts(ranked[0],item))
   const pick=(field,predicate=value=>Boolean(String(value||'').trim()))=>ranked.find(item=>predicate(item[field]))?.[field]||''
-  const primary=ranked[0]
-  const sources=uniqueLines(items.map(item=>item.lookup_source)).slice(0,4)
-  const fitment=uniqueLines(items.map(item=>item.vehicle_fitment)).slice(0,60)
-  const partNo=pick('part_no',value=>/[0-9]/.test(String(value||'')))
-  const cross=uniqueLines(items.map(item=>item.cross_numbers)).filter(value=>{
+  const safePick=(field,predicate=value=>Boolean(String(value||'').trim()))=>compatible.find(item=>predicate(item[field]))?.[field]||''
+  const primary=compatible[0]
+  const sources=uniqueLines(compatible.map(item=>item.lookup_source)).slice(0,4)
+  const fitment=uniqueLines(compatible.map(item=>item.vehicle_fitment)).slice(0,60)
+  const partNo=safePick('part_no',value=>/[0-9]/.test(String(value||'')))
+  const cross=uniqueLines(compatible.map(item=>item.cross_numbers)).filter(value=>{
     const compact=value.replace(/[^A-Z0-9]/gi,'').toUpperCase()
     return compact&&compact!==normalizeBarcode(barcode)&&compact!==String(partNo).replace(/[^A-Z0-9]/gi,'').toUpperCase()
   }).slice(0,60)
   const merged={...primary,
     barcode:normalizeBarcode(barcode||primary.barcode),
-    name:pick('name'),brand:pick('brand'),part_no:partNo,
-    category:pick('category')||'Części samochodowe',description:pick('description'),image_url:pick('image_url'),
+    name:safePick('name'),brand:safePick('brand'),part_no:partNo,
+    category:safePick('category')||'Części samochodowe',description:safePick('description'),image_url:safePick('image_url'),
     vehicle_fitment:fitment.join('\n'),cross_numbers:cross.join('\n'),
-    lookup_source:sources.join(' + '),lookup_url:pick('lookup_url'),lookup_sources:sources,
+    lookup_source:sources.join(' + '),lookup_url:safePick('lookup_url'),lookup_sources:sources,
     lookup_version:LOOKUP_VERSION
   }
   const core=[merged.name,merged.brand,merged.part_no].filter(Boolean).length
@@ -331,7 +358,11 @@ async function enrichWebCandidate(fetchImpl,item){
   if(!item?.lookup_url)return applyVerifiedPart(base)
   try{
     const response=await fetchImpl(item.lookup_url,{headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36'},signal:AbortSignal.timeout(6000)})
-    if(response.ok)return applyVerifiedPart(enrichPartFromHtml(base,await response.text()))
+    if(response.ok){
+      const html=await response.text(),products=jsonLdProducts(html),exactProduct=products.some(product=>productCodes(product).includes(normalizeBarcode(item.barcode)))
+      const pageHasBarcode=String(html).includes(normalizeBarcode(item.barcode))
+      return applyVerifiedPart({...enrichPartFromHtml(base,html),detail_barcode_verified:exactProduct||pageHasBarcode})
+    }
   }catch{}
   return applyVerifiedPart(base)
 }
@@ -373,13 +404,25 @@ function mapWebSearch(html,scannedCode){
     if(/ebay|amazon|allegro/i.test(url))score-=3
     results.push({url,rawTitle,snippet,score})
   }
+  for(const result of results){
+    result.partNo=webPartNumber(`${result.rawTitle} ${result.snippet}`,barcode)
+    result.brand=webBrand(`${result.rawTitle} ${result.snippet}`,result.partNo)
+    const signals=automotiveSignals({name:`${result.rawTitle} ${result.snippet}`,brand:result.brand,part_no:result.partNo,lookup_url:result.url})
+    result.score+=signals
+    result.automotiveSignals=signals
+  }
   const best=results.sort((a,b)=>b.score-a.score)[0]
-  if(!best||best.score<4)return null
+  if(!best||best.score<8||best.automotiveSignals<2)return null
   const name=best.rawTitle.replaceAll(barcode,'').replace(/\s*[|–—]\s*(?:eBay.*|AUTODOC.*)$/i,'').replace(/\s*\.{3}\s*$/,'').replace(/\s+/g,' ').trim()
   if(!name)return null
-  const combinedEvidence=results.map(result=>`${result.rawTitle} ${result.snippet}`).join('\n')
-  const partNo=webPartNumber(combinedEvidence,barcode)
-  const brand=webBrand(combinedEvidence,partNo)
+  const related=results.filter(result=>{
+    if(best.brand&&result.brand&&normalizedIdentity(best.brand)!==normalizedIdentity(result.brand))return false
+    if(best.partNo&&result.partNo&&normalizedIdentity(best.partNo)!==normalizedIdentity(result.partNo))return false
+    return result.automotiveSignals>=2
+  })
+  const combinedEvidence=related.map(result=>`${result.rawTitle} ${result.snippet}`).join('\n')
+  const partNo=best.partNo
+  const brand=best.brand
   return applyVerifiedPart({
     barcode,
     name:cleanPartName(name,barcode,partNo,brand)||name,
@@ -387,12 +430,12 @@ function mapWebSearch(html,scannedCode){
     category:'Części samochodowe',
     part_no:partNo,
     description:'',
-    vehicle_fitment:uniqueLines(results.flatMap(result=>[extractFitment(result.rawTitle),extractFitment(result.snippet)])).join('\n'),
+    vehicle_fitment:uniqueLines(related.flatMap(result=>[extractFitment(result.rawTitle),extractFitment(result.snippet)])).join('\n'),
     cross_numbers:extractReferenceNumbers(combinedEvidence,barcode,partNo),
     image_url:'',
     lookup_source:'Wyszukiwanie WWW',
     lookup_url:best.url,
-    web_candidate:true,lookup_version:LOOKUP_VERSION
+    web_candidate:true,evidence_score:best.score,result_count:related.length,lookup_version:LOOKUP_VERSION
   })
 }
 
@@ -429,7 +472,16 @@ async function lookupBarcodeOnline(fetchImpl,value,{details=false}={}){
   }
   const webByUrl=new Map(candidates.filter(item=>item.web_candidate).map(item=>[item.lookup_url,item]))
   const enriched=await Promise.all([...webByUrl.values()].slice(0,2).map(item=>enrichWebCandidate(fetchImpl,item)))
-  const item=mergePartCandidates([...candidates.filter(item=>!item.web_candidate),...enriched],barcode)
+  const identityCounts=new Map()
+  for(const candidate of enriched){
+    const identity=`${normalizedIdentity(candidate.brand)}|${normalizedIdentity(candidate.part_no)}`
+    if(identity!=='|')identityCounts.set(identity,(identityCounts.get(identity)||0)+1)
+  }
+  const reliableWeb=enriched.filter(candidate=>{
+    const identity=`${normalizedIdentity(candidate.brand)}|${normalizedIdentity(candidate.part_no)}`
+    return candidate.detail_barcode_verified||(identityCounts.get(identity)||0)>=2||Number(candidate.evidence_score||0)>=13
+  })
+  const item=mergePartCandidates([...candidates.filter(candidate=>!candidate.web_candidate),...reliableWeb],barcode)
   if(item)return details?{item,available:true,errors}:item
   return details?{item:null,available,errors}:null
 }
