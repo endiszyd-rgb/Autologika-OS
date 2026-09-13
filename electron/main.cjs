@@ -13,7 +13,7 @@ const { listAppointments, createAppointment, updateAppointment, removeAppointmen
 const { deletionPreview, removeEntity } = require('./entity-deletion.cjs')
 const { createCustomer, updateCustomer, createVehicle, updateVehicle } = require('./record-editing.cjs')
 const { decodeRegistrationPayload } = require('./registration-decoder.cjs')
-const { LOOKUP_VERSION, normalizeBarcode, isGtin, lookupBarcodeOnline } = require('./part-catalog.cjs')
+const { LOOKUP_VERSION, normalizeBarcode, normalizePartNumber, isGtin, lookupBarcodeOnline, lookupPartNumberOnline } = require('./part-catalog.cjs')
 const { deleteInventoryPart } = require('./inventory-record.cjs')
 const { readBarcodeCache, writeBarcodeHit, writeBarcodeMiss, pruneBarcodeCache } = require('./barcode-cache.cjs')
 const { issueInventoryPart, removeOrderItem } = require('./inventory-usage.cjs')
@@ -627,6 +627,16 @@ ipcMain.handle('inventory:lookupBarcode',async(_,request)=>{
     return{found:false,source:'online',barcode,unavailable:false,cached:false}
   }
   return{found:false,source:'online',barcode,unavailable:true,cached:false,errors:online.errors}
+})
+ipcMain.handle('inventory:lookupPartNumber',async(_,request)=>{
+  const partNo=normalizePartNumber(typeof request==='object'&&request!==null?request.value:request)
+  if(!partNo)throw new Error('Wpisz poprawny numer katalogowy części.')
+  const identity=value=>String(value||'').replace(/[^A-Z0-9]/gi,'').toUpperCase(),needle=identity(partNo),db=getDb()
+  const local=db.prepare(`SELECT p.*,s.name supplier FROM inventory_parts p LEFT JOIN suppliers s ON s.id=p.supplier_id`).all().find(part=>[part.part_no,...String(part.cross_numbers||'').split(/[\n;,]+/)].some(value=>identity(value)===needle))
+  if(local)return{found:true,partNo,source:'local',item:local}
+  const online=await lookupPartNumberOnline((url,options)=>net.fetch(url,options),partNo,{details:true})
+  if(online.item)return{found:true,partNo,source:'online',item:online.item,errors:online.errors}
+  return{found:false,partNo,source:'none',unavailable:!online.available,errors:online.errors}
 })
 ipcMain.handle('inventory:create',(_,d)=>{const db=getDb(),barcode=normalizeBarcode(d.barcode);if(!String(d.name||'').trim())throw new Error('Wpisz nazwę części.');if(barcode&&!isGtin(barcode))throw new Error('Kod kreskowy nie jest poprawnym EAN, UPC ani GTIN.');if(barcode&&db.prepare('SELECT id FROM inventory_parts WHERE barcode=?').get(barcode))throw new Error('Ten kod kreskowy jest już zapisany w magazynie.');const price=(+d.sell_price||0)||Math.round((+d.unit_cost||0)*(1+partMarkup(+d.unit_cost||0))*100)/100;const r=db.prepare('INSERT INTO inventory_parts(barcode,part_no,name,brand,category,description,vehicle_fitment,cross_numbers,image_url,lookup_source,lookup_url,stock,min_stock,unit_cost,sell_price,supplier_id,location,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(barcode||null,d.part_no||'',String(d.name).trim(),d.brand||'',d.category||'',d.description||'',d.vehicle_fitment||'',d.cross_numbers||'',d.image_url||'',d.lookup_source||'',d.lookup_url||'',+d.stock||0,+d.min_stock||0,+d.unit_cost||0,price,d.supplier_id||null,d.location||'',d.notes||'');return{id:r.lastInsertRowid,sell_price:price}})
 ipcMain.handle('inventory:update',(_,{id,data:d})=>{const db=getDb(),barcode=normalizeBarcode(d.barcode);if(!String(d.name||'').trim())throw new Error('Wpisz nazwę części.');if(barcode&&!isGtin(barcode))throw new Error('Kod kreskowy nie jest poprawnym EAN, UPC ani GTIN.');const duplicate=barcode&&db.prepare('SELECT id FROM inventory_parts WHERE barcode=? AND id<>?').get(barcode,id);if(duplicate)throw new Error('Ten kod kreskowy jest przypisany do innej części.');db.prepare(`UPDATE inventory_parts SET barcode=?,part_no=?,name=?,brand=?,category=?,description=?,vehicle_fitment=?,cross_numbers=?,image_url=?,lookup_source=?,lookup_url=?,min_stock=?,unit_cost=?,sell_price=?,supplier_id=?,location=?,notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(barcode||null,d.part_no||'',String(d.name).trim(),d.brand||'',d.category||'',d.description||'',d.vehicle_fitment||'',d.cross_numbers||'',d.image_url||'',d.lookup_source||'',d.lookup_url||'',+d.min_stock||0,+d.unit_cost||0,+d.sell_price||0,d.supplier_id||null,d.location||'',d.notes||'',id);return true})

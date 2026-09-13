@@ -1,6 +1,6 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
-const {normalizeBarcode,isGtin,mapWebSearch,cleanPartName,enrichPartFromHtml,mergePartCandidates,buildPartAlternatives,lookupBarcodeOnline}=require('../electron/part-catalog.cjs')
+const {normalizeBarcode,normalizePartNumber,isGtin,mapWebSearch,mapPartNumberWebSearch,cleanPartName,extractReferenceNumbers,enrichPartFromHtml,mergePartCandidates,buildPartAlternatives,lookupBarcodeOnline,lookupPartNumberOnline}=require('../electron/part-catalog.cjs')
 
 test('normalizes Zebra symbology prefixes and validates GTIN checksum',()=>{
   assert.equal(normalizeBarcode(']E04006381333931\r\n'),'4006381333931')
@@ -63,6 +63,38 @@ test('maps DuckDuckGo Lite results into clean autofill fields',()=>{
   assert.equal(item.part_no,'28SKV013')
   assert.equal(item.vehicle_fitment,'BMW 1 Series\nBMW 2 Series')
   assert.equal(item.lookup_url,'https://www.autodoc.co.uk/esen-skv/13449639')
+})
+
+test('maps an exact catalog number search into a part draft',()=>{
+  const html=`<tr><td><a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fwww.autodoc.pl%2Fmann-filter%2Fw-712-95&amp;rut=x" class='result-link'>MANN-FILTER W 712/95 Oil filter for Volkswagen Golf</a></td></tr>
+  <tr><td class='result-snippet'>Filtr oleju MANN-FILTER, numer katalogowy W 712/95. Pasuje do Volkswagen Golf VII. Numery OE: 04E 115 561 H</td></tr>`
+  const item=mapPartNumberWebSearch(html,'w 712/95')
+  assert.equal(normalizePartNumber(' w 712/95 '),'W 712/95')
+  assert.equal(item.part_no,'W 712/95')
+  assert.equal(item.brand,'MANN-FILTER')
+  assert.equal(item.name,'Filtr oleju')
+  assert.match(item.vehicle_fitment,/Volkswagen Golf/)
+  assert.match(item.cross_numbers,/04E 115 561 H/)
+})
+
+test('keeps spaced OE numbers and rejects technical units',()=>{
+  const refs=extractReferenceNumbers('Numery OE: UNF-1B; 04E 115 561 H; A 000 905 10 03; moment 25 Nm','','W 712/95')
+  assert.match(refs,/04E 115 561 H/)
+  assert.match(refs,/A 000 905 10 03/)
+  assert.doesNotMatch(refs,/UNF/)
+})
+
+test('searches multiple providers and enriches a catalog number result',async()=>{
+  const search=`<a class="result__a" href="https://www.autodoc.test/mann-filter/w71295">MANN-FILTER W 712/95 Oil filter for Volkswagen Golf</a><a class="result__snippet">Auto part W 712/95 for Volkswagen Golf VII</a>`
+  const page=`<script type="application/ld+json">{"@type":"Product","name":"Filtr oleju","sku":"W 712/95","brand":{"name":"MANN-FILTER"},"isAccessoryOrSparePartFor":{"name":"Volkswagen Golf VII"}}</script><p>Numery OE: 04E 115 561 H</p>`
+  const fetchImpl=async url=>url==='https://www.autodoc.test/mann-filter/w71295'?{ok:true,status:200,text:async()=>page}:{ok:true,status:200,text:async()=>search}
+  const result=await lookupPartNumberOnline(fetchImpl,'W 712/95',{details:true})
+  assert.equal(result.available,true)
+  assert.equal(result.item.part_no,'W 712/95')
+  assert.equal(result.item.brand,'MANN-FILTER')
+  assert.equal(result.item.name,'Filtr oleju')
+  assert.match(result.item.vehicle_fitment,/Volkswagen Golf VII/)
+  assert.match(result.item.cross_numbers,/04E 115 561 H/)
 })
 
 test('fills verified TEKNOROT catalog data instead of a sparse marketplace title',()=>{

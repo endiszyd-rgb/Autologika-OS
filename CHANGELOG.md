@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.31 — 2026-09-14
+
+### Wyszukiwanie części po numerze katalogowym
+
+- Magazyn oraz Centrum zlecenia pozwalają wyszukać część po numerze katalogowym, np. `W 712/95` lub `28SKV013`.
+- Aplikacja najpierw sprawdza własny magazyn i numery zamienne, a następnie wiarygodne katalogi internetowe.
+- Znaleziony wynik uzupełnia nazwę, producenta, numer katalogowy, zastosowanie oraz numery OE.
+- Gdy istnieje kilka pasujących wyników, użytkownik może wybrać właściwą część przed dodaniem jej do magazynu lub zlecenia.
+- Rozpoznawanie numerów OE obsługuje również zapis ze spacjami i odrzuca oznaczenia techniczne, które nie są numerami części.
+
 ## 1.0.30 — 2026-09-13
 
 ### Pełne dane skanowanej części w zleceniu

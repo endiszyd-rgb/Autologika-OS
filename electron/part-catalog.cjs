@@ -111,10 +111,11 @@ function cleanPartName(title='',barcode='',partNo='',brand=''){
   value=value.replace(/\s*[|–—-]\s*(?:AUTODOC|eBay|Amazon|Allegro|Motora|sklep).*$/i,' ').replace(/\s*\.{3}\s*/g,' ')
   const partIndex=partNo?value.toUpperCase().indexOf(String(partNo).toUpperCase()):-1
   if(partIndex>=0&&partIndex<50)value=value.slice(partIndex+String(partNo).length)
-  for(const prefix of [partNo,brand]){
-    if(!prefix)continue
-    const escaped=String(prefix).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')
-    value=value.replace(new RegExp('^\\s*'+escaped+'\\s*[-–—|:]?\\s*','i'),'')
+  for(let pass=0;pass<2;pass++)for(const prefix of [brand,partNo]){
+    const compact=normalizedIdentity(prefix)
+    if(!compact)continue
+    const flexible=compact.split('').join('[\\s._/-]*')
+    value=value.replace(new RegExp('^\\s*'+flexible+'\\s*[-–—|:]?\\s*','i'),'')
   }
   value=value.replace(/^\s*[-–—|:]\s*/,'').replace(/\s+(?:for|fits?|pour|für|do)\s+.*$/i,'').split(',')[0].replace(/\s+/g,' ').trim()
   const replacements=[
@@ -212,11 +213,14 @@ function extractReferenceNumbers(value='',barcode='',partNo=''){
   for(const segment of segments){
     const numeric=segment.match(/\b\d{5,14}\b/g)||[]
     const alphanumeric=segment.match(/\b(?=[A-Z0-9._/-]{5,24}\b)(?=[A-Z0-9._/-]*\d)(?=[A-Z0-9._/-]*[A-Z])[A-Z0-9][A-Z0-9._/-]{4,23}\b/gi)||[]
-    const tokens=[...numeric,...alphanumeric]
+    const spacedMixed=segment.match(/\b(?=[A-Z0-9]{2,4}\b)(?=[A-Z0-9]*[A-Z])(?=[A-Z0-9]*\d)[A-Z0-9]{2,4}(?:\s+(?:\d{1,4}|[A-Z])){2,5}\b/gi)||[]
+    const spacedPrefix=segment.match(/\b[A-Z]\s+\d{3}(?:\s+\d{2,3}){2,4}\b/gi)||[]
+    const spacedNumeric=segment.match(/\b\d{2}(?:\s+\d{1,3}){3,5}\b/g)||[]
+    const tokens=[...numeric,...alphanumeric,...spacedMixed,...spacedPrefix,...spacedNumeric]
     for(let token of tokens){
       token=token.replace(/\s+/g,' ').replace(/^[._/-]+|[._/-]+$/g,'').trim()
       const compact=token.replace(/[^A-Z0-9]/gi,'').toUpperCase()
-      if(!/\d/.test(token)||compact.length<5||excluded.has(compact)||/^(?:HTTP|WWW|EAN|GTIN|UPC)/i.test(token))continue
+      if(!/\d/.test(token)||compact.length<5||compact.length>18||excluded.has(compact)||/^(?:HTTP|WWW|EAN|GTIN|UPC)/i.test(token)||/\b(?:UNF|UNC|MM|CM|KG|KW|KM|CCM)\b/i.test(token))continue
       refs.push(token)
     }
   }
@@ -455,6 +459,88 @@ function mapWebSearch(html,scannedCode){
   })
 }
 
+function normalizePartNumber(value=''){
+  const partNumber=decodeHtml(value).trim().toUpperCase().replace(/\s+/g,' ')
+  if(partNumber.length<3||partNumber.length>40||!/\d/.test(partNumber)||!/^[A-Z0-9][A-Z0-9 ._/-]*$/.test(partNumber))return''
+  return partNumber
+}
+
+function partNumberSearchRows(html=''){
+  const rows=[]
+  const add=(url,title,snippet='')=>{url=unwrapSearchUrl(url);title=decodeHtml(title);snippet=decodeHtml(snippet);if(url&&title)rows.push({url,rawTitle:title,snippet})}
+  const duck=/<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>([\s\S]*?)(?=<a[^>]*class="result__a"|$)/gi
+  for(const match of String(html).matchAll(duck))add(match[1],match[2],match[3].match(/<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i)?.[1]||'')
+  const lite=/<a[^>]*href=["']([^"']+)["'][^>]*class=["'][^"']*result-link[^"']*["'][^>]*>([\s\S]*?)<\/a>([\s\S]*?)(?=<a[^>]*class=["'][^"']*result-link|$)/gi
+  for(const match of String(html).matchAll(lite))add(match[1],match[2],match[3].match(/class=["'][^"']*result-snippet[^"']*["'][^>]*>([\s\S]*?)<\/td>/i)?.[1]||'')
+  const brave=/<a[^>]*href="(https?:\/\/[^"#]+)"[^>]*class="[^"]*\bl1\b[^"]*"[^>]*>[\s\S]{0,6000}?<div[^>]*class="[^"]*\btitle\b[^"]*"[^>]*title="([^"]+)"/gi
+  for(const match of String(html).matchAll(brave))add(match[1],match[2])
+  return rows
+}
+
+function mapPartNumberWebSearch(html,searchedNumber){
+  const partNo=normalizePartNumber(searchedNumber),needle=normalizedIdentity(partNo)
+  if(!partNo)return null
+  const results=[]
+  for(const row of partNumberSearchRows(html)){
+    const evidence=`${row.rawTitle} ${row.snippet}`,identity=normalizedIdentity(evidence)
+    if(!identity.includes(needle))continue
+    const brand=webBrand(evidence,partNo)
+    let name=cleanPartName(row.rawTitle,'',partNo,brand)
+    if(!name)name=cleanPartName(row.snippet,'',partNo,brand)
+    let score=normalizedIdentity(row.rawTitle).includes(needle)?8:5
+    if(CATALOG_DOMAINS.test(row.url))score+=6
+    if(AUTOMOTIVE_WORDS.test(evidence))score+=3
+    if(/ebay|amazon|allegro/i.test(row.url))score-=3
+    const signals=automotiveSignals({name,brand,part_no:partNo,lookup_url:row.url})
+    if(!name||signals<2)continue
+    results.push({...row,name,brand,score:score+signals,signals})
+  }
+  const best=results.sort((a,b)=>b.score-a.score)[0]
+  if(!best||best.score<10)return null
+  const related=results.filter(result=>(!best.brand||!result.brand||normalizedIdentity(best.brand)===normalizedIdentity(result.brand))&&result.signals>=2)
+  const evidence=related.map(result=>`${result.rawTitle} ${result.snippet}`).join('\n')
+  return {
+    barcode:'',part_no:partNo,name:best.name,brand:best.brand,category:'Części samochodowe',description:'',
+    vehicle_fitment:uniqueLines(related.flatMap(result=>[extractFitment(result.rawTitle),extractFitment(result.snippet)])).join('\n'),
+    cross_numbers:extractReferenceNumbers(evidence,'',partNo),image_url:'',lookup_source:'Wyszukiwanie numeru katalogowego',
+    lookup_url:best.url,web_candidate:true,evidence_score:best.score,result_count:related.length,lookup_version:LOOKUP_VERSION
+  }
+}
+
+async function enrichPartNumberCandidate(fetchImpl,item,partNo){
+  if(!item?.lookup_url)return item
+  try{
+    const response=await fetchImpl(item.lookup_url,{headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36'},signal:AbortSignal.timeout(6000)})
+    if(response.ok){
+      const html=await response.text(),verified=normalizedIdentity(decodeHtml(html)).includes(normalizedIdentity(partNo))
+      if(verified){
+        const enriched=enrichPartFromHtml(item,html),pageName=cleanPartName(enriched.name,'',partNo,enriched.brand||item.brand),fallbackName=cleanPartName(item.name,'',partNo,item.brand)
+        return {...enriched,barcode:'',part_no:partNo,name:pageName||fallbackName||item.name,detail_part_number_verified:true}
+      }
+    }
+  }catch{}
+  return item
+}
+
+async function lookupPartNumberOnline(fetchImpl,value,{details=false}={}){
+  const partNo=normalizePartNumber(value)
+  if(!partNo)throw new Error('Wpisz poprawny numer katalogowy zawierający litery, cyfry lub znaki . / -.')
+  const headers={Accept:'text/html,application/xhtml+xml','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36','Accept-Language':'pl-PL,pl;q=0.9'}
+  const urls=[
+    `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(`"${partNo}" część samochodowa`)}`,
+    `https://search.brave.com/search?q=${encodeURIComponent(`"${partNo}" auto part`)}&source=web`,
+    `https://html.duckduckgo.com/html/?q=${encodeURIComponent(`"${partNo}" części`)}`
+  ]
+  const responses=await Promise.all(urls.map(async url=>{try{const response=await fetchImpl(url,{headers,signal:AbortSignal.timeout(6000)});if(!response.ok)return{error:`${new URL(url).hostname}: HTTP ${response.status}`};return{available:true,item:mapPartNumberWebSearch(await response.text(),partNo)}}catch(error){return{error:error?.message||String(error)}}}))
+  const available=responses.some(result=>result.available),errors=responses.flatMap(result=>result.error?[result.error]:[]),candidates=responses.flatMap(result=>result.item?[result.item]:[])
+  const unique=[...new Map(candidates.map(candidate=>[candidate.lookup_url,candidate])).values()]
+  const enriched=await Promise.all(unique.slice(0,3).map(candidate=>enrichPartNumberCandidate(fetchImpl,candidate,partNo)))
+  const reliable=enriched.filter(candidate=>candidate.detail_part_number_verified||Number(candidate.evidence_score||0)>=12)
+  const item=mergePartCandidates(reliable,'')
+  if(item){item.part_no=partNo;item.lookup_alternatives=buildPartAlternatives(item,reliable,'');return details?{item,available:true,errors}:item}
+  return details?{item:null,available,errors}:null
+}
+
 async function lookupBarcodeOnline(fetchImpl,value,{details=false}={}){
   const barcode=normalizeBarcode(value)
   if(!isGtin(barcode))throw new Error('Kod nie jest poprawnym EAN, UPC ani GTIN.')
@@ -505,4 +591,4 @@ async function lookupBarcodeOnline(fetchImpl,value,{details=false}={}){
   return details?{item:null,available,errors}:null
 }
 
-module.exports={LOOKUP_VERSION,normalizeBarcode,isGtin,mapUpcDev,mapUpcItemDb,mapOpenProductsFacts,mapWebSearch,cleanPartName,extractFitment,extractReferenceNumbers,enrichPartFromHtml,mergePartCandidates,buildPartAlternatives,lookupBarcodeOnline}
+module.exports={LOOKUP_VERSION,normalizeBarcode,normalizePartNumber,isGtin,mapUpcDev,mapUpcItemDb,mapOpenProductsFacts,mapWebSearch,mapPartNumberWebSearch,cleanPartName,extractFitment,extractReferenceNumbers,enrichPartFromHtml,mergePartCandidates,buildPartAlternatives,lookupBarcodeOnline,lookupPartNumberOnline}
