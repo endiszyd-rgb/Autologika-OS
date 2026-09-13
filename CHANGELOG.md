@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.29 — 2026-09-13
+
+### Weryfikacja wyników skanowania części
+
+- Gdy źródła rozpoznają ten sam kod jako różne wiarygodne części, formularz pokazuje osobne propozycje producenta i numeru katalogowego.
+- Wybranie propozycji podmienia nazwę, producenta, numer katalogowy, zastosowanie, numery OE i źródło przed zapisaniem części.
+- Przycisk „Wyczyść autofill” usuwa dane pobrane z Internetu, ale zachowuje zeskanowany kod do ręcznego uzupełnienia.
+- Alternatywne wyniki są oczyszczane z duplikatów i ogólnych stron wyszukiwania kodów kreskowych.
+
 ## 1.0.28 — 2026-09-13
 
 ### Usuwanie części z magazynu

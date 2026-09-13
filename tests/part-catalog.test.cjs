@@ -1,6 +1,6 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
-const {normalizeBarcode,isGtin,mapWebSearch,cleanPartName,enrichPartFromHtml,mergePartCandidates,lookupBarcodeOnline}=require('../electron/part-catalog.cjs')
+const {normalizeBarcode,isGtin,mapWebSearch,cleanPartName,enrichPartFromHtml,mergePartCandidates,buildPartAlternatives,lookupBarcodeOnline}=require('../electron/part-catalog.cjs')
 
 test('normalizes Zebra symbology prefixes and validates GTIN checksum',()=>{
   assert.equal(normalizeBarcode(']E04006381333931\r\n'),'4006381333931')
@@ -177,4 +177,15 @@ test('does not merge fields from conflicting manufacturers or part numbers',()=>
   assert.doesNotMatch(item.vehicle_fitment,/Volkswagen/)
   assert.doesNotMatch(item.cross_numbers,/04E115561H/)
   assert.equal(item.image_url,'')
+})
+
+test('keeps credible conflicting matches as selectable alternatives',()=>{
+  const primary={barcode:'5901947342091',name:'Czujnik parkowania',brand:'BOSCH',part_no:'0 263 003 001',category:'Części samochodowe',lookup_source:'Katalog A',lookup_url:'https://autodoc.test/a',web_candidate:true,evidence_score:20}
+  const candidates=[primary,
+    {barcode:'5901947342091',name:'Czujnik parkowania',brand:'VEMO',part_no:'V20-72-0134',category:'Części samochodowe',vehicle_fitment:'BMW Seria 3',lookup_source:'Katalog B',lookup_url:'https://autoparts.test/b',web_candidate:true,evidence_score:16},
+    {barcode:'5901947342091',name:'Barcode lookup result',brand:'',part_no:'',category:'',lookup_source:'Niepewne źródło'}]
+  const alternatives=buildPartAlternatives(primary,candidates,'5901947342091')
+  assert.equal(alternatives.length,1)
+  assert.equal(alternatives[0].brand,'VEMO')
+  assert.equal(alternatives[0].part_no,'V20-72-0134')
 })

@@ -316,6 +316,22 @@ function mergePartCandidates(candidates=[],barcode=''){
   return applyVerifiedPart(merged)
 }
 
+function buildPartAlternatives(primary,candidates=[],barcode=''){
+  if(!primary)return[]
+  const seen=new Set([`${normalizedIdentity(primary.brand)}|${normalizedIdentity(primary.part_no)}|${normalizedIdentity(primary.name)}`]),alternatives=[]
+  for(const candidate of candidates){
+    if(!candidate?.name||automotiveSignals(candidate)<2||compatibleParts(primary,candidate))continue
+    const normalized=mergePartCandidates([candidate],barcode)
+    if(!normalized)continue
+    const key=`${normalizedIdentity(normalized.brand)}|${normalizedIdentity(normalized.part_no)}|${normalizedIdentity(normalized.name)}`
+    if(seen.has(key))continue
+    seen.add(key)
+    alternatives.push({...normalized,lookup_alternatives:undefined})
+    if(alternatives.length===4)break
+  }
+  return alternatives
+}
+
 function enrichPartFromHtml(item,html=''){
   if(!item)return item
   const products=jsonLdProducts(html),product=selectJsonLdProduct(products,item.barcode)
@@ -482,8 +498,11 @@ async function lookupBarcodeOnline(fetchImpl,value,{details=false}={}){
     return candidate.detail_barcode_verified||(identityCounts.get(identity)||0)>=2||Number(candidate.evidence_score||0)>=13
   })
   const item=mergePartCandidates([...candidates.filter(candidate=>!candidate.web_candidate),...reliableWeb],barcode)
-  if(item)return details?{item,available:true,errors}:item
+  if(item){
+    item.lookup_alternatives=buildPartAlternatives(item,[...reliableWeb,...candidates.filter(candidate=>!candidate.web_candidate)],barcode)
+    return details?{item,available:true,errors}:item
+  }
   return details?{item:null,available,errors}:null
 }
 
-module.exports={LOOKUP_VERSION,normalizeBarcode,isGtin,mapUpcDev,mapUpcItemDb,mapOpenProductsFacts,mapWebSearch,cleanPartName,extractFitment,extractReferenceNumbers,enrichPartFromHtml,mergePartCandidates,lookupBarcodeOnline}
+module.exports={LOOKUP_VERSION,normalizeBarcode,isGtin,mapUpcDev,mapUpcItemDb,mapOpenProductsFacts,mapWebSearch,cleanPartName,extractFitment,extractReferenceNumbers,enrichPartFromHtml,mergePartCandidates,buildPartAlternatives,lookupBarcodeOnline}
