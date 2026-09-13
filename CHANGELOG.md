@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.30 — 2026-09-13
+
+### Pełne dane skanowanej części w zleceniu
+
+- W Centrum zlecenia można wybrać właściwy wynik, gdy skan kodu zwróci kilka wiarygodnych części.
+- Każda propozycja pokazuje producenta, numer katalogowy, nazwę oraz znalezione numery OE.
+- Zamówienie części zachowuje teraz EAN, producenta, zastosowanie, numery zamienne i źródło katalogowe jako osobne dane.
+- Producent i EAN są widoczne na liście części zlecenia oraz w centralnej kolejce zamówień.
+- Nowe pola przechodzą przez synchronizację między urządzeniami i pozostają dostępne podczas edycji.
+- Migracja schematu tworzy automatyczną kopię bezpieczeństwa istniejącej bazy i zachowuje wcześniejsze zamówienia części.
+
 ## 1.0.29 — 2026-09-13
 
 ### Weryfikacja wyników skanowania części

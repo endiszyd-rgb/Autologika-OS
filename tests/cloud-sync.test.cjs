@@ -43,19 +43,25 @@ test('order item preserves its inventory source through cloud synchronization',(
 
 test('ordered part maps its inventory source and OE data between devices',()=>{
  const db=new DatabaseSync(':memory:')
- db.exec(`CREATE TABLE suppliers(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE inventory_parts(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE orders(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE job_part_orders(id INTEGER PRIMARY KEY,order_id INTEGER,supplier_id INTEGER,inventory_part_id INTEGER,name TEXT,oe_number TEXT,vehicle_snapshot TEXT,cloud_id TEXT,updated_at TEXT); INSERT INTO suppliers VALUES(2,'supplier-cloud'); INSERT INTO inventory_parts VALUES(7,'inventory-cloud'); INSERT INTO orders VALUES(3,'order-cloud'); INSERT INTO job_part_orders VALUES(12,3,2,7,'Filtr oleju','11428507683','{"make":"BMW"}','job-part-cloud','2026-09-12T10:00:00.000Z');`)
+ db.exec(`CREATE TABLE suppliers(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE inventory_parts(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE orders(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE job_part_orders(id INTEGER PRIMARY KEY,order_id INTEGER,supplier_id INTEGER,inventory_part_id INTEGER,name TEXT,oe_number TEXT,barcode TEXT,brand TEXT,vehicle_fitment TEXT,cross_numbers TEXT,lookup_source TEXT,lookup_url TEXT,vehicle_snapshot TEXT,cloud_id TEXT,updated_at TEXT); INSERT INTO suppliers VALUES(2,'supplier-cloud'); INSERT INTO inventory_parts VALUES(7,'inventory-cloud'); INSERT INTO orders VALUES(3,'order-cloud'); INSERT INTO job_part_orders VALUES(12,3,2,7,'Filtr oleju','11428507683','4006381333931','MANN-FILTER','BMW 320d','11428507683','Katalog producenta','https://example.test/filter','{"make":"BMW"}','job-part-cloud','2026-09-12T10:00:00.000Z');`)
  const payload=buildPayload(db,'job_part_orders',db.prepare('SELECT * FROM job_part_orders WHERE id=12').get())
  assert.equal(payload.order_cloud_id,'order-cloud')
  assert.equal(payload.supplier_cloud_id,'supplier-cloud')
  assert.equal(payload.inventory_part_cloud_id,'inventory-cloud')
  assert.equal(payload.inventory_part_id,undefined)
  assert.equal(payload.oe_number,'11428507683')
- applyPayload(db,'job_part_orders','remote-job-part',{order_cloud_id:'order-cloud',supplier_cloud_id:'supplier-cloud',inventory_part_cloud_id:'inventory-cloud',name:'Filtr kabinowy',oe_number:'64319313519',vehicle_snapshot:'{"make":"BMW"}'},'2026-09-12T11:00:00.000Z')
+ assert.equal(payload.barcode,'4006381333931')
+ assert.equal(payload.brand,'MANN-FILTER')
+ assert.equal(payload.vehicle_fitment,'BMW 320d')
+ applyPayload(db,'job_part_orders','remote-job-part',{order_cloud_id:'order-cloud',supplier_cloud_id:'supplier-cloud',inventory_part_cloud_id:'inventory-cloud',name:'Filtr kabinowy',oe_number:'64319313519',barcode:'5901234123457',brand:'MAHLE',vehicle_fitment:'BMW Seria 3',cross_numbers:'64319313519',lookup_source:'Katalog części',lookup_url:'https://example.test/cabin',vehicle_snapshot:'{"make":"BMW"}'},'2026-09-12T11:00:00.000Z')
  const remote=db.prepare("SELECT * FROM job_part_orders WHERE cloud_id='remote-job-part'").get()
  assert.equal(remote.order_id,3)
  assert.equal(remote.supplier_id,2)
  assert.equal(remote.inventory_part_id,7)
  assert.equal(remote.oe_number,'64319313519')
+ assert.equal(remote.barcode,'5901234123457')
+ assert.equal(remote.brand,'MAHLE')
+ assert.equal(remote.cross_numbers,'64319313519')
 })
 
 test('recalculates order profitability after remote item changes',()=>{

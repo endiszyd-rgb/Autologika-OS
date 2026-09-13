@@ -6,7 +6,7 @@ const { seedTechnicalReference } = require('./technical-seed.cjs')
 const { migrateLegacyServiceReminders } = require('./service-reminders.cjs')
 
 let db
-const SCHEMA_VERSION = 8
+const SCHEMA_VERSION = 9
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -112,6 +112,17 @@ function migrate(db,currentVersion=0) {
   }
   if(currentVersion<8){
     db.transaction(()=>{migrateSchemaV8(db);db.pragma('user_version = 8')})()
+    currentVersion=8
+  }
+  if(currentVersion<9){
+    db.transaction(()=>{migrateSchemaV9(db);db.pragma('user_version = 9')})()
+  }
+}
+
+function migrateSchemaV9(db){
+  const existing=db.prepare('PRAGMA table_info(job_part_orders)').all().map(row=>row.name)
+  for(const [name,type] of [['barcode','TEXT'],['brand','TEXT'],['vehicle_fitment','TEXT'],['cross_numbers','TEXT'],['lookup_source','TEXT'],['lookup_url','TEXT']]){
+    if(!existing.includes(name))db.exec(`ALTER TABLE job_part_orders ADD COLUMN ${name} ${type}`)
   }
 }
 
@@ -600,7 +611,7 @@ function migrateSchemaV1(db) {
   ensureColumns('quote_items',catalogSnapshotColumns)
   ensureColumns('work_procedure_runs',[['catalog_work_id','TEXT'],['catalog_variant_id','TEXT'],['technical_description','TEXT'],['technical_data_key','TEXT']])
   ensureColumns('inventory_parts',[['barcode','TEXT'],['brand','TEXT'],['category','TEXT'],['description','TEXT'],['image_url','TEXT'],['lookup_source','TEXT'],['lookup_url','TEXT']])
-  ensureColumns('job_part_orders',[['oe_number','TEXT'],['inventory_part_id','INTEGER'],['vehicle_snapshot','TEXT'],['supplier_name','TEXT']])
+  ensureColumns('job_part_orders',[['oe_number','TEXT'],['inventory_part_id','INTEGER'],['vehicle_snapshot','TEXT'],['supplier_name','TEXT'],['barcode','TEXT'],['brand','TEXT'],['vehicle_fitment','TEXT'],['cross_numbers','TEXT'],['lookup_source','TEXT'],['lookup_url','TEXT']])
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_parts_barcode ON inventory_parts(barcode) WHERE barcode IS NOT NULL AND barcode!=''")
 
   const syncTables=['app_settings','customers','vehicles','orders','diagnostics','order_notes','job_part_orders','payments','appointments','suppliers','inventory_parts','order_items','work_logs','communications','approvals','order_events','sales_refs','service_reminders_v2','attachments','signatures','work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps']
@@ -698,4 +709,4 @@ function seed(db) {
     .run(o.lastInsertRowid,v.lastInsertRowid,'Diagnostyka braku mocy',start.toISOString(),end.toISOString(),'Stanowisko 1','PLAN')
 }
 
-module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8 }
+module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9 }

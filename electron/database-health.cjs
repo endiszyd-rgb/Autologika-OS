@@ -5,7 +5,7 @@ const CRITICAL_COLUMNS={
  orders:['wait_state','archived_at','cloud_id','updated_at'],
  vehicles:['customer_id','generation','engine_code','cloud_id'],
  inventory_parts:['barcode','vehicle_fitment','cross_numbers','cloud_id'],
- job_part_orders:['oe_number','inventory_part_id','vehicle_snapshot','supplier_name','cloud_id'],
+ job_part_orders:['oe_number','inventory_part_id','vehicle_snapshot','supplier_name','barcode','brand','vehicle_fitment','cross_numbers','cloud_id'],
  order_items:['oe_number','inventory_part_id','cloud_id'],
  attachments:['storage_path','size_bytes','sha256','category','cloud_id']
 }
