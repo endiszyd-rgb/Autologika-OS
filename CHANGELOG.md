@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.28 — 2026-09-13
+
+### Usuwanie części z magazynu
+
+- Każda karta części ma teraz wyraźny przycisk „Usuń”.
+- Potwierdzenie pokazuje ilość zapasu, która zostanie usunięta razem z rekordem.
+- Pozycje historyczne w zleceniach, zamówieniach części i dostawach pozostają zachowane, ale zostają odłączone od usuniętego rekordu magazynowego.
+- Usunięcie części czyści również zapamiętany wynik jej kodu kreskowego.
+- Jeśli część miała kod EAN, UPC lub GTIN, aplikacja automatycznie uruchamia świeże wyszukiwanie internetowe po jej usunięciu.
+- Usunięcie jest przekazywane przez kolejkę synchronizacji do pozostałych urządzeń.
+
 ## 1.0.27 — 2026-09-13
 
 ### Pewniejsze wyszukiwanie części

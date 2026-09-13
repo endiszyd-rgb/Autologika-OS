@@ -72,6 +72,7 @@ app.on('browser-window-created', (_, win) => {
       console.log('GLOBAL_AZTEC_INTAKE','AZTEC captured over an active input and redirected from settings to populated quick intake')
       const inventoryDb=require('../electron/db.cjs').getDb()
       inventoryDb.prepare(`INSERT INTO inventory_parts(barcode,part_no,name,brand,vehicle_fitment,cross_numbers,stock,min_stock,unit_cost,sell_price,location) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run('4006381333931','W 712/95','Filtr oleju','MANN-FILTER','BMW 320d','11428507683\n11427854445',4,2,24.5,49,'A-03')
+      const removablePart=inventoryDb.prepare(`INSERT INTO inventory_parts(part_no,name,brand,stock,min_stock,unit_cost,sell_price) VALUES (?,?,?,?,?,?,?)`).run('TEST-DELETE','Błędny wpis do usunięcia','TEST',0,0,0,0).lastInsertRowid
       await win.webContents.executeJavaScript(`{
         const target=document.querySelector('input');target.focus();
         for(const key of '4006381333931')target.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));
@@ -83,6 +84,7 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.stockLookupMessage')?.textContent.includes('Część jest już w Twoim magazynie')`),true)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.stockCard.selected')?.textContent.includes('Filtr oleju')`),true)
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.stockCard.selected button')].some(button=>button.textContent.includes('Wydaj do zlecenia'))`),true)
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.stockCard button')].some(button=>button.textContent==='Usuń')`),true)
       console.log('GLOBAL_PART_BARCODE','EAN captured globally and resolved directly from the local inventory')
       await capture('parts-inventory-scan')
       const lookupVersion=require('../electron/part-catalog.cjs').LOOKUP_VERSION
@@ -115,6 +117,10 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(inventoryDb.prepare('SELECT stock FROM inventory_parts WHERE id=?').get(issuedItem.inventory_part_id).stock,4)
       inventoryDb.prepare('DELETE FROM orders WHERE id=?').run(temporaryOrder)
       console.log('INVENTORY_ISSUE','part issued to an active order and restored after removing the order item')
+      const removedInventory=await win.webContents.executeJavaScript(`window.autologika.inventory.remove(${Number(removablePart)})`)
+      assert.equal(removedInventory.removed,true)
+      assert.equal(inventoryDb.prepare('SELECT COUNT(*) count FROM inventory_parts WHERE id=?').get(removablePart).count,0)
+      console.log('INVENTORY_DELETE','inventory record removed while historical order data remains available')
       await win.webContents.executeJavaScript(`document.querySelectorAll('.partsTabs button')[1].click()`)
       await delay(350)
       await win.webContents.executeJavaScript(`[...document.querySelectorAll('button')].find(x=>x.textContent.includes('+ Część do zlecenia')).click()`)
