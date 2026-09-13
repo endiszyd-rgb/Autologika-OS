@@ -95,7 +95,8 @@
 .wlCapacity p { margin: 0; color: #718188; font-size: 8px; line-height: 1.5; }
 
 .wlFlow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-bottom: 14px; }
-.wlStage { position: relative; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 10px; min-height: 55px; padding: 10px 13px; border: 1px solid var(--wl-line); border-radius: 11px; background: #0d1417; }
+.wlStage { position: relative; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 10px; width:100%; min-height: 55px; padding: 10px 13px; border: 1px solid var(--wl-line); border-radius: 11px; background: #0d1417; text-align:left; box-shadow:none; }
+.wlStage:hover { border-color:rgba(88,200,216,.42); background:#132025; transform:translateY(-1px); }
 .wlStage > span { grid-row: 1 / 3; color: #45555c; font-size: 8px; }
 .wlStage > b { color: #88979c; font-size: 18px; line-height: 1; }
 .wlStage > small { color: #627178; font-size: 8px; text-transform: uppercase; }
@@ -103,6 +104,9 @@
 .wlStage.active { border-color: rgba(88, 200, 216, .25); background: linear-gradient(90deg, rgba(88, 200, 216, .08), #0d1417); }
 .wlStage.active > b { color: #e4ebeb; }
 .wlStage.active > small { color: #93a4a9; }
+.wlStage.selected { border-color:rgba(196,244,124,.62); background:linear-gradient(135deg,rgba(196,244,124,.15),#101a18); box-shadow:inset 0 0 0 1px rgba(196,244,124,.08),0 8px 24px #0004; }
+.wlStage.selected > span,.wlStage.selected > small { color:var(--wl-lime); }
+.wlStage.selected > b { color:#f2f8ef; }
 
 .wlLayout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .65fr); gap: 14px; }
 .wlMain, .wlSide > section { border: 1px solid var(--wl-line); border-radius: 16px; background: rgba(11, 17, 20, .86); }
@@ -111,6 +115,10 @@
 .wlSectionHead h3 { margin: 3px 0 0; color: #e8eded; font-size: 15px; }
 .wlSectionHead > span { color: #7d8d92; font-size: 8px; font-weight: 800; letter-spacing: .6px; }
 .wlSectionHead > b { min-width: 25px; padding: 5px 8px; border-radius: 99px; background: #162126; color: #aebcbf; font-size: 10px; text-align: center; }
+.wlMapState { display:flex; align-items:center; gap:7px; }
+.wlMapState>span { color:#7d8d92; font-size:8px; font-weight:800; letter-spacing:.5px; }
+.wlMapState>span i { display:inline-block; width:6px; height:6px; margin-right:6px; border-radius:50%; background:var(--wl-green); box-shadow:0 0 10px rgba(94,226,155,.4); }
+.wlMapState>button { min-height:27px; padding:4px 7px; border-color:rgba(196,244,124,.25); background:rgba(196,244,124,.08); color:#cdeba5; font-size:8px; }
 .wlCars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
 .wlCar { position: relative; overflow: hidden; padding: 12px; border: 1px solid #243136; border-left: 3px solid #526d77; border-radius: 12px; background: linear-gradient(145deg, rgba(24, 34, 38, .88), rgba(12, 19, 22, .94)); cursor: pointer; animation: wlRise .42s both; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
 .wlCar:hover { transform: translateY(-2px); border-color: #3d5158; box-shadow: 0 12px 25px rgba(0, 0, 0, .24); }
@@ -175,6 +183,7 @@
 .wlEmpty span { font-size: 36px; }
 .wlEmpty b { color: #aab8ba; }
 .wlEmpty p { margin: 0; font-size: 9px; }
+.wlEmpty button { justify-self:center; margin-top:10px; }
 
 @keyframes wlSpin { to { transform: rotate(360deg); } }
 @keyframes wlPulse { 0% { box-shadow: 0 0 0 0 rgba(94, 226, 155, .42); } 70% { box-shadow: 0 0 0 8px rgba(94, 226, 155, 0); } 100% { box-shadow: 0 0 0 0 rgba(94, 226, 155, 0); } }

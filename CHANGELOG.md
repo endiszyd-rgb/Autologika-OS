@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.25 — 2026-09-13
+
+### Interaktywna mapa Workshop LIVE
+
+- Etapy „Przyjęte”, „Diagnoza”, „Akceptacja”, „Naprawa” i „Gotowe” działają teraz jako filtry mapy oraz radaru.
+- Ponowne kliknięcie aktywnego etapu przywraca pełny widok wszystkich pojazdów.
+- Licznik nad mapą pokazuje liczbę widocznych aut i pozwala szybko wyłączyć filtr.
+- Pojazdy z aktywnym timerem oraz blokadą są automatycznie wyświetlane wyżej na liście.
+- Dodano czytelny pusty stan dla etapu, na którym nie ma żadnych pojazdów.
+
 ## 1.0.24 — 2026-09-13
 
 ### Stabilniejszy Workshop LIVE
