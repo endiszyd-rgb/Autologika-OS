@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.33 — 2026-09-14
+
+### Numery OE i zamienniki w Centrum zlecenia
+
+- Wyszukiwanie rozpoznaje teraz również numery OE, dla których katalog zwraca części o innych numerach handlowych.
+- Wynik zachowuje wpisany numer OE i pokazuje dostępne zamienniki różnych producentów do wyboru.
+- Numer użyty do wyszukiwania jest automatycznie wpisywany w pole OE podczas dodawania części do zlecenia.
+- Dodano test rzeczywistego wyszukiwania internetowego bezpośrednio z formularza Centrum zlecenia.
+
 ## 1.0.32 — 2026-09-14
 
 ### Naprawione wyszukiwanie części po numerze

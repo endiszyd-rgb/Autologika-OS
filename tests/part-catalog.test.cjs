@@ -87,6 +87,16 @@ test('maps an exact Spareto catalog result without relying on a web search engin
   assert.equal(items[0].lookup_url,'https://spareto.com/products/skf-wheel-bearing-kit/vkba-3646')
 })
 
+test('keeps catalog alternatives returned for an OE number',()=>{
+  const html=`<div class='card-product-details'><a href='/products/kyb-link/kslf4023'><span class='brand'>KYB</span><span class='part_number'>KSLF4023</span><p class='name'>Link/Coupling Rod, stabiliser bar</p></a></div><div class='card-product-price'></div>
+  <div class='card-product-details'><a href='/products/tedgum-rod/ted11381'><span class='brand'>TEDGUM</span><span class='part_number'>TED11381</span><p class='name'>Rod/Strut, stabiliser</p></a></div><div class='card-product-price'></div>`
+  const items=mapSparetoPartNumberSearch(html,'5Q0 411 315 A')
+  assert.equal(items.length,2)
+  assert.equal(items[0].part_no,'KSLF4023')
+  assert.equal(items[0].cross_numbers,'5Q0 411 315 A')
+  assert.match(items[0].lookup_source,/numer OE/)
+})
+
 test('extracts OE numbers and vehicle models from a Spareto product page',()=>{
   const html=`<section class='cross-refs'><a href='/oe/7h0401611d'>7H0 401 611 D</a><a href='/oe/7h0498611'>7H0 498 611</a></section><section id='nav-vehicles'><div class='col-6' style='font-weight: bold'>VW</div><div class='col-6 ps-4'>MULTIVAN</div><div class='col-6 ps-4'>TRANSPORTER</div></section><section id='nav-alternatives'>`
   const data=sparetoDetailMetadata(html)

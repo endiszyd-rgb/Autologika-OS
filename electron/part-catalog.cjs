@@ -125,7 +125,7 @@ function cleanPartName(title='',barcode='',partNo='',brand=''){
     [/\bfuel filter\b/i,'Filtr paliwa'],[/\bbrake pads?\b/i,'Klocki hamulcowe'],[/\bbrake disc\b/i,'Tarcza hamulcowa'],
     [/\bwheel bearing(?: kit)?\b/i,'Łożysko koła'],[/\bshock absorber\b/i,'Amortyzator'],[/\bcontrol arm\b/i,'Wahacz'],
     [/\bsensor,?\s*parking distance control\b/i,'Czujnik parkowania'],
-    [/\b(?:rod\s*\/\s*strut|link)(?:,?\s+stabilis(?:er|or))?\b/i,'Łącznik stabilizatora'],[/\bstabilis(?:er|or) link\b/i,'Łącznik stabilizatora'],
+    [/\b(?:rod\s*\/\s*strut|link(?:\s*\/\s*coupling rod)?)(?:,?\s+stabilis(?:er|or)(?: bar)?)?\b/i,'Łącznik stabilizatora'],[/\bstabilis(?:er|or) link\b/i,'Łącznik stabilizatora'],
     [/\btie rod end\b/i,'Końcówka drążka kierowniczego']
   ]
   for(const [pattern,replacement] of replacements)value=value.replace(pattern,replacement)
@@ -477,15 +477,17 @@ function mapSparetoPartNumberSearch(html,searchedNumber){
     const brand=decodeHtml(card.match(/class=['"]brand['"][^>]*>([\s\S]*?)<\/span>/i)?.[1]||'')
     const displayedNumber=decodeHtml(card.match(/class=['"]part_number['"][^>]*>([\s\S]*?)<\/span>/i)?.[1]||'')
     const rawName=decodeHtml(card.match(/class=['"][^'"]*\bname\b[^'"]*['"][^>]*>([\s\S]*?)<\/p>/i)?.[1]||'')
-    if(!href||!rawName||normalizedIdentity(displayedNumber)!==needle)continue
+    if(!href||!rawName||!displayedNumber)continue
+    const exact=normalizedIdentity(displayedNumber)===needle
     items.push({
       barcode:'',part_no:displayedNumber||requested,name:cleanPartName(rawName,'',displayedNumber||requested,brand)||rawName,brand,
-      category:'Części samochodowe',description:'',vehicle_fitment:'',cross_numbers:'',image_url:'',
-      lookup_source:'Katalog części Spareto',lookup_url:new URL(href,'https://spareto.com').href,web_candidate:true,evidence_score:30,
-      catalog_part_number_verified:true,lookup_version:LOOKUP_VERSION
+      category:'Części samochodowe',description:'',vehicle_fitment:'',cross_numbers:exact?'':requested,image_url:'',
+      lookup_source:exact?'Katalog części Spareto':'Katalog części Spareto — numer OE / zamiennik',lookup_url:new URL(href,'https://spareto.com').href,
+      web_candidate:true,evidence_score:exact?30:23,catalog_part_number_verified:exact,lookup_version:LOOKUP_VERSION
     })
   }
-  return items
+  const exact=items.filter(item=>item.catalog_part_number_verified)
+  return (exact.length?exact:items).slice(0,8)
 }
 
 function sparetoDetailMetadata(html=''){
@@ -553,8 +555,11 @@ async function enrichPartNumberCandidate(fetchImpl,item,partNo){
       const html=await response.text(),verified=normalizedIdentity(decodeHtml(html)).includes(normalizedIdentity(partNo))
       if(verified){
         const enriched=enrichPartFromHtml(item,html),catalogMeta=/spareto\.com$/i.test(new URL(item.lookup_url).hostname)?sparetoDetailMetadata(html):{}
+        if(catalogMeta.cross_numbers)catalogMeta.cross_numbers=uniqueLines([item.cross_numbers,catalogMeta.cross_numbers]).join('\n')
+        if(catalogMeta.vehicle_fitment)catalogMeta.vehicle_fitment=uniqueLines([item.vehicle_fitment,catalogMeta.vehicle_fitment]).join('\n')
         const pageName=cleanPartName(enriched.name,'',partNo,enriched.brand||item.brand),fallbackName=cleanPartName(item.name,'',partNo,item.brand)
-        return {...enriched,...catalogMeta,barcode:'',part_no:partNo,name:pageName||fallbackName||item.name,detail_part_number_verified:true}
+        const resolvedNumber=normalizedIdentity(item.part_no)===normalizedIdentity(partNo)?partNo:item.part_no
+        return {...enriched,...catalogMeta,barcode:'',part_no:resolvedNumber,name:pageName||fallbackName||item.name,detail_part_number_verified:true}
       }
     }
   }catch{}
@@ -577,7 +582,7 @@ async function lookupPartNumberOnline(fetchImpl,value,{details=false}={}){
   const enriched=await Promise.all(unique.slice(0,3).map(candidate=>enrichPartNumberCandidate(fetchImpl,candidate,partNo)))
   const reliable=enriched.filter(candidate=>candidate.detail_part_number_verified||Number(candidate.evidence_score||0)>=12)
   const item=mergePartCandidates(reliable,'')
-  if(item){item.part_no=partNo;item.lookup_alternatives=buildPartAlternatives(item,reliable,'');return details?{item,available:true,errors}:item}
+  if(item){item.part_no=item.part_no||partNo;item.lookup_alternatives=buildPartAlternatives(item,reliable,'');return details?{item,available:true,errors}:item}
   return details?{item:null,available,errors}:null
 }
 
