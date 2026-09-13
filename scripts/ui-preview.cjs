@@ -162,6 +162,18 @@ app.on('browser-window-created', (_, win) => {
         assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.workspaceContent').textContent.trim().length > 0`), true, `${tab} must render content`)
       }
       for (const tab of ['diagnosis','quote','parts','time','docs','contact','settlement','reminders','timeline','release']) await openOrderTab(tab)
+      await openOrderTab('parts')
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.workspaceContent button')].find(x=>x.textContent.includes('+ Część')).click()`)
+      await delay(250)
+      await win.webContents.executeJavaScript(`{const input=document.querySelector('.jobPartBarcode input');input.focus();for(const key of '5901947342091')input.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));}`)
+      await delay(500)
+      assert.equal((await inspect()).title,'Centrum zlecenia')
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.jobPartLookup')?.textContent.includes('Znaleziono gotowy wynik')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.modal label')].find(x=>x.textContent.startsWith('Nazwa części')).querySelector('input').value`),'Czujnik parkowania — tył')
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.modal label')].find(x=>x.textContent.startsWith('Nr katalogowy części')).querySelector('input').value`),'28SKV013')
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.modal label')].find(x=>x.textContent.startsWith('Numer OE')).querySelector('input').value`),'66209261613')
+      await win.webContents.executeJavaScript(`document.querySelector('.modalhead button').click()`)
+      console.log('ORDER_PART_BARCODE_LOOKUP','global Zebra EAN stayed in Order Center and populated the ordered-part form')
       await openOrderTab('diagnosis')
       await win.webContents.executeJavaScript(`{
         const field = [...document.querySelectorAll('.workspaceContent label')].find(x=>x.textContent==='Wniosek / przyczyna').querySelector('textarea');

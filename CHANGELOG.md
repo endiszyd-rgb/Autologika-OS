@@ -2,6 +2,11 @@
 
 ## 1.0.20 — 2026-09-13
 
+### Części w Centrum zlecenia
+
+- Okno dodawania części przejmuje skan Zebra EAN, UPC lub GTIN i natychmiast uruchamia to samo wyszukiwanie co magazyn.
+- Wynik lokalny lub internetowy uzupełnia nazwę, producenta, numer katalogowy, numer OE, dopasowanie pojazdów i źródło bez opuszczania zlecenia.
+
 ### Kompletność zlecenia
 
 - Widok przeglądu pokazuje siedem warunków potrzebnych do wydania pojazdu, wspólnych z checklistą zamknięcia.
