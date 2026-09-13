@@ -9,6 +9,7 @@ import './contrast.css'
 import './finance.css'
 import './customer-profile.css'
 import './care.css'
+import './ui-polish.css'
 import {Icon} from './ui.jsx'
 import {WorkshopDashboard} from './dashboard.jsx'
 import {WorkshopSchedule} from './schedule.jsx'
@@ -729,7 +730,12 @@ function OrderCenter({changed,initialId,openManual}){
  const advice=processAdvice({order:o,diag,items,parts,approvals,notes,payments,qcRows})
  const applyAdvice=async()=>{if(advice.status)await api.orders.updateStatus(o.id,advice.status);if(advice.wait)await api.orders.updateWait(o.id,advice.wait);if(advice.tab)setTab(advice.tab);await reload()}
  const tabs=[['overview','Przegląd'],['vehicle','Stan pojazdu'],['works','Wykonane prace'],['tech','Dane techniczne'],['diagnosis','Diagnostyka'],['quote','Wycena / akceptacja'],['parts','Części'],['time','Czas pracy'],['docs','Zdjęcia / dokumenty'],['contact','Kontakt'],['settlement','Płatność / wynik'],['reminders','Przypomnienia'],['timeline','Oś czasu'],['release','QC / wydanie']]
- return <section>
+ const tabGroups=[
+   ['POJAZD',tabs.filter(([key])=>['overview','vehicle','tech','diagnosis'].includes(key))],
+   ['NAPRAWA',tabs.filter(([key])=>['works','quote','parts','time'].includes(key))],
+   ['OBSŁUGA',tabs.filter(([key])=>['docs','contact','settlement','reminders','timeline','release'].includes(key))]
+ ]
+ return <section className="orderCenterPage">
    <div className="centerPicker"><label>Aktywne zlecenie<select aria-label="Wybierz zlecenie" value={id||''} onChange={e=>{setId(Number(e.target.value));setTab('overview')}}>{orders.map(x=><option key={x.id} value={x.id}>#{x.id} · {x.plate} · {x.make} {x.model} · {x.title}</option>)}</select></label><div className="grow"/><button className="primary" onClick={()=>openManual?.(o)}>◫ Dokumentacja auta</button><button onClick={()=>api.orders.exportPdf(o.id,'intake')}>PDF przyjęcia</button><button onClick={()=>api.orders.exportPdf(o.id,'order')}>PDF zlecenia</button><button onClick={()=>api.orders.exportPdf(o.id,'release')}>PDF wydania</button></div>
    <div className="centerHero">
      <div><small>ZLECENIE #{o.id}</small><h2>{o.plate} · {o.make} {o.model}</h2><p>{o.customer} · {o.phone?<button className="phoneLink" onClick={()=>api.system.openPhone(o.phone)}>☎ {o.phone}</button>:'telefon brak'} · {o.vin||'VIN brak'}</p></div>
@@ -738,7 +744,7 @@ function OrderCenter({changed,initialId,openManual}){
    {(()=>{const n=nextAction(o);return <div className={'nextAction '+n.tone}><div><small>NASTĘPNA CZYNNOŚĆ</small><b>{n.title}</b><span>{n.detail}</span></div><button className="primary" onClick={()=>n.tab&&setTab(n.tab)}>Przejdź →</button></div>})()}
    <div className="workflowAdvisor"><div><small>WORKFLOW 2.0 · SUGEROWANY KROK</small><b>{advice.title}</b><span>{advice.detail}</span></div><div className="actionrow">{advice.tab&&<button onClick={()=>setTab(advice.tab)}>Pokaż etap</button>}{(advice.status||advice.wait)&&<button className="primary" onClick={applyAdvice}>Zastosuj krok →</button>}</div></div>
    <div className="steps centerSteps">{statuses.map(s=><button key={s} className={o.status===s?'sel':''} disabled={s==='WYDANE'&&o.status!=='WYDANE'} title={s==='WYDANE'&&o.status!=='WYDANE'?'Wydanie potwierdź w zakładce QC / wydanie':''} onClick={async()=>{await api.orders.updateStatus(o.id,s);reload()}}>{labels[s]}</button>)}</div><div className="waitBar"><span>Oczekiwanie:</span>{[['BRAK','brak'],['KLIENT','na klienta'],['CZESCI','na części'],['DECYZJA','na decyzję']].map(([v,l])=><button key={v} className={(o.wait_state||'BRAK')===v?'active':''} onClick={async()=>{await api.orders.updateWait(o.id,v);reload()}}>{l}</button>)}</div>
-   <div className="centerTabs">{tabs.map(([k,l])=><button data-order-tab={k} aria-current={tab===k?'page':undefined} className={tab===k?'active':''} key={k} onClick={()=>setTab(k)}>{l}{k==='parts'&&partsOpen.length>0?<i>{partsOpen.length}</i>:null}{k==='time'&&active.length>0?<i>{active.length}</i>:null}</button>)}</div>
+   <nav className="centerTabs orderTabDock" aria-label="Sekcje Centrum zlecenia">{tabGroups.map(([group,groupTabs])=><div className="orderTabGroup" key={group}><small>{group}</small><div>{groupTabs.map(([k,l])=><button data-order-tab={k} aria-current={tab===k?'page':undefined} className={tab===k?'active':''} key={k} onClick={()=>setTab(k)}>{l}{k==='parts'&&partsOpen.length>0?<i>{partsOpen.length}</i>:null}{k==='time'&&active.length>0?<i>{active.length}</i>:null}</button>)}</div></div>)}</nav>
 
    <div className="workspaceContent">
 

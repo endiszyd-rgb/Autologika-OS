@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.22 — 2026-09-13
+
+### Czytelniejszy interfejs
+
+- Zakładki Centrum zlecenia są pogrupowane w obszary „Pojazd”, „Naprawa” i „Obsługa”, dzięki czemu szybciej można znaleźć właściwy etap pracy.
+- Pasek sekcji pozostaje widoczny podczas przewijania i dostosowuje układ do mniejszych ekranów bez poziomego przepełnienia.
+- Zwiększono czytelność nawigacji, nagłówków, formularzy i przycisków oraz poprawiono kontrast aktywnych elementów.
+- Dodano wyraźne obramowanie podczas obsługi klawiaturą i płynniejsze animacje okien oraz przełączania treści z uwzględnieniem ustawienia ograniczenia ruchu.
+
 ## 1.0.21 — 2026-09-13
 
 ### Części w Centrum zlecenia
