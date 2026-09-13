@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.21 — 2026-09-13
+
+### Części w Centrum zlecenia
+
+- Każda część na liście zlecenia ma teraz przycisk „Usuń” z potwierdzeniem operacji.
+- Usunięcie jest zapisywane w historii zlecenia i synchronizowane z pozostałymi urządzeniami.
+- Dla części już zamontowanej aplikacja informuje, że pozycja wykonana i jej rozliczenie pozostają w zleceniu.
+
 ## 1.0.20 — 2026-09-13
 
 ### Części w Centrum zlecenia

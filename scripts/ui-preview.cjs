@@ -172,8 +172,17 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.modal label')].find(x=>x.textContent.startsWith('Nazwa części')).querySelector('input').value`),'Czujnik parkowania — tył')
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.modal label')].find(x=>x.textContent.startsWith('Nr katalogowy części')).querySelector('input').value`),'28SKV013')
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.modal label')].find(x=>x.textContent.startsWith('Numer OE')).querySelector('input').value`),'66209261613')
-      await win.webContents.executeJavaScript(`document.querySelector('.modalhead button').click()`)
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.modal button')].find(x=>x.textContent.includes('Dodaj do zamówień')).click()`)
+      await delay(450)
+      const scannedJobPart=inventoryDb.prepare("SELECT id FROM job_part_orders WHERE order_id=1 AND name='Czujnik parkowania — tył' ORDER BY id DESC LIMIT 1").get()
+      assert.ok(scannedJobPart)
+      assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('[data-remove-job-part="${scannedJobPart.id}"]')`),true)
+      await win.webContents.executeJavaScript(`window.confirm=()=>true;document.querySelector('[data-remove-job-part="${scannedJobPart.id}"]').click()`)
+      await delay(450)
+      assert.equal(inventoryDb.prepare('SELECT COUNT(*) n FROM job_part_orders WHERE id=?').get(scannedJobPart.id).n,0)
+      assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('[data-remove-job-part="${scannedJobPart.id}"]')`),false)
       console.log('ORDER_PART_BARCODE_LOOKUP','global Zebra EAN stayed in Order Center and populated the ordered-part form')
+      console.log('ORDER_PART_REMOVE','ordered part removed from the order and disappeared from its list')
       await openOrderTab('diagnosis')
       await win.webContents.executeJavaScript(`{
         const field = [...document.querySelectorAll('.workspaceContent label')].find(x=>x.textContent==='Wniosek / przyczyna').querySelector('textarea');
