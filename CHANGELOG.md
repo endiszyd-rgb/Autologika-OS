@@ -1,6 +1,6 @@
 # Changelog
 
-## Następna wersja
+## 1.0.20 — 2026-09-13
 
 ### Kompletność zlecenia
 
