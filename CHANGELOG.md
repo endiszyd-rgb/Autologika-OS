@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.32 — 2026-09-14
+
+### Naprawione wyszukiwanie części po numerze
+
+- Dodano bezpośrednie wyszukiwanie w katalogu części, niezależne od limitów ogólnych wyszukiwarek internetowych.
+- Wyniki są sprawdzane po pełnym numerze katalogowym i uzupełniają producenta, nazwę części, zastosowanie oraz numery OE.
+- Poprawiono polskie nazwy części pobranych z katalogu, m.in. czujników parkowania i zestawów łożysk kół.
+- Gdy źródła internetowe są niedostępne, wpisany numer pozostaje w formularzu i można dokończyć dodawanie części ręcznie.
+
 ## 1.0.31 — 2026-09-14
 
 ### Wyszukiwanie części po numerze katalogowym

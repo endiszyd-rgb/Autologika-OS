@@ -549,8 +549,8 @@ function NewJobPart({orders,suppliers,inventory,close,saved}){
     const choices=result.source==='local'?[]:[result.item,...(Array.isArray(result.item.lookup_alternatives)?result.item.lookup_alternatives:[])]
     setLookupChoices(choices);setSelectedLookupKey(lookupKey(result.item))
     setLookupMessage({tone:result.source==='local'?'local':'online',title:result.source==='local'?'Część znaleziona w magazynie':choices.length>1?'Znaleziono kilka części dla tego numeru':'Znaleziono część po numerze katalogowym',detail:`${result.item.brand||'Producent nieustalony'} · ${result.item.part_no||number}`,retry:result.source!=='local',retryMode:'PART_NUMBER'})
-   }else setLookupMessage({tone:'missing',title:'Nie znaleziono części po tym numerze',detail:result.unavailable?'Źródła internetowe są chwilowo niedostępne. Możesz uzupełnić pozycję ręcznie.':'Sprawdź zapis numeru albo uzupełnij pozycję ręcznie.',retry:true,retryMode:'PART_NUMBER'})
-  }catch(error){setLookupMessage({tone:'error',title:'Nie udało się wyszukać numeru',detail:error.message||String(error),retry:true,retryMode:'PART_NUMBER'})}
+   }else{setD(current=>({...current,part_no:result.partNo||number,inventory_part_id:''}));setLookupMessage({tone:'missing',title:'Nie znaleziono części po tym numerze',detail:result.unavailable?'Źródła internetowe są chwilowo niedostępne. Numer pozostawiliśmy w formularzu.':'Numer pozostawiliśmy w formularzu — możesz uzupełnić nazwę ręcznie.',retry:true,retryMode:'PART_NUMBER'})}
+  }catch(error){setD(current=>({...current,part_no:number,inventory_part_id:''}));setLookupMessage({tone:'error',title:'Nie udało się wyszukać numeru',detail:error.message||String(error),retry:true,retryMode:'PART_NUMBER'})}
   finally{setLookupBusy(false)}
  }
  useEffect(()=>{const receive=event=>{const code=event.detail?.barcode;if(!code)return;event.preventDefault();lookup(code)};window.addEventListener('autologika:product-scan',receive);return()=>window.removeEventListener('autologika:product-scan',receive)},[lookupBusy])

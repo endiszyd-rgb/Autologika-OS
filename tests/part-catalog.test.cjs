@@ -1,6 +1,6 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
-const {normalizeBarcode,normalizePartNumber,isGtin,mapWebSearch,mapPartNumberWebSearch,cleanPartName,extractReferenceNumbers,enrichPartFromHtml,mergePartCandidates,buildPartAlternatives,lookupBarcodeOnline,lookupPartNumberOnline}=require('../electron/part-catalog.cjs')
+const {normalizeBarcode,normalizePartNumber,isGtin,mapWebSearch,mapPartNumberWebSearch,mapSparetoPartNumberSearch,sparetoDetailMetadata,cleanPartName,extractReferenceNumbers,enrichPartFromHtml,mergePartCandidates,buildPartAlternatives,lookupBarcodeOnline,lookupPartNumberOnline}=require('../electron/part-catalog.cjs')
 
 test('normalizes Zebra symbology prefixes and validates GTIN checksum',()=>{
   assert.equal(normalizeBarcode(']E04006381333931\r\n'),'4006381333931')
@@ -75,6 +75,23 @@ test('maps an exact catalog number search into a part draft',()=>{
   assert.equal(item.name,'Filtr oleju')
   assert.match(item.vehicle_fitment,/Volkswagen Golf/)
   assert.match(item.cross_numbers,/04E 115 561 H/)
+})
+
+test('maps an exact Spareto catalog result without relying on a web search engine',()=>{
+  const html=`<div class='card-product-details'><a title="VKBA 3646 - Wheel Bearing Kit" href="/products/skf-wheel-bearing-kit/vkba-3646"><span class='brand'>SKF</span><span class='part_number'>VKBA 3646</span><p class='m-0 name'>Wheel Bearing Kit</p></a></div><div class='card-product-price'>105</div>`
+  const items=mapSparetoPartNumberSearch(html,'vkba3646')
+  assert.equal(items.length,1)
+  assert.equal(items[0].brand,'SKF')
+  assert.equal(items[0].part_no,'VKBA 3646')
+  assert.equal(items[0].name,'Łożysko koła')
+  assert.equal(items[0].lookup_url,'https://spareto.com/products/skf-wheel-bearing-kit/vkba-3646')
+})
+
+test('extracts OE numbers and vehicle models from a Spareto product page',()=>{
+  const html=`<section class='cross-refs'><a href='/oe/7h0401611d'>7H0 401 611 D</a><a href='/oe/7h0498611'>7H0 498 611</a></section><section id='nav-vehicles'><div class='col-6' style='font-weight: bold'>VW</div><div class='col-6 ps-4'>MULTIVAN</div><div class='col-6 ps-4'>TRANSPORTER</div></section><section id='nav-alternatives'>`
+  const data=sparetoDetailMetadata(html)
+  assert.match(data.cross_numbers,/7H0 401 611 D/)
+  assert.equal(data.vehicle_fitment,'VW MULTIVAN\nVW TRANSPORTER')
 })
 
 test('keeps spaced OE numbers and rejects technical units',()=>{

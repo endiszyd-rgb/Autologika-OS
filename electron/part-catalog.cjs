@@ -117,12 +117,14 @@ function cleanPartName(title='',barcode='',partNo='',brand=''){
     const flexible=compact.split('').join('[\\s._/-]*')
     value=value.replace(new RegExp('^\\s*'+flexible+'\\s*[-–—|:]?\\s*','i'),'')
   }
+  value=value.replace(/\bsensor,?\s*parking distance control\b/i,'Czujnik parkowania')
   value=value.replace(/^\s*[-–—|:]\s*/,'').replace(/\s+(?:for|fits?|pour|für|do)\s+.*$/i,'').split(',')[0].replace(/\s+/g,' ').trim()
   const replacements=[
     [/\bparking sensor\b/i,'Czujnik parkowania'],[/\bultrasonic sensor\b/i,'Czujnik ultradźwiękowy'],
     [/\boil filter\b/i,'Filtr oleju'],[/\bair filter\b/i,'Filtr powietrza'],[/\bcabin filter\b/i,'Filtr kabinowy'],
     [/\bfuel filter\b/i,'Filtr paliwa'],[/\bbrake pads?\b/i,'Klocki hamulcowe'],[/\bbrake disc\b/i,'Tarcza hamulcowa'],
-    [/\bwheel bearing\b/i,'Łożysko koła'],[/\bshock absorber\b/i,'Amortyzator'],[/\bcontrol arm\b/i,'Wahacz'],
+    [/\bwheel bearing(?: kit)?\b/i,'Łożysko koła'],[/\bshock absorber\b/i,'Amortyzator'],[/\bcontrol arm\b/i,'Wahacz'],
+    [/\bsensor,?\s*parking distance control\b/i,'Czujnik parkowania'],
     [/\b(?:rod\s*\/\s*strut|link)(?:,?\s+stabilis(?:er|or))?\b/i,'Łącznik stabilizatora'],[/\bstabilis(?:er|or) link\b/i,'Łącznik stabilizatora'],
     [/\btie rod end\b/i,'Końcówka drążka kierowniczego']
   ]
@@ -465,6 +467,42 @@ function normalizePartNumber(value=''){
   return partNumber
 }
 
+function mapSparetoPartNumberSearch(html,searchedNumber){
+  const requested=normalizePartNumber(searchedNumber),needle=normalizedIdentity(requested),items=[]
+  if(!requested)return items
+  const cards=/<div class=['"]card-product-details['"]>([\s\S]*?)<\/div>\s*<div class=['"]card-product-price['"]>/gi
+  for(const match of String(html||'').matchAll(cards)){
+    const card=match[1]
+    const href=decodeHtml(card.match(/href=['"]([^'"]*\/products\/[^'"]+)['"]/i)?.[1]||'')
+    const brand=decodeHtml(card.match(/class=['"]brand['"][^>]*>([\s\S]*?)<\/span>/i)?.[1]||'')
+    const displayedNumber=decodeHtml(card.match(/class=['"]part_number['"][^>]*>([\s\S]*?)<\/span>/i)?.[1]||'')
+    const rawName=decodeHtml(card.match(/class=['"][^'"]*\bname\b[^'"]*['"][^>]*>([\s\S]*?)<\/p>/i)?.[1]||'')
+    if(!href||!rawName||normalizedIdentity(displayedNumber)!==needle)continue
+    items.push({
+      barcode:'',part_no:displayedNumber||requested,name:cleanPartName(rawName,'',displayedNumber||requested,brand)||rawName,brand,
+      category:'Części samochodowe',description:'',vehicle_fitment:'',cross_numbers:'',image_url:'',
+      lookup_source:'Katalog części Spareto',lookup_url:new URL(href,'https://spareto.com').href,web_candidate:true,evidence_score:30,
+      catalog_part_number_verified:true,lookup_version:LOOKUP_VERSION
+    })
+  }
+  return items
+}
+
+function sparetoDetailMetadata(html=''){
+  const references=[]
+  for(const match of String(html).matchAll(/<a[^>]+href=['"]\/oe\/[^'"]+['"][^>]*>([\s\S]*?)<\/a>/gi))references.push(decodeHtml(match[1]))
+  const section=String(html).match(/id=['"]nav-vehicles['"][^>]*>([\s\S]*?)(?=<section[^>]+id=['"]nav-alternatives['"]|$)/i)?.[1]||''
+  const fitment=[]
+  let make=''
+  for(const match of section.matchAll(/<div class=['"]col-6([^'"]*)['"](?:[^>]*)>([\s\S]*?)<\/div>/gi)){
+    const classes=match[1],value=decodeHtml(match[2])
+    if(!value)continue
+    if(/font-weight\s*:\s*bold/i.test(match[0]))make=value
+    else if(/\bps-4\b/.test(classes)&&make)fitment.push(`${make} ${value}`)
+  }
+  return{cross_numbers:uniqueLines(references).slice(0,60).join('\n'),vehicle_fitment:uniqueLines(fitment).slice(0,60).join('\n')}
+}
+
 function partNumberSearchRows(html=''){
   const rows=[]
   const add=(url,title,snippet='')=>{url=unwrapSearchUrl(url);title=decodeHtml(title);snippet=decodeHtml(snippet);if(url&&title)rows.push({url,rawTitle:title,snippet})}
@@ -514,8 +552,9 @@ async function enrichPartNumberCandidate(fetchImpl,item,partNo){
     if(response.ok){
       const html=await response.text(),verified=normalizedIdentity(decodeHtml(html)).includes(normalizedIdentity(partNo))
       if(verified){
-        const enriched=enrichPartFromHtml(item,html),pageName=cleanPartName(enriched.name,'',partNo,enriched.brand||item.brand),fallbackName=cleanPartName(item.name,'',partNo,item.brand)
-        return {...enriched,barcode:'',part_no:partNo,name:pageName||fallbackName||item.name,detail_part_number_verified:true}
+        const enriched=enrichPartFromHtml(item,html),catalogMeta=/spareto\.com$/i.test(new URL(item.lookup_url).hostname)?sparetoDetailMetadata(html):{}
+        const pageName=cleanPartName(enriched.name,'',partNo,enriched.brand||item.brand),fallbackName=cleanPartName(item.name,'',partNo,item.brand)
+        return {...enriched,...catalogMeta,barcode:'',part_no:partNo,name:pageName||fallbackName||item.name,detail_part_number_verified:true}
       }
     }
   }catch{}
@@ -526,13 +565,14 @@ async function lookupPartNumberOnline(fetchImpl,value,{details=false}={}){
   const partNo=normalizePartNumber(value)
   if(!partNo)throw new Error('Wpisz poprawny numer katalogowy zawierający litery, cyfry lub znaki . / -.')
   const headers={Accept:'text/html,application/xhtml+xml','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36','Accept-Language':'pl-PL,pl;q=0.9'}
-  const urls=[
-    `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(`"${partNo}" część samochodowa`)}`,
-    `https://search.brave.com/search?q=${encodeURIComponent(`"${partNo}" auto part`)}&source=web`,
-    `https://html.duckduckgo.com/html/?q=${encodeURIComponent(`"${partNo}" części`)}`
+  const providers=[
+    {url:`https://spareto.com/products?keywords=${encodeURIComponent(partNo)}`,map:html=>mapSparetoPartNumberSearch(html,partNo)},
+    {url:`https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(`"${partNo}" część samochodowa`)}`,map:html=>[mapPartNumberWebSearch(html,partNo)].filter(Boolean)},
+    {url:`https://search.brave.com/search?q=${encodeURIComponent(`"${partNo}" auto part`)}&source=web`,map:html=>[mapPartNumberWebSearch(html,partNo)].filter(Boolean)},
+    {url:`https://html.duckduckgo.com/html/?q=${encodeURIComponent(`"${partNo}" części`)}`,map:html=>[mapPartNumberWebSearch(html,partNo)].filter(Boolean)}
   ]
-  const responses=await Promise.all(urls.map(async url=>{try{const response=await fetchImpl(url,{headers,signal:AbortSignal.timeout(6000)});if(!response.ok)return{error:`${new URL(url).hostname}: HTTP ${response.status}`};return{available:true,item:mapPartNumberWebSearch(await response.text(),partNo)}}catch(error){return{error:error?.message||String(error)}}}))
-  const available=responses.some(result=>result.available),errors=responses.flatMap(result=>result.error?[result.error]:[]),candidates=responses.flatMap(result=>result.item?[result.item]:[])
+  const responses=await Promise.all(providers.map(async provider=>{try{const response=await fetchImpl(provider.url,{headers,signal:AbortSignal.timeout(8000)});if(!response.ok)return{error:`${new URL(provider.url).hostname}: HTTP ${response.status}`};return{available:true,items:provider.map(await response.text())}}catch(error){return{error:error?.message||String(error)}}}))
+  const available=responses.some(result=>result.available),errors=responses.flatMap(result=>result.error?[result.error]:[]),candidates=responses.flatMap(result=>result.items||[])
   const unique=[...new Map(candidates.map(candidate=>[candidate.lookup_url,candidate])).values()]
   const enriched=await Promise.all(unique.slice(0,3).map(candidate=>enrichPartNumberCandidate(fetchImpl,candidate,partNo)))
   const reliable=enriched.filter(candidate=>candidate.detail_part_number_verified||Number(candidate.evidence_score||0)>=12)
@@ -591,4 +631,4 @@ async function lookupBarcodeOnline(fetchImpl,value,{details=false}={}){
   return details?{item:null,available,errors}:null
 }
 
-module.exports={LOOKUP_VERSION,normalizeBarcode,normalizePartNumber,isGtin,mapUpcDev,mapUpcItemDb,mapOpenProductsFacts,mapWebSearch,mapPartNumberWebSearch,cleanPartName,extractFitment,extractReferenceNumbers,enrichPartFromHtml,mergePartCandidates,buildPartAlternatives,lookupBarcodeOnline,lookupPartNumberOnline}
+module.exports={LOOKUP_VERSION,normalizeBarcode,normalizePartNumber,isGtin,mapUpcDev,mapUpcItemDb,mapOpenProductsFacts,mapWebSearch,mapPartNumberWebSearch,mapSparetoPartNumberSearch,sparetoDetailMetadata,cleanPartName,extractFitment,extractReferenceNumbers,enrichPartFromHtml,mergePartCandidates,buildPartAlternatives,lookupBarcodeOnline,lookupPartNumberOnline}
