@@ -1,6 +1,6 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
-const {normalizeBarcode,isGtin,mapWebSearch,cleanPartName,enrichPartFromHtml,lookupBarcodeOnline}=require('../electron/part-catalog.cjs')
+const {normalizeBarcode,isGtin,mapWebSearch,cleanPartName,enrichPartFromHtml,mergePartCandidates,lookupBarcodeOnline}=require('../electron/part-catalog.cjs')
 
 test('normalizes Zebra symbology prefixes and validates GTIN checksum',()=>{
   assert.equal(normalizeBarcode(']E04006381333931\r\n'),'4006381333931')
@@ -116,4 +116,48 @@ test('enriches a web candidate with detail-page JSON-LD',async()=>{
   assert.match(item.vehicle_fitment,/BMW Series 1/)
   assert.match(item.cross_numbers,/66209261582/)
   assert.ok(calls>=3)
+})
+
+test('selects the JSON-LD product whose GTIN matches the scanned barcode',()=>{
+  const html=`<script type="application/ld+json">{"@graph":[
+    {"@type":"Product","name":"Inny produkt","gtin13":"4006381333931","sku":"WRONG-1","brand":{"name":"Inna marka"}},
+    {"@type":"Product","name":"Wahacz zawieszenia","gtin13":"5901947342091","mpn":"72SKV999","manufacturer":{"name":"ESEN SKV"},"category":"Zawieszenie","additionalProperty":[{"name":"OE numbers","value":"5Q0407151A; 5Q0407151B"},{"name":"Vehicle fitment","value":"Volkswagen Golf VII; Skoda Octavia III"}]}
+  ]}</script>`
+  const item=enrichPartFromHtml({barcode:'5901947342091',name:'wynik',brand:'',part_no:'',vehicle_fitment:'',cross_numbers:''},html)
+  assert.equal(item.name,'Wahacz zawieszenia')
+  assert.equal(item.brand,'ESEN SKV')
+  assert.equal(item.part_no,'72SKV999')
+  assert.equal(item.category,'Zawieszenie')
+  assert.match(item.vehicle_fitment,/Volkswagen Golf VII/)
+  assert.match(item.vehicle_fitment,/Skoda Octavia III/)
+  assert.match(item.cross_numbers,/5Q0407151A/)
+})
+
+test('extracts product fields from labelled specification tables',()=>{
+  const html=`<title>Łącznik stabilizatora do Volkswagen Golf VII</title><table>
+    <tr><th>Producent</th><td>FEBI BILSTEIN</td></tr>
+    <tr><th>Numer katalogowy</th><td>178899</td></tr>
+    <tr><th>Numery OE</th><td>5Q0 411 315 A; 5Q0 411 315 B</td></tr>
+    <tr><th>Pasuje do</th><td>Volkswagen Golf VII; Skoda Octavia III</td></tr>
+  </table>`
+  const item=enrichPartFromHtml({barcode:'5901947342091',name:'wynik',brand:'',part_no:'',vehicle_fitment:'',cross_numbers:''},html)
+  assert.equal(item.brand,'FEBI BILSTEIN')
+  assert.equal(item.part_no,'178899')
+  assert.match(item.vehicle_fitment,/Volkswagen Golf VII/)
+  assert.match(item.cross_numbers,/5Q0 411 315 A/)
+})
+
+test('merges complementary catalog results without losing OE and fitment data',()=>{
+  const item=mergePartCandidates([
+    {barcode:'5901947342091',name:'Wahacz zawieszenia',brand:'ESEN SKV',part_no:'72SKV999',category:'Części samochodowe',vehicle_fitment:'Volkswagen Golf VII',cross_numbers:'5Q0407151A',lookup_source:'Wyszukiwanie WWW',lookup_url:'https://example.test/part',web_candidate:true},
+    {barcode:'5901947342091',name:'Control arm',brand:'',part_no:'',category:'Auto Parts',vehicle_fitment:'Skoda Octavia III',cross_numbers:'5Q0407151B',image_url:'https://example.test/image.jpg',lookup_source:'UPCitemDB'}
+  ],'5901947342091')
+  assert.equal(item.brand,'ESEN SKV')
+  assert.equal(item.part_no,'72SKV999')
+  assert.match(item.vehicle_fitment,/Volkswagen Golf VII/)
+  assert.match(item.vehicle_fitment,/Skoda Octavia III/)
+  assert.match(item.cross_numbers,/5Q0407151A/)
+  assert.match(item.cross_numbers,/5Q0407151B/)
+  assert.equal(item.image_url,'https://example.test/image.jpg')
+  assert.equal(item.lookup_confidence,'wysoka')
 })

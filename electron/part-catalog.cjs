@@ -78,7 +78,7 @@ function unwrapSearchUrl(value=''){
   }catch{return''}
 }
 
-const PART_BRANDS=['MANN-FILTER','FEBI BILSTEIN','LEMFÖRDER','CONTINENTAL','TEKNOROT','BOSCH','VALEO','DELPHI','BREMBO','SACHS','SKF','MOOG','MEYLE','TRW','ATE','MAHLE','HELLA','NGK','DENSO','DAYCO','GATES','KYB','MONROE','PURFLUX','FILTRON','RIDEX','MAXGEAR','ESEN SKV']
+const PART_BRANDS=['MANN-FILTER','FEBI BILSTEIN','LEMFÖRDER','CONTINENTAL','TEKNOROT','BOSCH','VALEO','DELPHI','BREMBO','SACHS','SKF','MOOG','MEYLE','TRW','ATE','MAHLE','HELLA','NGK','DENSO','DAYCO','GATES','KYB','MONROE','PURFLUX','FILTRON','RIDEX','MAXGEAR','ESEN SKV','ZIMMERMANN','TEXTAR','FERODO','SNR','INA','LUK','ELRING','VICTOR REINZ','PIERBURG','MAGNETI MARELLI','BERU','VDO','SWAG','BLUE PRINT','JAPANPARTS','ASHIKA','NTY','FAE','FACET','VEMO','TOPRAN','HENGST','KNECHT','CHAMPION','OSRAM','PHILIPS']
 
 function knownBrand(value=''){
   const upper=` ${String(value).toUpperCase().replace(/[^A-Z0-9-]+/g,' ')} `
@@ -130,7 +130,7 @@ function cleanPartName(title='',barcode='',partNo='',brand=''){
   return value.trim()
 }
 
-const LOOKUP_VERSION='catalog-web-v4'
+const LOOKUP_VERSION='catalog-web-v5'
 const VEHICLE_MAKES=['ALFA ROMEO','ASTON MARTIN','LAND ROVER','MERCEDES-BENZ','MERCEDES','VOLKSWAGEN','VAUXHALL','CHEVROLET','CHRYSLER','CITROEN','DACIA','DAEWOO','DAIHATSU','DODGE','FERRARI','FIAT','FORD','HONDA','HYUNDAI','INFINITI','ISUZU','IVECO','JAGUAR','JEEP','KIA','LANCIA','LEXUS','MAN','MAZDA','MINI','MITSUBISHI','NISSAN','OPEL','PEUGEOT','PORSCHE','RENAULT','ROVER','SAAB','SEAT','SKODA','SMART','SSANGYONG','SUBARU','SUZUKI','TESLA','TOYOTA','VOLVO','AUDI','BMW']
 
 function uniqueLines(values=[]){
@@ -215,9 +215,84 @@ function jsonLdProducts(html=''){
   return products
 }
 
+function scalarValue(value=''){
+  if(Array.isArray(value))return value.map(scalarValue).find(Boolean)||''
+  if(value&&typeof value==='object')return String(value.name||value.value||value.model||value.sku||'').trim()
+  return String(value||'').trim()
+}
+
+function productCodes(product={}){
+  return uniqueLines([
+    product.gtin,product.gtin8,product.gtin12,product.gtin13,product.gtin14,
+    product.ean,product.upc,product.productID
+  ].map(scalarValue)).map(value=>normalizeBarcode(value))
+}
+
+function selectJsonLdProduct(products=[],barcode=''){
+  const exact=products.find(product=>productCodes(product).includes(normalizeBarcode(barcode)))
+  if(exact)return exact
+  return products.find(product=>product.sku||product.mpn||product.brand||product.manufacturer)||products[0]||{}
+}
+
+function labelledHtmlValues(html='',labels=''){
+  const values=[]
+  const pair=new RegExp(`<[^>]+>\\s*(?:${labels})\\s*:?\\s*<\\/[^>]+>\\s*<(?:td|dd|span|div)[^>]*>([\\s\\S]{1,500}?)<\\/(?:td|dd|span|div)>`,'gi')
+  for(const match of String(html).matchAll(pair))values.push(decodeHtml(match[1]))
+  const lineText=String(html)
+    .replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ')
+    .replace(/<br\s*\/?>|<\/(?:tr|li|p|div|section|dl|h\d)>/gi,'__AUTOLINE__')
+    .split('__AUTOLINE__').map(decodeHtml).join('\n')
+  const line=new RegExp(`(?:^|\\n)\\s*(?:${labels})\\s*[:#-]\\s*([^\\n]{2,500})`,'gi')
+  for(const match of lineText.matchAll(line))values.push(match[1])
+  return uniqueLines(values)
+}
+
+function additionalProperties(product={}){
+  const list=Array.isArray(product.additionalProperty)?product.additionalProperty:[product.additionalProperty]
+  return list.filter(Boolean).map(entry=>({name:scalarValue(entry.name||entry.propertyID),value:scalarValue(entry.value||entry.description)}))
+}
+
+function mergePartCandidates(candidates=[],barcode=''){
+  const items=candidates.filter(item=>item&&item.name)
+  if(!items.length)return null
+  const score=item=>{
+    let points=item.web_candidate?8:2
+    if(item.brand)points+=knownBrand(item.brand)?7:3
+    if(item.part_no)points+=6
+    if(item.vehicle_fitment)points+=4
+    if(item.cross_numbers)points+=4
+    if(item.image_url)points+=2
+    if(item.description)points+=1
+    if(/zweryfikowany/i.test(item.lookup_source||''))points+=20
+    return points
+  }
+  const ranked=[...items].sort((a,b)=>score(b)-score(a))
+  const pick=(field,predicate=value=>Boolean(String(value||'').trim()))=>ranked.find(item=>predicate(item[field]))?.[field]||''
+  const primary=ranked[0]
+  const sources=uniqueLines(items.map(item=>item.lookup_source)).slice(0,4)
+  const fitment=uniqueLines(items.map(item=>item.vehicle_fitment)).slice(0,60)
+  const partNo=pick('part_no',value=>/[0-9]/.test(String(value||'')))
+  const cross=uniqueLines(items.map(item=>item.cross_numbers)).filter(value=>{
+    const compact=value.replace(/[^A-Z0-9]/gi,'').toUpperCase()
+    return compact&&compact!==normalizeBarcode(barcode)&&compact!==String(partNo).replace(/[^A-Z0-9]/gi,'').toUpperCase()
+  }).slice(0,60)
+  const merged={...primary,
+    barcode:normalizeBarcode(barcode||primary.barcode),
+    name:pick('name'),brand:pick('brand'),part_no:partNo,
+    category:pick('category')||'Części samochodowe',description:pick('description'),image_url:pick('image_url'),
+    vehicle_fitment:fitment.join('\n'),cross_numbers:cross.join('\n'),
+    lookup_source:sources.join(' + '),lookup_url:pick('lookup_url'),lookup_sources:sources,
+    lookup_version:LOOKUP_VERSION
+  }
+  const core=[merged.name,merged.brand,merged.part_no].filter(Boolean).length
+  merged.lookup_confidence=core===3&&(fitment.length||cross.length)?'wysoka':core===3?'dobra':'podstawowa'
+  return applyVerifiedPart(merged)
+}
+
 function enrichPartFromHtml(item,html=''){
   if(!item)return item
-  const products=jsonLdProducts(html),product=products[0]||{},brandValue=typeof product.brand==='object'?product.brand?.name:product.brand
+  const products=jsonLdProducts(html),product=selectJsonLdProduct(products,item.barcode)
+  const brandValue=scalarValue(product.brand)||scalarValue(product.manufacturer)
   const fitment=[]
   const collectFit=value=>{
     if(Array.isArray(value))return value.forEach(collectFit)
@@ -225,15 +300,26 @@ function enrichPartFromHtml(item,html=''){
     else fitment.push(value||'')
   }
   collectFit(product.isAccessoryOrSparePartFor)
+  collectFit(product.isRelatedTo)
+  const properties=additionalProperties(product)
+  for(const property of properties){
+    if(/(?:vehicle|fitment|application|pasuje|pojazd|model)/i.test(property.name))fitment.push(property.value)
+  }
   const text=decodeHtml(String(html).replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<\/(?:div|p|li|tr|section|h\d)>/gi,'\n'))
   const title=decodeHtml(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||product.name||item.name)
-  const pagePartNo=String(product.sku||product.mpn||product.productID||'').trim()
-  const references=extractReferenceNumbers(text,item.barcode,pagePartNo||item.part_no)
-  const vehicleFitment=uniqueLines([...fitment,extractFitment(title),extractFitment(item.name)]).join('\n')
+  const metaName=decodeHtml(html.match(/<meta[^>]+(?:property|name)=["'](?:og:title|twitter:title)["'][^>]+content=["']([^"']+)/i)?.[1]||'')
+  const pagePartNo=scalarValue(product.sku||product.mpn)||labelledHtmlValues(html,'(?:numer\\s+(?:katalogowy|artykułu)|nr\\s+katalogowy|article\\s+(?:number|no)|part\\s+(?:number|no)|mpn|sku)')[0]||item.part_no||''
+  const labelledBrand=labelledHtmlValues(html,'(?:producent|manufacturer|marka|brand)')[0]||''
+  const propertyRefs=properties.filter(property=>/(?:oe|oem|reference|zamiennik|cross)/i.test(property.name)).map(property=>property.value)
+  const labelledRefs=labelledHtmlValues(html,'(?:numery?\\s+(?:oe|oem|referencyjne)|oe(?:m)?\\s*(?:nr|no|number|numbers)?|cross\\s*reference|zamienniki?)')
+  const references=uniqueLines([propertyRefs,labelledRefs,extractReferenceNumbers(text,item.barcode,pagePartNo)]).join('\n')
+  const labelledFitment=labelledHtmlValues(html,'(?:pasuje\\s+do|zastosowanie|pojazdy|vehicle\\s+(?:fitment|application)|compatibility)')
+  const vehicleFitment=uniqueLines([...fitment,...labelledFitment,extractFitment(title),extractFitment(item.name)]).join('\n')
   return {...item,
-    name:String(product.name||item.name||'').trim(),
-    brand:String(brandValue||item.brand||'').trim(),
+    name:String(product.name||metaName||item.name||'').trim(),
+    brand:String(brandValue||labelledBrand||item.brand||'').trim(),
     part_no:pagePartNo||item.part_no||'',
+    category:scalarValue(product.category)||item.category||'Części samochodowe',
     vehicle_fitment:vehicleFitment||item.vehicle_fitment||'',
     cross_numbers:references||item.cross_numbers||'',
     description:'',lookup_version:LOOKUP_VERSION
@@ -323,25 +409,29 @@ async function lookupBarcodeOnline(fetchImpl,value,{details=false}={}){
     {url:`https://world.openproductsfacts.org/api/v3/product/${encodeURIComponent(barcode)}?fields=code,product_name,brands,categories,generic_name,image_front_url`,map:mapOpenProductsFacts}
   ]
   let available=false
-  let fallbackItem=null
+  const candidates=[]
   const errors=[]
-  for(const provider of providers){
+  const results=await Promise.all(providers.map(async provider=>{
     try{
       const response=await fetchImpl(provider.url,{headers:{...headers,...provider.headers},signal:AbortSignal.timeout(6000)})
-      if(response.status===404){available=true;continue}
-      if(!response.ok){errors.push(`${new URL(provider.url).hostname}: HTTP ${response.status}`);continue}
-      available=true
+      if(response.status===404)return{available:true}
+      if(!response.ok)return{error:`${new URL(provider.url).hostname}: HTTP ${response.status}`}
       const payload=provider.type==='text'?await response.text():await response.json()
       let item=provider.map(payload,barcode)
-      if(item){
-        item={vehicle_fitment:'',cross_numbers:'',lookup_version:LOOKUP_VERSION,...item}
-        if(item.web_candidate){item=await enrichWebCandidate(fetchImpl,item);return details?{item,available:true,errors}:item}
-        fallbackItem??=item
-      }
-    }catch(error){errors.push(error?.message||String(error))}
+      if(item)item={vehicle_fitment:'',cross_numbers:'',lookup_version:LOOKUP_VERSION,...item}
+      return{available:true,item}
+    }catch(error){return{error:error?.message||String(error)}}
+  }))
+  for(const result of results){
+    if(result.available)available=true
+    if(result.error)errors.push(result.error)
+    if(result.item)candidates.push(result.item)
   }
-  if(fallbackItem)return details?{item:fallbackItem,available:true,errors}:fallbackItem
+  const webByUrl=new Map(candidates.filter(item=>item.web_candidate).map(item=>[item.lookup_url,item]))
+  const enriched=await Promise.all([...webByUrl.values()].slice(0,2).map(item=>enrichWebCandidate(fetchImpl,item)))
+  const item=mergePartCandidates([...candidates.filter(item=>!item.web_candidate),...enriched],barcode)
+  if(item)return details?{item,available:true,errors}:item
   return details?{item:null,available,errors}:null
 }
 
-module.exports={LOOKUP_VERSION,normalizeBarcode,isGtin,mapUpcDev,mapUpcItemDb,mapOpenProductsFacts,mapWebSearch,cleanPartName,extractFitment,extractReferenceNumbers,enrichPartFromHtml,lookupBarcodeOnline}
+module.exports={LOOKUP_VERSION,normalizeBarcode,isGtin,mapUpcDev,mapUpcItemDb,mapOpenProductsFacts,mapWebSearch,cleanPartName,extractFitment,extractReferenceNumbers,enrichPartFromHtml,mergePartCandidates,lookupBarcodeOnline}

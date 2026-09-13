@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.26 — 2026-09-13
+
+### Dokładniejsze dane części po skanowaniu
+
+- Wyniki z katalogów kodów i wyszukiwarek są teraz łączone, dzięki czemu producent, numer katalogowy, zdjęcie, zastosowanie oraz numery OE uzupełniają się między źródłami.
+- Karty produktów rozpoznają dane JSON-LD i wybierają produkt zgodny z zeskanowanym GTIN, także gdy strona zawiera kilka pozycji.
+- Dodano odczyt producenta, numeru katalogowego, zastosowania i numerów OE z tabel specyfikacji oraz właściwości produktu.
+- Internetowe źródła są sprawdzane równolegle, co skraca czas oczekiwania na bogatszy wynik.
+- Rozszerzono listę rozpoznawanych producentów części i odświeżono wersję pamięci wyników, aby wcześniejsze niepełne wpisy zostały wyszukane ponownie.
+- Formularz wyniku pokazuje kompletność danych, poziom pewności oraz liczbę znalezionych dopasowań i numerów OE.
+
 ## 1.0.25 — 2026-09-13
 
 ### Interaktywna mapa Workshop LIVE
