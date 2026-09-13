@@ -6,7 +6,7 @@
 }
 
 button,input,select,textarea{font-size:11px}
-button{min-height:38px}
+button:not(.wlBlip){min-height:38px}
 input,select{min-height:40px}
 textarea{line-height:1.55}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{

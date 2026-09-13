@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.23 — 2026-09-13
+
+### Radar Workshop LIVE
+
+- Naprawiono zniekształcone znaczniki pojazdów i ich przemieszczanie po najechaniu kursorem.
+- Radar pokazuje tablice rejestracyjne, stan pracy, blokady oraz do ośmiu aktywnych pojazdów.
+- Kliknięcie znacznika otwiera bezpośrednio właściwe zlecenie.
+- Środek radaru pokazuje liczbę aut na hali i aktywnych timerów, a opisy statusów są dostępne po wskazaniu znacznika.
+- Powiększono radar i poprawiono jego responsywny układ oraz animację skanowania.
+
 ## 1.0.22 — 2026-09-13
 
 ### Czytelniejszy interfejs
