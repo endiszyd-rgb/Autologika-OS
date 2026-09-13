@@ -34,7 +34,15 @@
 .wlHeadline > span i, .wlSectionHead > span i { display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: var(--wl-green); animation: wlPulse 1.8s infinite; }
 .wlHeadline b { color: #dfe7e9; font-size: 14px; }
 .wlHeadline small { color: #64737a; font-size: 9px; }
-.wlFullscreen { align-self: start; min-height: 36px; border-color: #2d3b40; background: #11181b; color: #a8b5b9; font-size: 10px; }
+.wlTopActions { display:flex; align-self:start; gap:7px; }
+.wlFullscreen,.wlRefresh { min-height: 36px; border-color: #2d3b40; background: #11181b; color: #a8b5b9; font-size: 10px; }
+.wlRefresh:disabled { opacity:.58; }
+.wlHeadline.error { border-left-color:rgba(239,119,111,.4); }
+.wlHeadline.error > span { color:var(--wl-red); }
+.wlHeadline.error > span i { background:var(--wl-red); }
+.wlDataError { display:grid; grid-template-columns:26px 1fr auto; align-items:center; gap:10px; margin:12px 0 -2px; padding:9px 11px; border:1px solid rgba(239,119,111,.35); border-radius:10px; background:rgba(239,119,111,.07); color:#e8b0ac; font-size:9px; }
+.wlDataError>span { display:grid; place-items:center; width:24px; height:24px; border:1px solid rgba(239,119,111,.4); border-radius:50%; color:var(--wl-red); }
+.wlDataError button { min-height:30px; }
 
 .wlOverview { display: grid; grid-template-columns: 240px minmax(0, 1fr) 195px; gap: 14px; margin: 16px 0 12px; }
 .wlRadar { position: relative; aspect-ratio: 1; isolation: isolate; overflow: hidden; border: 1px solid rgba(88, 200, 216, .34); border-radius: 50%; background: radial-gradient(circle at 50% 50%, rgba(196, 244, 124, .075) 0 4%, transparent 5%),radial-gradient(circle, rgba(88, 200, 216, .105), rgba(10, 17, 20, .88) 64%); box-shadow: inset 0 0 44px rgba(88, 200, 216, .08),0 0 32px rgba(40, 121, 130, .08); }
@@ -106,6 +114,7 @@
 .wlCars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
 .wlCar { position: relative; overflow: hidden; padding: 12px; border: 1px solid #243136; border-left: 3px solid #526d77; border-radius: 12px; background: linear-gradient(145deg, rgba(24, 34, 38, .88), rgba(12, 19, 22, .94)); cursor: pointer; animation: wlRise .42s both; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
 .wlCar:hover { transform: translateY(-2px); border-color: #3d5158; box-shadow: 0 12px 25px rgba(0, 0, 0, .24); }
+.wlCar:focus-visible { outline:2px solid var(--wl-lime); outline-offset:2px; border-color:#6d8d5a; }
 .wlCar.diagnoza { border-left-color: #8e75d9; }
 .wlCar.akceptacja { border-left-color: var(--wl-amber); }
 .wlCar.naprawa { border-left-color: var(--wl-cyan); }
@@ -187,6 +196,7 @@
   .workshopLive { padding: 14px; }
   .wlTop { grid-template-columns: 1fr auto; }
   .wlHeadline { display: none; }
+  .wlTopActions span { display:none; }
   .wlOverview { grid-template-columns: 160px 1fr; }
   .wlKpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .wlFlow { grid-template-columns: repeat(5, minmax(100px, 1fr)); overflow-x: auto; }

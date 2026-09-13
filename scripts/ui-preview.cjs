@@ -443,6 +443,8 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(liveRadar.blips,5)
       assert.ok(liveRadar.label.length>0)
       assert.ok(liveRadar.height<=22)
+      assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('[data-live-refresh]')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.wlCar[role="button"][tabindex="0"]').length`),5)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.wlStage').length`),5)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.wlCar').length > 0`),true)
       assert.equal((await inspect()).overflow,false)

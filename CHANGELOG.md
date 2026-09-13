@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.24 — 2026-09-13
+
+### Stabilniejszy Workshop LIVE
+
+- Dodano czas ostatniej poprawnej aktualizacji danych oraz przycisk ręcznego odświeżania.
+- Przy błędzie pobierania Workshop LIVE zachowuje ostatni poprawny stan i pokazuje czytelny komunikat z możliwością ponowienia.
+- Alert opóźnionej części otwiera teraz bezpośrednio powiązane zlecenie.
+- Karty pojazdów można otwierać klawiszami Enter i Spacja, a fokus jest wyraźnie oznaczony.
+- Radar informuje o pojazdach poza ośmioma widocznymi pozycjami i poprawnie odmienia licznik timerów.
+
 ## 1.0.23 — 2026-09-13
 
 ### Radar Workshop LIVE
