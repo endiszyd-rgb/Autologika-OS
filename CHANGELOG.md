@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.37 — 2026-09-14
+
+### Service Forecast
+
+- Historia zakończonych prac wyznacza sugerowane terminy kolejnych podstawowych obsług.
+- Prognoza rozróżnia terminy planowane, bliskie i przekroczone oraz pokazuje źródło i poziom pewności.
+- Ręczne przypomnienie ma pierwszeństwo przed sugestią, dzięki czemu system nie dubluje pozycji.
+- Sugestię można jednym kliknięciem zapisać jako przypomnienie powiązane z pojazdem i zleceniem.
+- Algorytm korzysta wyłącznie z zapisów warsztatu i nie przedstawia interwałów jako danych producenta.
+
 ## 1.0.36 — 2026-09-14
 
 ### Dyktowanie notatek po polsku

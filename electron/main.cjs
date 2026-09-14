@@ -395,10 +395,18 @@ ipcMain.handle('vehicles:remove',(_,id)=>removeEntity(getDb(),'vehicle',id,{unli
 ipcMain.handle('vehicles:history',(_,id)=>getDb().prepare(`${orderSelect} WHERE o.vehicle_id=? ORDER BY o.opened_at DESC`).all(id))
 
 // --- 0.33 DEV: Vehicle Intelligence 2.0 -----------------------------------
+function attachVehicleServiceText(db,vehicleId,orders){
+  const rows=db.prepare(`SELECT i.order_id,GROUP_CONCAT(COALESCE(NULLIF(i.work_name,''),i.name),' | ') service_text
+    FROM order_items i JOIN orders o ON o.id=i.order_id
+    WHERE o.vehicle_id=? AND i.kind='ROBOCIZNA'
+    GROUP BY i.order_id`).all(vehicleId)
+  const textByOrder=new Map(rows.map(row=>[Number(row.order_id),row.service_text||'']))
+  return orders.map(order=>({...order,service_text:textByOrder.get(Number(order.id))||''}))
+}
 function vehicleHealthData(id){
   const db=getDb(),vehicle=db.prepare('SELECT * FROM vehicles WHERE id=?').get(id)
   if(!vehicle)return null
-  const orders=db.prepare('SELECT * FROM orders WHERE vehicle_id=? ORDER BY opened_at DESC').all(id)
+  const orders=attachVehicleServiceText(db,id,db.prepare('SELECT * FROM orders WHERE vehicle_id=? ORDER BY opened_at DESC').all(id))
   const findings=db.prepare('SELECT * FROM vehicle_findings WHERE vehicle_id=? AND deleted_at IS NULL').all(id)
   const reminders=db.prepare('SELECT * FROM service_reminders_v2 WHERE vehicle_id=? AND deleted_at IS NULL').all(id)
   const diagnostics=db.prepare('SELECT d.*,o.title,o.complaint,o.status,o.opened_at FROM diagnostics d JOIN orders o ON o.id=d.order_id WHERE o.vehicle_id=? AND d.deleted_at IS NULL ORDER BY o.opened_at DESC').all(id)
@@ -409,7 +417,7 @@ ipcMain.handle('vehicles:profile',(_,id)=>{
   const db=getDb()
   const vehicle=db.prepare(`SELECT v.*,c.name customer,c.phone,c.email FROM vehicles v LEFT JOIN customers c ON c.id=v.customer_id WHERE v.id=?`).get(id)
   if(!vehicle)return null
-  const orders=db.prepare(`${orderSelect} WHERE o.vehicle_id=? ORDER BY o.opened_at DESC`).all(id)
+  const orders=attachVehicleServiceText(db,id,db.prepare(`${orderSelect} WHERE o.vehicle_id=? ORDER BY o.opened_at DESC`).all(id))
   const findings=db.prepare(`SELECT * FROM vehicle_findings WHERE vehicle_id=? AND deleted_at IS NULL ORDER BY CASE status WHEN 'OPEN' THEN 0 WHEN 'MONITOR' THEN 1 ELSE 2 END,CASE severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END,created_at DESC`).all(id)
   const reminders=db.prepare(`SELECT * FROM service_reminders_v2 WHERE vehicle_id=? AND deleted_at IS NULL ORDER BY CASE status WHEN 'OPEN' THEN 0 ELSE 1 END,due_date,due_mileage`).all(id)
   const diagnostics=db.prepare(`SELECT d.*,o.opened_at,o.id order_id,o.title FROM diagnostics d JOIN orders o ON o.id=d.order_id WHERE o.vehicle_id=? AND d.deleted_at IS NULL ORDER BY o.opened_at DESC LIMIT 20`).all(id)

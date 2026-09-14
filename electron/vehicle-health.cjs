@@ -1,3 +1,4 @@
+const {buildServiceForecast}=require('./service-forecast.cjs')
 const fold=value=>String(value||'').toLocaleLowerCase('pl').replaceAll('ł','l').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
 
 const SYSTEMS=[
@@ -69,7 +70,8 @@ function buildVehicleHealth(input={},options={}){
  const weight=subsystems.reduce((sum,item)=>sum+item.weight,0),score=clamp(subsystems.reduce((sum,item)=>sum+item.score*item.weight,0)/weight),coverage=calculateCoverage({vehicle,orders,findings,reminders,diagnostics},now),state=coverage<20?{label:'DO OCENY',tone:'unknown'}:stateFor(score)
  const actions=subsystems.filter(item=>item.issues.length).sort((a,b)=>a.score-b.score).map(item=>({system:item.id,title:item.recommendation,score:item.score,priority:item.tone})).slice(0,4)
  if(coverage<50)actions.push({system:'data',title:'Uzupełnij kontrolę pojazdu, przebieg, terminy serwisowe i wnioski diagnostyczne.',score:coverage,priority:'unknown'})
- return{score,displayScore:coverage<20?null:score,coverage,state:state.label,tone:state.tone,subsystems,actions,issueCount:subsystems.reduce((sum,item)=>sum+item.issues.length,0),calculatedAt:new Date(now).toISOString(),version:'vehicle-health-v1'}
+ const forecast=buildServiceForecast({vehicle,orders,reminders},{now})
+ return{score,displayScore:coverage<20?null:score,coverage,state:state.label,tone:state.tone,subsystems,actions,forecast,issueCount:subsystems.reduce((sum,item)=>sum+item.issues.length,0),calculatedAt:new Date(now).toISOString(),version:'vehicle-health-v2'}
 }
 
 module.exports={buildVehicleHealth,systemFor,reminderUrgency,SYSTEMS}
