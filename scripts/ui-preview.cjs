@@ -234,6 +234,16 @@ app.on('browser-window-created', (_, win) => {
       console.log('ORDER_PART_NUMBER_LOOKUP','catalog number selected a local part and added its OE reference to the order')
       console.log('ORDER_PART_REMOVE','ordered part removed from the order and disappeared from its list')
       await openOrderTab('diagnosis')
+      assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.diagnosticCopilot')`),true)
+      await win.webContents.executeJavaScript(`document.querySelector('.diagnosticCopilot button.primary').click()`)
+      await delay(450)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.copilotVerdict')?.textContent.includes('Układ doładowania')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.copilotChecklist li').length >= 3`),true)
+      await capture('diagnostic-copilot')
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.diagnosticCopilot button')].find(x=>x.textContent.includes('Przenieś hipotezy')).click()`)
+      await delay(100)
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.workspaceContent label')].find(x=>x.textContent.startsWith('Hipotezy i testy')).querySelector('textarea').value.includes('Układ doładowania')`),true)
+      console.log('DIAGNOSTIC_COPILOT','offline symptom analysis, test plan and diagnostic card autofill verified')
       await win.webContents.executeJavaScript(`{
         const field = [...document.querySelectorAll('.workspaceContent label')].find(x=>x.textContent==='Wniosek / przyczyna').querySelector('textarea');
         Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(field,'Wniosek testowy UI');

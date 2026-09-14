@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.34 — 2026-09-14
+
+### Diagnostic Copilot w Centrum zlecenia
+
+- Nowy asystent analizuje objaw, DTC, pomiary, dane pojazdu i podobne przypadki bez wysyłania danych poza komputer.
+- Wynik pokazuje podejrzane obszary, przesłanki, uporządkowaną kolejność testów i pytania uzupełniające do klienta.
+- Jednym kliknięciem można przenieść hipotezy oraz plan weryfikacji do karty diagnostycznej.
+- Asystent dobiera pasujące procedury z pełnego katalogu prac i otwiera wybraną pozycję bezpośrednio we właściwej grupie i wariancie.
+- Ocena ma jawny poziom pewności i pozostaje planem do potwierdzenia pomiarami przez mechanika.
+
 ## 1.0.33 — 2026-09-14
 
 ### Numery OE i zamienniki w Centrum zlecenia

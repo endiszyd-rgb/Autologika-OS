@@ -10,12 +10,14 @@ import './finance.css'
 import './customer-profile.css'
 import './care.css'
 import './ui-polish.css'
+import './diagnostic-assistant.css'
 import {Icon} from './ui.jsx'
 import {WorkshopDashboard} from './dashboard.jsx'
 import {WorkshopSchedule} from './schedule.jsx'
 import {vehicleMakes,vehicleModels,vehicleYears,vehicleEngines,vehicleGenerations,generationYears,generationEngineNames,enginePowers,engineCodes} from './vehicle-catalog.js'
-import {WORK_CATALOG,jobsForGroup} from './work-catalog.js'
+import {WORK_CATALOG,jobsForGroup,catalogRows} from './work-catalog.js'
 import {procedureFor} from './work-procedures.js'
+import {analyzeDiagnostic} from './diagnostic-assistant.mjs'
 import {TECH_CATEGORIES,TECH_LABELS,SOURCE_TYPES,relevantTechnical,techValue,verificationLabel} from './technical-data.js'
 import {analyzeScan,createKeyboardWedge,isProductBarcode,normalizeProductBarcode} from './zebra-scanner.js'
 import TechnicalManual from './technical-manual.jsx'
@@ -735,6 +737,27 @@ function Debtors({openOrder}){
 }
 
 
+function DiagnosticAssistant({order,diag,setDiag,openWork}){
+ const[symptoms,setSymptoms]=useState(diag?.symptom_confirmed||order.complaint||''),[result,setResult]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('')
+ useEffect(()=>{setSymptoms(diag?.symptom_confirmed||order.complaint||'');setResult(null);setError('')},[order.id])
+ const run=async()=>{setBusy(true);setError('');try{const query=[order.make,order.model,order.engine,order.complaint,symptoms,diag?.dtcs,diag?.measurements].filter(Boolean).join(' · '),knowledge=await api.assistant.search(query);setResult(analyzeDiagnostic({order,diagnostic:diag,symptoms,knowledge,catalog:catalogRows()}))}catch(e){setError(String(e?.message||e))}finally{setBusy(false)}}
+ const apply=()=>{if(!result)return;const hypothesis=result.hypotheses.map((item,index)=>`${index+1}. ${item.title}: ${item.text}${item.evidence.length?` [przesłanki: ${item.evidence.join(', ')}]`:''}`).join('\n'),recommendation=['Plan weryfikacji:',...result.checklist.map((item,index)=>`${index+1}. ${item}`)].join('\n');setDiag({...diag,symptom_confirmed:diag?.symptom_confirmed||symptoms,hypothesis,recommendation})}
+ return <div className="diagnosticCopilot" data-confidence={result?.confidence||''}>
+   <div className="diagnosticCopilotHead"><div className="copilotOrb"><i/><span>✦</span></div><div><small>AUTOLOGIKA DIAGNOSTIC COPILOT · OFFLINE</small><h3>Analiza objawu i następny test</h3><p>Łączy dane zlecenia, kody DTC, pomiary, historię przypadków i katalog prac.</p></div><div className="copilotVehicle"><span>{order.plate||'BEZ REJ.'}</span><b>{order.make} {order.model}</b><small>{order.engine||'silnik nieuzupełniony'}</small></div></div>
+   <div className="copilotInput"><label>Objaw do analizy<textarea value={symptoms} onChange={e=>setSymptoms(e.target.value)} placeholder="Opisz objaw, moment występowania i warunki…"/></label><button className="primary" disabled={busy||![symptoms,diag?.dtcs,order.complaint].some(value=>String(value||'').trim())} onClick={run}>{busy?'ANALIZOWANIE…':'✦ ANALIZUJ ZLECENIE'}</button></div>
+   {error&&<div className="warnbox">Nie udało się wykonać analizy: {error}</div>}
+   {result&&<div className="copilotResult">
+     <div className="copilotVerdict"><div><small>WSTĘPNA OCENA</small><h3>{result.summary}</h3><p>To plan diagnostyczny do potwierdzenia pomiarami, nie automatyczne rozpoznanie usterki.</p></div><span className={'confidence '+result.confidence.toLowerCase()}><i/>{result.confidence} PEWNOŚĆ</span></div>
+     <div className="copilotEvidence"><span><b>{result.codes.length}</b>DTC</span><span><b>{result.basis.rules}</b>obszary</span><span><b>{result.basis.cases}</b>podobne przypadki</span><span><b>{result.suggestions.length}</b>procedury</span></div>
+     {result.codes.length>0&&<div className="copilotCodes">{result.codes.map(code=><code key={code}>{code}</code>)}</div>}
+     <div className="copilotColumns"><div><h4>Podejrzane obszary</h4>{result.hypotheses.map((item,index)=><article className="copilotHypothesis" key={item.id}><i>{index+1}</i><div><b>{item.title}</b><p>{item.text}</p>{item.evidence.length>0&&<small>Przesłanki: {item.evidence.join(' · ')}</small>}</div></article>)}</div><div><h4>Kolejność testów</h4><ol className="copilotChecklist">{result.checklist.map((item,index)=><li key={index}><i>{index+1}</i><span>{item}</span></li>)}</ol></div></div>
+     {result.questions.length>0&&<div className="copilotQuestions"><h4>Dopytaj klienta</h4>{result.questions.map((item,index)=><span key={index}>{item}</span>)}</div>}
+     {result.suggestions.length>0&&<div className="copilotProcedures"><div><h4>Pasujące procedury z katalogu</h4><small>Otwórz wybraną pozycję, sprawdź zakres i dopiero dodaj ją do zlecenia.</small></div><div>{result.suggestions.slice(0,4).map(item=><button key={`${item.workId}-${item.variantId}`} onClick={()=>openWork({group:item.group,workId:item.workId,variantId:item.variantId})}><span>{item.group}</span><b>{item.name}</b><small>{item.variant} →</small></button>)}</div></div>}
+     {result.similarCases.length>0&&<details className="copilotCases"><summary>Podobne przypadki z bazy warsztatu ({result.similarCases.length})</summary>{result.similarCases.map(item=><div key={item.id}><b>{item.title||item.symptom||`Przypadek #${item.id}`}</b><span>{item.cause||item.conclusion||item.solution||''}</span></div>)}</details>}
+     <div className="actionrow right"><button onClick={run}>↻ Przelicz</button><button className="primary" onClick={apply}>Przenieś hipotezy i testy do karty ↓</button></div>
+   </div>}
+ </div>
+}
 function Notifications({changed,openOrder}){
  const[rows,setRows]=useState([]),[group,setGroup]=useState('ALL'),[query,setQuery]=useState(''),[busy,setBusy]=useState(true),[updated,setUpdated]=useState(null)
  const load=()=>{setBusy(true);return api.notifications.list().then(data=>{setRows(data);setUpdated(new Date())}).finally(()=>setBusy(false))};useEffect(()=>{load();const timer=setInterval(load,30000);return()=>clearInterval(timer)},[])
@@ -796,7 +819,7 @@ function OrderCenter({changed,initialId,openManual}){
    {tab==='works'&&<><Panel title="Wykonane prace" action={<button className="primary" onClick={()=>setShowWork(true)}>+ Dodaj pakiet z katalogu</button>}><p className="muted">Jedno wybranie pracy może dodać robociznę, listę kontrolną, QC, materiały oraz części do kolejki DO ZAMÓWIENIA.</p><PerformedWorkList items={items} reload={reload}/></Panel><ProcedureRuns procedures={procedures} reload={reload}/></>}
 
    {tab==='tech'&&<TechnicalDataPanel order={o} entries={technical} reload={reload}/>}
-   {tab==='diagnosis'&&<Panel title="Diagnostyka — jedna karta dla zlecenia"><div className="diagform"><label>Potwierdzenie objawu<textarea value={diag?.symptom_confirmed||''} onChange={e=>setDiag({...diag,symptom_confirmed:e.target.value})}/></label><label>DTC<textarea value={diag?.dtcs||''} onChange={e=>setDiag({...diag,dtcs:e.target.value})}/></label><label>Pomiary / live data / oscyloskop<textarea value={diag?.measurements||''} onChange={e=>setDiag({...diag,measurements:e.target.value})}/></label><label>Hipotezy i testy<textarea value={diag?.hypothesis||''} onChange={e=>setDiag({...diag,hypothesis:e.target.value})}/></label><label>Wniosek / przyczyna<textarea value={diag?.conclusion||''} onChange={e=>setDiag({...diag,conclusion:e.target.value})}/></label><label>Rekomendowana naprawa<textarea value={diag?.recommendation||''} onChange={e=>setDiag({...diag,recommendation:e.target.value})}/></label></div><div className="actionrow"><button className="primary" onClick={async()=>{await api.diagnostics.save(o.id,diag);await reload()}}>Zapisz diagnostykę</button><button onClick={()=>api.knowledge.fromOrder(o.id)}>→ Zapisz jako przypadek w bazie wiedzy</button></div></Panel>}
+   {tab==='diagnosis'&&<><DiagnosticAssistant order={o} diag={diag} setDiag={setDiag} openWork={setShowWork}/><Panel title="Diagnostyka — jedna karta dla zlecenia"><div className="diagform"><label>Potwierdzenie objawu<textarea value={diag?.symptom_confirmed||''} onChange={e=>setDiag({...diag,symptom_confirmed:e.target.value})}/></label><label>DTC<textarea value={diag?.dtcs||''} onChange={e=>setDiag({...diag,dtcs:e.target.value})}/></label><label>Pomiary / live data / oscyloskop<textarea value={diag?.measurements||''} onChange={e=>setDiag({...diag,measurements:e.target.value})}/></label><label>Hipotezy i testy<textarea value={diag?.hypothesis||''} onChange={e=>setDiag({...diag,hypothesis:e.target.value})}/></label><label>Wniosek / przyczyna<textarea value={diag?.conclusion||''} onChange={e=>setDiag({...diag,conclusion:e.target.value})}/></label><label>Rekomendowana naprawa<textarea value={diag?.recommendation||''} onChange={e=>setDiag({...diag,recommendation:e.target.value})}/></label></div><div className="actionrow"><button className="primary" onClick={async()=>{await api.diagnostics.save(o.id,diag);await reload()}}>Zapisz diagnostykę</button><button onClick={()=>api.knowledge.fromOrder(o.id)}>→ Zapisz jako przypadek w bazie wiedzy</button></div></Panel></>}
 
    {tab==='quote'&&<div className="connectedStage"><Panel title="Wycena i zakres"><p className="muted">Wycena jest przygotowywana przed przeniesieniem pozycji do właściwego zlecenia. Po decyzji klienta zaakceptowany zakres przechodzi do realizacji.</p><button className="primary" onClick={()=>setShowQuote(true)}>Otwórz kalkulator wyceny</button><div className="centerFacts topgap"><div><span>Aktualna sprzedaż</span><b>{money(o.total)}</b></div><div><span>Zakup części</span><b>{money(o.parts_cost)}</b></div><div><span>Sprzedaż części</span><b>{money(o.parts_sale)}</b></div><div><span>Robocizna</span><b>{money(o.labor_hours*o.labor_rate)}</b></div></div></Panel><div className="stageConnector"><i>1</i><span>Wycena</span><b>→</b><i>2</i><span>Decyzja klienta</span></div><ApprovalPanel order={o} rows={approvals} reload={reload}/></div>}
 
@@ -817,7 +840,7 @@ function OrderCenter({changed,initialId,openManual}){
    {tab==='release'&&<div className="releaseFlow"><PersistentQC order={o} notes={notes} setNotes={setNotes} rows={qcRows} reload={reload}/><CloseoutPanel order={o} data={closeout} payments={payments} onClosed={handleClosed} reload={reload}/></div>}
 
    </div>
-   {showWork&&<WorkCatalogModalV2 api={api} order={o} close={()=>setShowWork(false)} saved={()=>{setShowWork(false);reload()}}/>}
+   {showWork&&<WorkCatalogModalV2 api={api} order={o} initialSelection={typeof showWork==='object'?showWork:{}} close={()=>setShowWork(false)} saved={()=>{setShowWork(false);reload()}}/>}
    {showQuote&&<QuoteModal order={o} close={()=>setShowQuote(false)} accepted={()=>{setShowQuote(false);reload()}}/>}
    {showPart&&<CenterNewPart order={o} close={()=>setShowPart(false)} saved={()=>{setShowPart(false);reload()}}/>}
  </section>
