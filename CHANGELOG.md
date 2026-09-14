@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.35 — 2026-09-14
+
+### Vehicle Health Score
+
+- Profil pojazdu oraz Centrum zlecenia pokazują ocenę sześciu obszarów: hamulców, silnika, zawieszenia, elektryki, opon i płynów.
+- Wynik powstaje z otwartych usterek, terminów serwisowych oraz aktywnych zleceń bez zakończonej diagnozy.
+- Każda obniżona ocena ma widoczną przyczynę i proponowane następne działanie dla warsztatu.
+- Wskaźnik kompletności danych zapobiega pokazywaniu sztucznego wyniku 100 dla pojazdu bez historii i pomiarów.
+- Ten sam model oceny jest dostępny w aplikacji Android.
+
 ## 1.0.34 — 2026-09-14
 
 ### Diagnostic Copilot w Centrum zlecenia

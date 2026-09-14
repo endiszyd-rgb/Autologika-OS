@@ -21,6 +21,7 @@ const { documentHtml: renderProtocolDocument } = require('./protocol-document.cj
 const { customerProfile } = require('./customer-profile.cjs')
 const { listDebtors } = require('./debtors.cjs')
 const { listServiceReminders, createServiceReminder, setServiceReminderStatus } = require('./service-reminders.cjs')
+const { buildVehicleHealth } = require('./vehicle-health.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -394,6 +395,16 @@ ipcMain.handle('vehicles:remove',(_,id)=>removeEntity(getDb(),'vehicle',id,{unli
 ipcMain.handle('vehicles:history',(_,id)=>getDb().prepare(`${orderSelect} WHERE o.vehicle_id=? ORDER BY o.opened_at DESC`).all(id))
 
 // --- 0.33 DEV: Vehicle Intelligence 2.0 -----------------------------------
+function vehicleHealthData(id){
+  const db=getDb(),vehicle=db.prepare('SELECT * FROM vehicles WHERE id=?').get(id)
+  if(!vehicle)return null
+  const orders=db.prepare('SELECT * FROM orders WHERE vehicle_id=? ORDER BY opened_at DESC').all(id)
+  const findings=db.prepare('SELECT * FROM vehicle_findings WHERE vehicle_id=? AND deleted_at IS NULL').all(id)
+  const reminders=db.prepare('SELECT * FROM service_reminders_v2 WHERE vehicle_id=? AND deleted_at IS NULL').all(id)
+  const diagnostics=db.prepare('SELECT d.*,o.title,o.complaint,o.status,o.opened_at FROM diagnostics d JOIN orders o ON o.id=d.order_id WHERE o.vehicle_id=? AND d.deleted_at IS NULL ORDER BY o.opened_at DESC').all(id)
+  return{vehicle,orders,findings,reminders,diagnostics,health:buildVehicleHealth({vehicle,orders,findings,reminders,diagnostics})}
+}
+ipcMain.handle('vehicleHealth:get',(_,id)=>vehicleHealthData(id)?.health||null)
 ipcMain.handle('vehicles:profile',(_,id)=>{
   const db=getDb()
   const vehicle=db.prepare(`SELECT v.*,c.name customer,c.phone,c.email FROM vehicles v LEFT JOIN customers c ON c.id=v.customer_id WHERE v.id=?`).get(id)
@@ -404,7 +415,7 @@ ipcMain.handle('vehicles:profile',(_,id)=>{
   const diagnostics=db.prepare(`SELECT d.*,o.opened_at,o.id order_id,o.title FROM diagnostics d JOIN orders o ON o.id=d.order_id WHERE o.vehicle_id=? AND d.deleted_at IS NULL ORDER BY o.opened_at DESC LIMIT 20`).all(id)
   const tech=db.prepare(`SELECT COUNT(*) total,SUM(CASE WHEN verified=1 THEN 1 ELSE 0 END) verified FROM technical_data_entries WHERE deleted_at IS NULL AND (vehicle_id=? OR (make=? AND engine_code!='' AND engine_code=?))`).get(id,vehicle.make||'',vehicle.engine_code||'')
   const totals=orders.reduce((a,o)=>{a.revenue+=Number(o.total||0);a.contribution+=Number(o.contribution||0);return a},{revenue:0,contribution:0})
-  return {vehicle,orders,findings,reminders,diagnostics,tech:{total:Number(tech?.total||0),verified:Number(tech?.verified||0)},totals}
+  return {vehicle,orders,findings,reminders,diagnostics,health:buildVehicleHealth({vehicle,orders,findings,reminders,diagnostics}),tech:{total:Number(tech?.total||0),verified:Number(tech?.verified||0)},totals}
 })
 ipcMain.handle('vehicleFindings:list',(_,vehicleId)=>getDb().prepare(`SELECT * FROM vehicle_findings WHERE vehicle_id=? AND deleted_at IS NULL ORDER BY CASE status WHEN 'OPEN' THEN 0 WHEN 'MONITOR' THEN 1 ELSE 2 END,created_at DESC`).all(vehicleId))
 ipcMain.handle('vehicleFindings:create',(_,{vehicleId,orderId,data})=>{const r=getDb().prepare(`INSERT INTO vehicle_findings(vehicle_id,source_order_id,category,title,details,severity,status,due_date,due_mileage) VALUES (?,?,?,?,?,?,?,?,?)`).run(vehicleId,orderId||null,data.category||'USTERKA',data.title,data.details||'',data.severity||'INFO',data.status||'OPEN',data.due_date||null,data.due_mileage||null);return{id:Number(r.lastInsertRowid)}})
