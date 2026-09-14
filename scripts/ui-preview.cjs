@@ -239,7 +239,13 @@ app.on('browser-window-created', (_, win) => {
       console.log('ORDER_PART_BARCODE_LOOKUP','global Zebra EAN stayed in Order Center and saved the selected manufacturer, catalog number and OE reference')
       console.log('ORDER_PART_NUMBER_LOOKUP','catalog number selected a local part and added its OE reference to the order')
       console.log('ORDER_PART_REMOVE','ordered part removed from the order and disappeared from its list')
+      await win.webContents.executeJavaScript(`window.SpeechRecognition=class{start(){this.onstart?.();setTimeout(()=>{const result=Object.assign([{transcript:'stuki z przodu kropka'}],{isFinal:true});this.onresult?.({results:[result]});this.onend?.()},30)}stop(){this.onend?.()}abort(){}};true`)
       await openOrderTab('diagnosis')
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.workspaceContent .voiceButton').length>=7`),true)
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.workspaceContent label')].find(x=>x.textContent.startsWith('Wniosek / przyczyna')).querySelector('.voiceButton').click()`)
+      await delay(100)
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.workspaceContent label')].find(x=>x.textContent.startsWith('Wniosek / przyczyna')).querySelector('textarea').value.includes('Stuki z przodu.')`),true)
+      console.log('VOICE_ENTRY','Polish speech transcript populated the selected diagnostic field')
       assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.diagnosticCopilot')`),true)
       await win.webContents.executeJavaScript(`document.querySelector('.diagnosticCopilot button.primary').click()`)
       await delay(450)
@@ -251,7 +257,7 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.workspaceContent label')].find(x=>x.textContent.startsWith('Hipotezy i testy')).querySelector('textarea').value.includes('Układ doładowania')`),true)
       console.log('DIAGNOSTIC_COPILOT','offline symptom analysis, test plan and diagnostic card autofill verified')
       await win.webContents.executeJavaScript(`{
-        const field = [...document.querySelectorAll('.workspaceContent label')].find(x=>x.textContent==='Wniosek / przyczyna').querySelector('textarea');
+        const field = [...document.querySelectorAll('.workspaceContent label')].find(x=>x.textContent.startsWith('Wniosek / przyczyna')).querySelector('textarea');
         Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(field,'Wniosek testowy UI');
         field.dispatchEvent(new Event('input',{bubbles:true}));
       }`)

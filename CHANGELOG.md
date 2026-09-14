@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.36 — 2026-09-14
+
+### Dyktowanie notatek po polsku
+
+- Przyjęcie pojazdu, Diagnostic Copilot, karta diagnostyczna oraz dokumentacja wydania otrzymały przyciski mikrofonu.
+- Rozpoznany tekst trafia bezpośrednio do wybranego pola i nie usuwa wcześniej zapisanej treści.
+- Komendy „kropka”, „przecinek”, „nowa linia” i „nowy wiersz” formatują notatkę podczas dyktowania.
+- Interfejs pokazuje stan nasłuchiwania oraz czytelne komunikaty o mikrofonie, braku mowy i niedostępnej usłudze.
+- Android korzysta z natywnej usługi rozpoznawania mowy urządzenia i pyta o uprawnienie do mikrofonu dopiero przy pierwszym użyciu.
+
 ## 1.0.35 — 2026-09-14
 
 ### Vehicle Health Score
