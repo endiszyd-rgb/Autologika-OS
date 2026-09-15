@@ -1,7 +1,14 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor}}=require('../electron/cloud-sync.cjs')
+const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount}}=require('../electron/cloud-sync.cjs')
+
+test('PC binds the workshop to its Cloud account and protects a previously synchronized database',()=>{
+ assert.equal(bindAccount({workshopId:'manual-id',lastSync:'',syncOwnerId:''},'account-1').workshopId,'account-1')
+ assert.equal(bindAccount({workshopId:'account-1',lastSync:'2026-09-15T10:00:00.000Z',syncOwnerId:'account-1'},'account-1').lastSync,'2026-09-15T10:00:00.000Z')
+ assert.throws(()=>bindAccount({workshopId:'account-1',lastSync:'2026-09-15T10:00:00.000Z',syncOwnerId:''},'account-2'),/innym kontem Cloud/)
+ assert.throws(()=>bindAccount({workshopId:'account-1',lastSync:'',syncOwnerId:'account-1'},'account-2'),/innym kontem Cloud/)
+})
 
 test('PC downloads every page including records sharing a timestamp at the page boundary',async()=>{
  const stamp='2026-09-15T10:00:00.000Z'
