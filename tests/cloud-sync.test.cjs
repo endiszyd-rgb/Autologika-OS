@@ -39,7 +39,15 @@ test('existing PC installations replay old cloud rows once after their queue dra
  assert.equal(pullCursor(config,1).recover,false)
  assert.equal(pullCursor(config,1).since,config.lastSync)
  assert.equal(pullCursor(config,0).since,'1970-01-01T00:00:00.000Z')
- assert.equal(pullCursor({...config,syncCursorVersion:2},0).since,config.lastSync)
+ assert.equal(pullCursor({...config,syncCursorVersion:2,lastFullSyncAt:'2026-09-15T10:00:00.000Z'},0,Date.parse('2026-09-15T10:00:00.000Z')).since,config.lastSync)
+})
+
+test('PC periodically replays older cloud rows after queued changes are sent',()=>{
+ const now=Date.parse('2026-09-15T10:00:00.000Z')
+ const config={lastSync:'2026-09-15T09:00:00.000Z',syncCursorVersion:2,lastFullSyncAt:new Date(now-24*60*60*1000).toISOString()}
+ assert.equal(pullCursor(config,1,now).recover,false)
+ assert.equal(pullCursor(config,0,now).recover,true)
+ assert.equal(pullCursor({...config,lastFullSyncAt:new Date(now-60*60*1000).toISOString()},0,now).recover,false)
 })
 
 test('historical remote deletion cannot remove a newer local record during replay',()=>{
