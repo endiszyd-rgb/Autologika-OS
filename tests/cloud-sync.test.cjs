@@ -1,7 +1,55 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {_testing:{buildPayload,applyPayload,reconcileOrderTotals,queueState}}=require('../electron/cloud-sync.cjs')
+const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor}}=require('../electron/cloud-sync.cjs')
+
+test('PC downloads every page including records sharing a timestamp at the page boundary',async()=>{
+ const stamp='2026-09-15T10:00:00.000Z'
+ const remote=Array.from({length:2201},(_,index)=>({entity_type:index%2?'vehicles':'customers',cloud_id:index<2?'shared-id':`record-${String(index).padStart(4,'0')}`,updated_at:stamp,payload:{name:'Próba',plate:`PO ${index}`,customer_cloud_id:null}})).sort((a,b)=>a.entity_type.localeCompare(b.entity_type)||a.cloud_id.localeCompare(b.cloud_id))
+ const offsets=[]
+ const rows=await fetchSyncPages('workshop-1',stamp,async route=>{
+  const query=new URL(route,'https://example.test').searchParams
+  assert.equal(query.get('updated_at'),`gte.${stamp}`)
+  assert.equal(query.get('order'),'updated_at.asc,entity_type.asc,cloud_id.asc')
+  const offset=Number(query.get('offset'))
+  offsets.push(offset)
+  return remote.slice(offset,offset+Number(query.get('limit')))
+ })
+ assert.deepEqual(offsets,[0,1000,2000])
+ assert.equal(rows.length,2201)
+ assert.deepEqual(new Set(rows.map(row=>`${row.entity_type}:${row.cloud_id}`)).size,2201)
+ const db=new DatabaseSync(':memory:')
+ db.exec('CREATE TABLE customers(id INTEGER PRIMARY KEY,cloud_id TEXT,name TEXT,updated_at TEXT); CREATE TABLE vehicles(id INTEGER PRIMARY KEY,cloud_id TEXT,customer_id INTEGER,plate TEXT,updated_at TEXT);')
+ for(const type of ['customers','vehicles'])for(const row of rows.filter(x=>x.entity_type===type))applyPayload(db,type,row.cloud_id,row.payload,row.updated_at)
+ assert.equal(db.prepare('SELECT COUNT(*) c FROM customers').get().c,1101)
+ assert.equal(db.prepare('SELECT COUNT(*) c FROM vehicles').get().c,1100)
+ assert.ok(db.prepare("SELECT id FROM customers WHERE cloud_id='shared-id'").get())
+ assert.ok(db.prepare("SELECT id FROM vehicles WHERE cloud_id='shared-id'").get())
+})
+
+test('a failed later page aborts the pull instead of advancing the cursor',async()=>{
+ await assert.rejects(fetchSyncPages('workshop-1','2026-09-15T10:00:00.000Z',async route=>{
+  if(route.includes('offset=1000'))throw new Error('Cloud 503')
+  return Array.from({length:1000},()=>({updated_at:'2026-09-15T10:00:00.000Z'}))
+ }),/Cloud 503/)
+})
+
+test('existing PC installations replay old cloud rows once after their queue drains',()=>{
+ const config={lastSync:'2026-09-15T10:00:00.000Z',syncCursorVersion:0}
+ assert.equal(pullCursor(config,1).recover,false)
+ assert.equal(pullCursor(config,1).since,config.lastSync)
+ assert.equal(pullCursor(config,0).since,'1970-01-01T00:00:00.000Z')
+ assert.equal(pullCursor({...config,syncCursorVersion:2},0).since,config.lastSync)
+})
+
+test('historical remote deletion cannot remove a newer local record during replay',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec("CREATE TABLE customers(id INTEGER PRIMARY KEY,cloud_id TEXT,name TEXT,updated_at TEXT); INSERT INTO customers VALUES(1,'customer-1','Nowsza wersja','2026-09-15T12:00:00.000Z');")
+ assert.equal(applyRemoteDeletion(db,'customers',{cloud_id:'customer-1',updated_at:'2026-09-14T12:00:00.000Z'}),false)
+ assert.equal(db.prepare('SELECT name FROM customers WHERE id=1').get().name,'Nowsza wersja')
+ assert.equal(applyRemoteDeletion(db,'customers',{cloud_id:'customer-1',updated_at:'2026-09-16T12:00:00.000Z'}),true)
+ assert.equal(db.prepare('SELECT COUNT(*) c FROM customers').get().c,0)
+})
 
 test('standalone vehicle keeps a null customer through cloud synchronization',()=>{
  const db=new DatabaseSync(':memory:')
