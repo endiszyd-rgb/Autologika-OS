@@ -1,7 +1,22 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount}}=require('../electron/cloud-sync.cjs')
+const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute}}=require('../electron/cloud-sync.cjs')
+
+test('PC compares SQLite UTC timestamps with Cloud ISO timestamps without a local timezone shift',()=>{
+ assert.equal(timestampMs('2026-09-20 10:15:30'),Date.parse('2026-09-20T10:15:30.000Z'))
+ assert.equal(timestampIso('2026-09-20 10:15:30'),'2026-09-20T10:15:30.000Z')
+ assert.equal(remoteWins({updated_at:'2026-09-20T10:15:31.000Z'},'2026-09-20 10:15:30'),true)
+ assert.equal(remoteWins({updated_at:'2026-09-20T10:15:29.000Z'},'2026-09-20 10:15:30'),false)
+})
+
+test('PC batches conflict checks for exact entity and cloud identifiers',()=>{
+ const query=new URL(remoteHeadsRoute('workshop-1','orders',['order-1','order-2']),'https://example.test').searchParams
+ assert.equal(query.get('workshop_id'),'eq.workshop-1')
+ assert.equal(query.get('entity_type'),'eq.orders')
+ assert.equal(query.get('cloud_id'),'in.(order-1,order-2)')
+ assert.equal(query.get('limit'),'2')
+})
 
 test('PC binds the workshop to its Cloud account and protects a previously synchronized database',()=>{
  assert.equal(bindAccount({workshopId:'manual-id',lastSync:'',syncOwnerId:''},'account-1').workshopId,'account-1')
