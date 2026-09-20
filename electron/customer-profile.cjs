@@ -1,5 +1,4 @@
-const ORDER_VALUE=`COALESCE(o.labor_hours,0)*COALESCE(o.labor_rate,0)+COALESCE(o.parts_sale,0)+COALESCE(o.other_sale,0)+COALESCE(o.diagnosis_fee,0)-COALESCE(o.discount,0)`
-const ORDER_COST=`COALESCE(o.parts_cost,0)+COALESCE(o.other_cost,0)`
+const {ORDER_TOTAL_SQL:ORDER_VALUE,ORDER_COST_SQL:ORDER_COST}=require('./order-financials.cjs')
 
 function customerProfile(db,id){
   const customer=db.prepare('SELECT * FROM customers WHERE id=?').get(id)

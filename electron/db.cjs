@@ -6,7 +6,7 @@ const { seedTechnicalReference } = require('./technical-seed.cjs')
 const { migrateLegacyServiceReminders } = require('./service-reminders.cjs')
 
 let db
-const SCHEMA_VERSION = 9
+const SCHEMA_VERSION = 10
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -116,7 +116,18 @@ function migrate(db,currentVersion=0) {
   }
   if(currentVersion<9){
     db.transaction(()=>{migrateSchemaV9(db);db.pragma('user_version = 9')})()
+    currentVersion=9
   }
+  if(currentVersion<10){
+    db.transaction(()=>{migrateSchemaV10(db);db.pragma('user_version = 10')})()
+  }
+}
+
+function migrateSchemaV10(db){
+  const existing=db.prepare('PRAGMA table_info(orders)').all().map(row=>row.name)
+  if(!existing.includes('final_price'))db.exec('ALTER TABLE orders ADD COLUMN final_price REAL')
+  if(!existing.includes('final_price_note'))db.exec('ALTER TABLE orders ADD COLUMN final_price_note TEXT')
+  if(!existing.includes('final_price_updated_at'))db.exec('ALTER TABLE orders ADD COLUMN final_price_updated_at TEXT')
 }
 
 function migrateSchemaV9(db){
@@ -709,4 +720,4 @@ function seed(db) {
     .run(o.lastInsertRowid,v.lastInsertRowid,'Diagnostyka braku mocy',start.toISOString(),end.toISOString(),'Stanowisko 1','PLAN')
 }
 
-module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9 }
+module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10 }

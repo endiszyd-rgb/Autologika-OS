@@ -1,4 +1,4 @@
-const ORDER_TOTAL=`COALESCE(o.labor_hours,0)*COALESCE(o.labor_rate,0)+COALESCE(o.parts_sale,0)+COALESCE(o.other_sale,0)+COALESCE(o.diagnosis_fee,0)-COALESCE(o.discount,0)`
+const {ORDER_TOTAL_SQL:ORDER_TOTAL}=require('./order-financials.cjs')
 
 function listDebtors(db){
   return db.prepare(`WITH balances AS (

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.42 — 2026-09-20
+
+### Edytowalna cena końcowa zlecenia
+
+- W zakładce „Płatność / wynik” można ustawić cenę końcową niezależnie od wyliczenia pozycji.
+- Każda korekta wymaga powodu i trafia na oś czasu zlecenia.
+- Cena końcowa jest używana w płatnościach, należnościach, marży, KPI, profilu klienta i protokołach PDF.
+- Można wrócić do automatycznego wyliczania bez utraty zaakceptowanego kosztorysu.
+- Migracja schematu zachowuje wszystkie istniejące zlecenia i uruchamia nowy mechanizm dopiero po ręcznym ustawieniu ceny.
+
 ## 1.0.37 — 2026-09-14
 
 ### Service Forecast

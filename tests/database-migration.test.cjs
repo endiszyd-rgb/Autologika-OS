@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {migrateSchemaV9}=require('../electron/db.cjs')
+const {migrateSchemaV9,migrateSchemaV10}=require('../electron/db.cjs')
 
 test('schema v9 preserves ordered parts and adds scanned catalog fields',()=>{
  const db=new DatabaseSync(':memory:')
@@ -25,5 +25,18 @@ test('schema v9 preserves ordered parts and adds scanned catalog fields',()=>{
  assert.equal(row.status,'ZAMOWIONE')
  assert.equal(row.notes,'Zachowaj mnie')
  assert.equal(row.barcode,null)
+ db.close()
+})
+
+test('schema v10 adds an auditable final price without changing existing orders',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE orders(id INTEGER PRIMARY KEY,title TEXT); INSERT INTO orders VALUES(7,'Naprawa');`)
+ migrateSchemaV10(db)
+ migrateSchemaV10(db)
+ const columns=db.prepare('PRAGMA table_info(orders)').all().map(row=>row.name)
+ assert.deepEqual(columns.slice(-3),['final_price','final_price_note','final_price_updated_at'])
+ const row=db.prepare('SELECT * FROM orders WHERE id=7').get()
+ assert.equal(row.title,'Naprawa')
+ assert.equal(row.final_price,null)
  db.close()
 })

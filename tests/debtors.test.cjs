@@ -18,6 +18,7 @@ function fixture(){
       (3,1,'Jeszcze w naprawie','NAPRAWA',3,220,500,0,0,0,'2026-06-01'),
       (4,2,'Auto bez właściciela','GOTOWE',1,220,0,0,0,0,'2026-07-01');
     INSERT INTO payments VALUES(1,1,300),(2,2,220);
+    ALTER TABLE orders ADD COLUMN final_price REAL;
   `)
   return db
 }
@@ -31,6 +32,14 @@ test('debtors list uses order financials and subtracts partial payments',()=>{
   assert.equal(rows[0].balance,550)
   assert.equal(rows[1].customer,null)
   assert.equal(rows[1].balance,220)
+})
+
+test('debtors list uses the edited final price',()=>{
+  const db=fixture()
+  db.exec('UPDATE orders SET final_price=700 WHERE id=1')
+  const row=listDebtors(db).find(order=>order.id===1)
+  assert.equal(row.total,700)
+  assert.equal(row.balance,400)
 })
 
 test('paid and unfinished orders are excluded from debtors',()=>{

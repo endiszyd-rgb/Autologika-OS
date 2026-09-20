@@ -687,6 +687,14 @@ function PaymentPanel({order,rows,refs,reload}){
  </div>
 }
 
+function FinalPriceEditor({order,reload}){
+ const active=order.final_price!==null&&order.final_price!==undefined,[price,setPrice]=useState(active?String(order.final_price):String(order.calculated_total||0)),[note,setNote]=useState(order.final_price_note||''),[busy,setBusy]=useState(false),[message,setMessage]=useState('')
+ useEffect(()=>{const enabled=order.final_price!==null&&order.final_price!==undefined;setPrice(String(enabled?order.final_price:order.calculated_total||0));setNote(order.final_price_note||'');setMessage('')},[order.id,order.final_price,order.calculated_total,order.final_price_note])
+ const save=async()=>{setBusy(true);setMessage('');try{await api.orders.updateFinalPrice(order.id,price,note);await reload();setMessage('Cena końcowa została zapisana i przeliczona w płatnościach oraz rentowności.')}catch(error){setMessage(error?.message||String(error))}finally{setBusy(false)}}
+ const reset=async()=>{setBusy(true);setMessage('');try{await api.orders.updateFinalPrice(order.id,null,'Przywrócono wyliczenie automatyczne');await reload();setMessage('Przywrócono automatyczne wyliczanie ceny.')}catch(error){setMessage(error?.message||String(error))}finally{setBusy(false)}}
+ return <Panel title="Cena końcowa zlecenia"><div className="finalPriceEditor" data-final-price-active={active?'true':'false'}><div className="finalPriceCurrent"><small>WYLICZENIE Z POZYCJI</small><b>{money(order.calculated_total)}</b><span>{active?'Zastosowano ręczną cenę końcową':'Cena końcowa jest liczona automatycznie'}</span></div><div className="finalPriceForm"><label>Cena końcowa brutto<input data-final-price-input type="number" min="0" step="0.01" value={price} onChange={event=>setPrice(event.target.value)}/></label><label>Powód korekty<input data-final-price-note value={note} onChange={event=>setNote(event.target.value)} placeholder="np. uzgodniony rabat, prace dodatkowe"/></label><div className="actionrow"><button className="primary" data-final-price-save disabled={busy||price===''||!note.trim()} onClick={save}>{busy?'Zapisywanie…':'Zapisz cenę końcową'}</button>{active&&<button disabled={busy} onClick={reset}>Przywróć wyliczenie</button>}</div></div></div>{message&&<p className="muted finalPriceMessage">{message}</p>}<p className="financeNote">Zmiana trafia na oś czasu zlecenia. Zaakceptowany kosztorys pozostaje bez zmian jako zapis decyzji klienta.</p></Panel>
+}
+
 function SettlementPanel({order,rows,refs,items,actualMinutes,reload}){
  const paid=rows.reduce((sum,row)=>sum+Number(row.amount||0),0)
  const total=Number(order.total||0), costs=Number(order.parts_cost||0)+Number(order.other_cost||0)
@@ -701,7 +709,7 @@ function SettlementPanel({order,rows,refs,items,actualMinutes,reload}){
    </div>
    <div className="settlementProgress"><i style={{width:`${coverage}%`}}/><span>{coverage}%</span></div>
    <div className="settlementColumns">
-     <PaymentPanel order={order} rows={rows} refs={refs} reload={reload}/>
+     <div><FinalPriceEditor order={order} reload={reload}/><PaymentPanel order={order} rows={rows} refs={refs} reload={reload}/></div>
      <div className="centerGrid profitabilityGrid">
        <Panel title="Rentowność i przepływ gotówki"><div className="profitHero"><span>Marża kontrybucyjna</span><strong>{money(order.contribution)}</strong><span>Wynik gotówkowy po kosztach</span><b className={cashResult<0?'debt':''}>{money(cashResult)}</b></div><div className="centerFacts"><div><span>Koszty części i pozostałe</span><b>{money(costs)}</b></div><div><span>Realny czas</span><b>{durText(actualMinutes)}</b></div><div><span>Sprzedaż / realną h</span><b>{actualMinutes?money(total/(actualMinutes/60)):'—'}</b></div><div><span>Rabat</span><b>{money(order.discount)}</b></div></div><p className="financeNote">Marża opisuje opłacalność wykonanej pracy. Wpłata zmienia rozliczenie i wynik gotówkowy, dlatego oba wyniki są widoczne obok siebie.</p></Panel>
        <Panel title="Pozycje sprzedane">{items.length?<table><thead><tr><th>Pozycja</th><th>Koszt</th><th>Sprzedaż</th><th>Różnica</th></tr></thead><tbody>{items.map(x=><tr key={x.id}><td>{x.name}</td><td>{money(x.qty*x.unit_cost)}</td><td>{money(x.qty*x.unit_price)}</td><td>{money(x.qty*(x.unit_price-x.unit_cost))}</td></tr>)}</tbody></table>:<Empty/>}</Panel>

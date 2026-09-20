@@ -16,6 +16,7 @@ function fixture(){
       (1,1,'Serwis olejowy','WYDANE',1,220,100,180,0,0,0,0,'2026-04-01','2026-04-02'),
       (2,2,'Hamulce','NAPRAWA',2,220,200,350,20,50,80,20,'2026-05-01',NULL);
     INSERT INTO payments VALUES(1,1,400,'KARTA','','','2026-04-02'),(2,2,300,'PRZELEW','','','2026-05-02');
+    ALTER TABLE orders ADD COLUMN final_price REAL;
   `)
   return db
 }
@@ -29,6 +30,14 @@ test('customer profile combines vehicles, service history and settlements',()=>{
   assert.deepEqual(profile.totals,{revenue:1300,paid:700,balance:600,contribution:980,active:1})
   assert.equal(profile.vehicles.find(vehicle=>vehicle.id===2).order_count,1)
   assert.equal(profile.orders.find(order=>order.id===2).balance,600)
+})
+
+test('customer profile uses the final agreed price when it is set',()=>{
+  const db=fixture()
+  db.exec('UPDATE orders SET final_price=750 WHERE id=2')
+  const profile=customerProfile(db,1)
+  assert.equal(profile.orders.find(order=>order.id===2).total,750)
+  assert.equal(profile.orders.find(order=>order.id===2).balance,450)
 })
 
 test('customer profile returns null for a missing customer',()=>{

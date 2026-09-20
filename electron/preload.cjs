@@ -7,7 +7,7 @@ contextBridge.exposeInMainWorld('autologika', {
   vehicleHealth: { get:vehicleId=>ipcRenderer.invoke('vehicleHealth:get',vehicleId) },
   orders: {
     list:(status='')=>ipcRenderer.invoke('orders:list',status), get:id=>ipcRenderer.invoke('orders:get',id), create:data=>ipcRenderer.invoke('orders:create',data),
-    updateStatus:(id,status)=>ipcRenderer.invoke('orders:updateStatus',{id,status}), updateWait:(id,waitState)=>ipcRenderer.invoke('orders:updateWait',{id,waitState}), updateFinancials:(id,data)=>ipcRenderer.invoke('orders:updateFinancials',{id,data}), archive:id=>ipcRenderer.invoke('orders:archive',id), restore:id=>ipcRenderer.invoke('orders:restore',id), deletePreview:id=>ipcRenderer.invoke('orders:deletePreview',id), remove:id=>ipcRenderer.invoke('orders:remove',id),
+    updateStatus:(id,status)=>ipcRenderer.invoke('orders:updateStatus',{id,status}), updateWait:(id,waitState)=>ipcRenderer.invoke('orders:updateWait',{id,waitState}), updateFinancials:(id,data)=>ipcRenderer.invoke('orders:updateFinancials',{id,data}), updateFinalPrice:(id,price,note)=>ipcRenderer.invoke('orders:updateFinalPrice',{id,price,note}), archive:id=>ipcRenderer.invoke('orders:archive',id), restore:id=>ipcRenderer.invoke('orders:restore',id), deletePreview:id=>ipcRenderer.invoke('orders:deletePreview',id), remove:id=>ipcRenderer.invoke('orders:remove',id),
     exportPdf:(id,type='order')=>ipcRenderer.invoke('orders:exportPdf',{id,type}), notesGet:id=>ipcRenderer.invoke('orders:notesGet',id), notesSave:(id,data)=>ipcRenderer.invoke('orders:notesSave',{id,data})
   },
   intake: { create:data=>ipcRenderer.invoke('intake:create',data) },

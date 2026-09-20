@@ -71,7 +71,7 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Model')).querySelector('select').value`),'Corolla')
       console.log('GLOBAL_AZTEC_INTAKE','AZTEC captured over an active input and redirected from settings to populated quick intake')
       const inventoryDb=require('../electron/db.cjs').getDb()
-      assert.equal(inventoryDb.pragma('user_version',{simple:true}),9)
+      assert.equal(inventoryDb.pragma('user_version',{simple:true}),10)
       for(const column of ['barcode','brand','vehicle_fitment','cross_numbers','lookup_source','lookup_url'])assert.equal(inventoryDb.prepare('PRAGMA table_info(job_part_orders)').all().some(item=>item.name===column),true,`job_part_orders.${column}`)
       inventoryDb.prepare(`INSERT INTO inventory_parts(barcode,part_no,name,brand,vehicle_fitment,cross_numbers,stock,min_stock,unit_cost,sell_price,location) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run('4006381333931','W 712/95','Filtr oleju','MANN-FILTER','BMW 320d','11428507683\n11427854445',4,2,24.5,49,'A-03')
       const removablePart=inventoryDb.prepare(`INSERT INTO inventory_parts(part_no,name,brand,stock,min_stock,unit_cost,sell_price) VALUES (?,?,?,?,?,?,?)`).run('TEST-DELETE','Błędny wpis do usunięcia','TEST',0,0,0,0).lastInsertRowid
@@ -269,6 +269,16 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('[data-order-tab="diagnosis"]').getAttribute('aria-current')`), 'page')
       assert.equal(require('../electron/db.cjs').getDb().prepare('SELECT conclusion FROM diagnostics WHERE order_id=1').get().conclusion, 'Wniosek testowy UI')
       await openOrderTab('settlement')
+      await win.webContents.executeJavaScript(`{
+        const note=document.querySelector('[data-final-price-note]');
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(note,'Cena końcowa potwierdzona w teście');
+        note.dispatchEvent(new Event('input',{bubbles:true}));
+      }`)
+      await delay(80)
+      await win.webContents.executeJavaScript(`document.querySelector('[data-final-price-save]').click()`)
+      await delay(350)
+      assert.equal(require('../electron/db.cjs').getDb().prepare('SELECT final_price FROM orders WHERE id=1').get().final_price,600)
+      assert.equal(require('../electron/db.cjs').getDb().prepare("SELECT COUNT(*) n FROM order_events WHERE order_id=1 AND event_type='FINAL_PRICE'").get().n,1)
       await capture('order-payment')
       await win.webContents.executeJavaScript(`[...document.querySelectorAll('.workspaceContent button')].find(x=>x.textContent.includes('Zapisz płatność')).click()`)
       await delay(450)
