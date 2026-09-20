@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.43 — 2026-09-20
+
+### Pełna edycja pozycji zlecenia
+
+- Robociznę, części i pozostałe pozycje można edytować po przeniesieniu do zlecenia.
+- Edycja obejmuje ilość lub czas, ceny zakupu i sprzedaży, stawkę robocizny, numer katalogowy/OE, dostawcę oraz opis dla klienta.
+- Zmiana części powiązanej z magazynem automatycznie koryguje stan i blokuje zapis, gdy zapasu jest za mało.
+- Podsumowanie zlecenia, rentowność i rozliczenie są przeliczane od razu po zapisie.
+- Każda zmiana trafia na oś czasu zlecenia, a po wydaniu pojazdu edycja jest blokowana.
+
 ## 1.0.42 — 2026-09-20
 
 ### Edytowalna cena końcowa zlecenia

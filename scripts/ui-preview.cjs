@@ -352,13 +352,28 @@ app.on('browser-window-created', (_, win) => {
       const laborAfter=require('../electron/db.cjs').getDb().prepare("SELECT COUNT(*) n FROM order_items WHERE order_id=1 AND kind='ROBOCIZNA'").get().n
       assert.equal(laborAfter,laborBefore+1)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.performedWork').length`),1)
+      const editedLaborId=require('../electron/db.cjs').getDb().prepare("SELECT id FROM order_items WHERE order_id=1 AND kind='ROBOCIZNA' ORDER BY id DESC LIMIT 1").get().id
+      await win.webContents.executeJavaScript(`document.querySelector('[data-edit-order-item="${editedLaborId}"]').click()`)
+      await delay(180)
+      await win.webContents.executeJavaScript(`{
+        const qty=document.querySelector('[data-item-edit-qty]'),price=document.querySelector('[data-item-edit-price]');
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(qty,'2.5');qty.dispatchEvent(new Event('input',{bubbles:true}));
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(price,'300');price.dispatchEvent(new Event('input',{bubbles:true}));
+      }`)
+      await win.webContents.executeJavaScript(`document.querySelector('[data-item-edit-save]').click()`)
+      await delay(450)
+      const editedLabor=require('../electron/db.cjs').getDb().prepare('SELECT qty,unit_price,hours_snapshot,price_snapshot FROM order_items WHERE id=?').get(editedLaborId)
+      assert.equal(editedLabor.qty,2.5)
+      assert.equal(editedLabor.unit_price,300)
+      assert.equal(editedLabor.hours_snapshot,2.5)
+      assert.equal(editedLabor.price_snapshot,750)
       assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.newRepairPosition')`),true)
       assert.equal((await inspect()).fatal,false)
       await win.webContents.executeJavaScript(`document.querySelector('.newRepairPosition').scrollIntoView({block:'center'})`)
       await delay(200)
       await capture('orders-repair-added')
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.orderRepairDetail .mini>div:nth-child(2) b').textContent===document.querySelector('.orderrow strong').textContent`),true)
-      console.log('ORDER_REPAIR_CASCADE', 'repair selected from 3-level catalog and added as a procedure bundle')
+      console.log('ORDER_REPAIR_CASCADE', 'repair selected from 3-level catalog, edited and recalculated as a procedure bundle')
       await win.webContents.executeJavaScript(`[...document.querySelectorAll('button')].find(x=>x.textContent.includes('Nowe zlecenie')).click()`)
       await delay(350)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.vehicleChoiceList>button').length >= 6`),true)

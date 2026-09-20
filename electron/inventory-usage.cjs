@@ -68,4 +68,41 @@ function removeOrderItem(db,id){
   })()
 }
 
-module.exports={issueInventoryPart,removeOrderItem,syncOrderTotals}
+function updateOrderItem(db,id,input={}){
+  const itemId=Number(id),qty=number(input.qty),unitCost=number(input.unit_cost),unitPrice=number(input.unit_price)
+  if(!Number.isInteger(itemId)||itemId<=0)throw new Error('Nie wybrano pozycji zlecenia.')
+  if(qty<=0)throw new Error('Ilość lub czas muszą być większe od zera.')
+  if(unitCost<0||unitPrice<0)throw new Error('Cena nie może być ujemna.')
+  const name=String(input.name||'').trim()
+  if(!name)throw new Error('Nazwa pozycji jest wymagana.')
+
+  return db.transaction(()=>{
+    const row=db.prepare('SELECT * FROM order_items WHERE id=?').get(itemId)
+    if(!row)throw new Error('Pozycja zlecenia już nie istnieje.')
+    const order=db.prepare('SELECT status,archived_at FROM orders WHERE id=?').get(row.order_id)
+    if(!order)throw new Error('Zlecenie nie istnieje.')
+    if(order.archived_at||order.status==='WYDANE')throw new Error('Nie można edytować pozycji zamkniętego zlecenia.')
+
+    if(row.inventory_part_id){
+      const delta=qty-number(row.qty)
+      if(delta>0){
+        const changed=db.prepare('UPDATE inventory_parts SET stock=stock-?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND stock>=?').run(delta,row.inventory_part_id,delta)
+        if(changed.changes!==1)throw new Error('Za mało części w magazynie, aby zwiększyć ilość w zleceniu.')
+      }else if(delta<0){
+        db.prepare('UPDATE inventory_parts SET stock=stock+?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(-delta,row.inventory_part_id)
+      }
+    }
+
+    const description=String(input.customer_description??input.notes??row.customer_description??row.notes??'').trim()
+    const isLabor=row.kind==='ROBOCIZNA',hours=isLabor?qty:Number(row.hours_snapshot??qty),price=isLabor?Math.round(qty*unitPrice*100)/100:Number(row.price_snapshot??qty*unitPrice)
+    db.prepare(`UPDATE order_items SET name=?,qty=?,unit_cost=?,unit_price=?,part_no=?,oe_number=?,supplier=?,notes=?,customer_description=?,hours_snapshot=?,price_snapshot=? WHERE id=?`)
+      .run(name,qty,unitCost,unitPrice,String(input.part_no||'').trim(),String(input.oe_number||'').trim(),String(input.supplier||'').trim(),description,description,hours,price,itemId)
+    syncOrderTotals(db,row.order_id)
+    const before=`${row.name} · ${number(row.qty).toLocaleString('pl-PL')} × ${number(row.unit_price).toFixed(2)} zł`
+    const after=`${name} · ${qty.toLocaleString('pl-PL')} × ${unitPrice.toFixed(2)} zł`
+    db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(row.order_id,'ORDER_ITEM_UPDATED','Zmieniono pozycję zlecenia',`${before} → ${after}`)
+    return{updated:true,orderId:row.order_id,inventoryPartId:row.inventory_part_id||null,stockDelta:row.inventory_part_id?number(row.qty)-qty:0}
+  })()
+}
+
+module.exports={issueInventoryPart,removeOrderItem,updateOrderItem,syncOrderTotals}
