@@ -17,6 +17,7 @@ const { LOOKUP_VERSION, normalizeBarcode, normalizePartNumber, isGtin, lookupBar
 const { deleteInventoryPart } = require('./inventory-record.cjs')
 const { readBarcodeCache, writeBarcodeHit, writeBarcodeMiss, pruneBarcodeCache } = require('./barcode-cache.cjs')
 const { createOrderItem, issueInventoryPart, removeOrderItem, requireEditableOrder, updateOrderItem, updateOrderItemDescription } = require('./inventory-usage.cjs')
+const { archiveOrder, reopenOrder, updateOrderStatus, updateOrderWait } = require('./order-lifecycle.cjs')
 const { documentHtml: renderProtocolDocument } = require('./protocol-document.cjs')
 const { customerProfile } = require('./customer-profile.cjs')
 const { listDebtors } = require('./debtors.cjs')
@@ -272,8 +273,8 @@ function createMobileServer(port=8787){
       }
       if(orderMatch&&req.method==='PATCH'){
         const id=Number(orderMatch[1]),d=await readJson(req),db=getDb(),allowedStatus=['PRZYJETE','DIAGNOZA','AKCEPTACJA','NAPRAWA','GOTOWE','WYDANE'],allowedWait=['BRAK','KLIENT','CZESCI','DECYZJA']
-        if(d.status&&allowedStatus.includes(d.status))db.prepare('UPDATE orders SET status=? WHERE id=?').run(d.status,id)
-        if(d.wait_state&&allowedWait.includes(d.wait_state))db.prepare('UPDATE orders SET wait_state=? WHERE id=?').run(d.wait_state,id)
+        if(d.status&&allowedStatus.includes(d.status))updateOrderStatus(db,id,d.status)
+        if(d.wait_state&&allowedWait.includes(d.wait_state))updateOrderWait(db,id,d.wait_state)
         db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(id,'MOBILE_UPDATE','Zmiana z tabletu',JSON.stringify({status:d.status||null,wait_state:d.wait_state||null}))
         notifyDesktopSync('order-update');return sendJson(res,200,{ok:true})
       }
@@ -434,8 +435,8 @@ ipcMain.handle('vehicleFindings:setStatus',(_,{id,status})=>{getDb().prepare(`UP
 ipcMain.handle('orders:list',(_,status='')=>{const db=getDb();if(status==='ACTIVE')return db.prepare(`${orderSelect} WHERE o.archived_at IS NULL AND o.status!='WYDANE' ORDER BY o.opened_at DESC`).all();if(status==='ARCHIVE')return db.prepare(`${orderSelect} WHERE o.archived_at IS NOT NULL OR o.status='WYDANE' ORDER BY COALESCE(o.archived_at,o.closed_at,o.opened_at) DESC`).all();return status?db.prepare(`${orderSelect} WHERE o.status=? AND o.archived_at IS NULL ORDER BY o.opened_at DESC`).all(status):db.prepare(`${orderSelect} WHERE o.archived_at IS NULL AND o.status!='WYDANE' ORDER BY o.opened_at DESC`).all()})
 ipcMain.handle('orders:get',(_,id)=>getDb().prepare(`${orderSelect} WHERE o.id=?`).get(id))
 ipcMain.handle('orders:create',(_,d)=>{const r=getDb().prepare(`INSERT INTO orders(vehicle_id,title,complaint,status,priority,diagnosis_limit,labor_rate,diagnosis_fee,source,due_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(d.vehicle_id,d.title,d.complaint||'','PRZYJETE',d.priority||'NORMALNY',+d.diagnosis_limit||0,+d.labor_rate||220,+d.diagnosis_fee||0,d.source||'nieznane',d.due_at||null);return{id:r.lastInsertRowid}})
-ipcMain.handle('orders:archive',(_event,id)=>{const db=getDb(),order=db.prepare('SELECT status FROM orders WHERE id=?').get(id);if(!order)return{ok:false,error:'Zlecenie nie istnieje.'};if(!['GOTOWE','WYDANE'].includes(order.status))return{ok:false,error:'Do archiwum można przenieść zlecenie gotowe lub wydane.'};db.prepare('UPDATE orders SET archived_at=CURRENT_TIMESTAMP WHERE id=?').run(id);return{ok:true}})
-ipcMain.handle('orders:restore',(_event,id)=>{const result=getDb().prepare("UPDATE orders SET archived_at=NULL,status=CASE WHEN status='WYDANE' THEN 'GOTOWE' ELSE status END,closed_at=CASE WHEN status='WYDANE' THEN NULL ELSE closed_at END WHERE id=?").run(id);return{ok:result.changes>0}})
+ipcMain.handle('orders:archive',(_event,id)=>archiveOrder(getDb(),id))
+ipcMain.handle('orders:restore',(_event,{id,note})=>reopenOrder(getDb(),id,note))
 ipcMain.handle('orders:deletePreview',(_event,id)=>deletionPreview(getDb(),'order',id))
 ipcMain.handle('orders:remove',(_event,id)=>removeEntity(getDb(),'order',id,{unlink:file=>fs.unlinkSync(file)}))
 ipcMain.handle('intake:create',(_,d)=>{
@@ -467,16 +468,10 @@ ipcMain.handle('intake:create',(_,d)=>{
 })
 
 ipcMain.handle('orders:updateStatus',(_,{id,status})=>{
-  const db=getDb(); const prev=db.prepare('SELECT status FROM orders WHERE id=?').get(id)
-  db.prepare("UPDATE orders SET status=?,closed_at=CASE WHEN ?='WYDANE' THEN CURRENT_TIMESTAMP ELSE closed_at END WHERE id=?").run(status,status,id)
-  if(!prev || prev.status!==status) db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(id,'STATUS','Zmiana statusu',`${prev?.status||'—'} → ${status}`)
-  return true
+  return updateOrderStatus(getDb(),id,status)
 })
 ipcMain.handle('orders:updateWait',(_,{id,waitState})=>{
-  const db=getDb(); const v=waitState||'BRAK'; const prev=db.prepare('SELECT wait_state FROM orders WHERE id=?').get(id)
-  db.prepare("UPDATE orders SET wait_state=? WHERE id=?").run(v,id)
-  if(!prev || prev.wait_state!==v) db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(id,'WAIT','Zmiana oczekiwania',`${prev?.wait_state||'BRAK'} → ${v}`)
-  return true
+  return updateOrderWait(getDb(),id,waitState)
 })
 
 ipcMain.handle('orders:updateFinancials',(_,{id,data})=>{const db=getDb();return db.transaction(()=>{requireEditableOrder(db,id);const values=['labor_hours','labor_rate','parts_cost','parts_sale','other_cost','other_sale','discount','diagnosis_fee'].map(key=>Number(data[key]||0));if(values.some(value=>!Number.isFinite(value)||value<0))throw new Error('Wartości finansowe muszą być liczbami nieujemnymi.');db.prepare(`UPDATE orders SET labor_hours=?,labor_rate=?,parts_cost=?,parts_sale=?,other_cost=?,other_sale=?,discount=?,diagnosis_fee=? WHERE id=?`).run(...values,id);db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(id,'FINANCIALS','Zmieniono parametry finansowe zlecenia',`Robocizna ${values[0].toFixed(2)} h × ${values[1].toFixed(2)} zł · rabat ${values[6].toFixed(2)} zł · diagnostyka ${values[7].toFixed(2)} zł`);return true})()})

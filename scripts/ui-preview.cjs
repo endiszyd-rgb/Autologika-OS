@@ -17,7 +17,18 @@ app.on('browser-window-created', (_, win) => {
   })
   win.webContents.once('did-finish-load', async () => {
     try {
-      const capture = async name => fs.writeFileSync(path.join(output, `${name}.png`), (await win.webContents.capturePage()).toPNG())
+      const capture = async name => {
+        let lastError
+        for(let attempt=1;attempt<=3;attempt++){
+          try{
+            const image=await win.webContents.capturePage()
+            if(!image.isEmpty()){fs.writeFileSync(path.join(output,`${name}.png`),image.toPNG());return}
+            lastError=new Error('Electron zwrócił pusty zrzut ekranu.')
+          }catch(error){lastError=error}
+          await delay(250*attempt)
+        }
+        throw lastError
+      }
       await delay(450)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.bootSplash') !== null`), true)
       await capture('boot-splash')
@@ -425,12 +436,21 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.archivedOrderDetail')`),true)
       await capture('orders-archive')
       await win.webContents.executeJavaScript(`document.querySelector('.archiveActions button').click()`)
-      await delay(400)
+      await delay(180)
+      assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('[data-reopen-order-save]')`),true)
+      await win.webContents.executeJavaScript(`{
+        const field=document.querySelector('.modal textarea');
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(field,'Korekta zlecenia w teście interfejsu');
+        field.dispatchEvent(new Event('input',{bubbles:true}));
+      }`)
+      await win.webContents.executeJavaScript(`document.querySelector('[data-reopen-order-save]').click()`)
+      await delay(450)
       assert.equal(database.prepare('SELECT COUNT(*) n FROM orders WHERE archived_at IS NOT NULL').get().n,archiveBefore)
+      assert.equal(database.prepare("SELECT COUNT(*) n FROM order_events WHERE event_type='ORDER_REOPENED' AND details LIKE '%Korekta zlecenia%'").get().n,1)
       await win.webContents.executeJavaScript(`document.querySelector('[data-orders-view="active"]').click()`)
       await delay(200)
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.orderrow')].some(x=>x.textContent.includes('Gotowe'))`),true)
-      console.log('ORDER_ARCHIVE_DELETE', 'archive, restore and permanent order deletion verified; vehicle retained')
+      console.log('ORDER_ARCHIVE_DELETE', 'archive and audited reopen with a required reason verified; vehicle retained')
       const vehicleOnlyCustomer=database.prepare("INSERT INTO customers(name) VALUES ('Klient Pojazdu UI')").run().lastInsertRowid
       const vehicleOnly=database.prepare("INSERT INTO vehicles(customer_id,plate,make,model) VALUES (?,'PO DELETE','Toyota','Yaris')").run(vehicleOnlyCustomer).lastInsertRowid
       const cascadeCustomer=database.prepare("INSERT INTO customers(name) VALUES ('Klient Kaskada UI')").run().lastInsertRowid

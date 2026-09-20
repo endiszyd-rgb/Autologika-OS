@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.45 — 2026-09-20
+
+### Kontrolowane ponowne otwieranie zleceń
+
+- Zamknięte zlecenie można otworzyć do korekty bezpośrednio z archiwum lub Centrum zlecenia.
+- Operacja wymaga podania powodu, przywraca status „Gotowe” i zapisuje pełne zdarzenie na osi czasu.
+- Zwykła zmiana statusu oraz oczekiwania nie pozwala już ominąć ochrony zamkniętego zlecenia.
+- Status „Wydane” nadal można nadać wyłącznie przez prawidłowo ukończony proces QC i wydania.
+- Test interfejsu odporniej wykonuje zrzuty po przeładowaniu okna Electron.
+
 ## 1.0.44 — 2026-09-20
 
 ### Ochrona rozliczonych zleceń
