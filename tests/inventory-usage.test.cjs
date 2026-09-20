@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {issueInventoryPart,removeOrderItem,updateOrderItem}=require('../electron/inventory-usage.cjs')
+const {createOrderItem,issueInventoryPart,removeOrderItem,updateOrderItem,updateOrderItemDescription}=require('../electron/inventory-usage.cjs')
 
 function database(){
  const db=new DatabaseSync(':memory:')
@@ -9,7 +9,7 @@ function database(){
   CREATE TABLE suppliers(id INTEGER PRIMARY KEY,name TEXT);
   CREATE TABLE inventory_parts(id INTEGER PRIMARY KEY,supplier_id INTEGER,name TEXT,part_no TEXT,location TEXT,stock REAL,unit_cost REAL,sell_price REAL,updated_at TEXT);
   CREATE TABLE orders(id INTEGER PRIMARY KEY,status TEXT,archived_at TEXT,parts_cost REAL DEFAULT 0,parts_sale REAL DEFAULT 0,other_cost REAL DEFAULT 0,other_sale REAL DEFAULT 0);
-  CREATE TABLE order_items(id INTEGER PRIMARY KEY,order_id INTEGER,kind TEXT,name TEXT,qty REAL,unit_cost REAL,unit_price REAL,part_no TEXT,oe_number TEXT,supplier TEXT,notes TEXT,customer_description TEXT,hours_snapshot REAL,price_snapshot REAL,inventory_part_id INTEGER);
+  CREATE TABLE order_items(id INTEGER PRIMARY KEY,order_id INTEGER,kind TEXT,name TEXT,qty REAL,unit_cost REAL,unit_price REAL,part_no TEXT,oe_number TEXT,supplier TEXT,notes TEXT,catalog_work_id TEXT,catalog_variant_id TEXT,work_name TEXT,variant_name TEXT,customer_description TEXT,technical_description TEXT,hours_snapshot REAL,price_snapshot REAL,inventory_part_id INTEGER);
   CREATE TABLE order_events(id INTEGER PRIMARY KEY,order_id INTEGER,event_type TEXT,title TEXT,details TEXT);
   INSERT INTO suppliers VALUES(1,'Moto Dostawca');
   INSERT INTO inventory_parts VALUES(7,1,'Filtr oleju','W 712/95','A-03',4,24.5,49,NULL);
@@ -34,6 +34,26 @@ test('wydanie części zmniejsza stan i dodaje wycenioną pozycję do zlecenia',
  const order=db.prepare('SELECT parts_cost,parts_sale FROM orders WHERE id=3').get()
  assert.equal(order.parts_cost,49)
  assert.equal(order.parts_sale,98)
+})
+
+test('ręczne dodanie pozycji waliduje dane, przelicza zlecenie i zapisuje historię',()=>{
+ const db=database()
+ const result=createOrderItem(db,3,{kind:'USLUGA_ZEW',name:'Geometria kół',qty:1,unit_cost:100,unit_price:180,customer_description:'Ustawienie geometrii'})
+ assert.ok(result.id>0)
+ assert.equal(db.prepare('SELECT other_cost FROM orders WHERE id=3').get().other_cost,100)
+ assert.equal(db.prepare('SELECT other_sale FROM orders WHERE id=3').get().other_sale,180)
+ assert.equal(db.prepare("SELECT COUNT(*) count FROM order_events WHERE event_type='ORDER_ITEM_ADDED'").get().count,1)
+ assert.throws(()=>createOrderItem(db,3,{kind:'CZESC',name:'Błędna część',qty:-1,unit_cost:1,unit_price:1}),/większe od zera/)
+})
+
+test('zamknięte zlecenie chroni dodawanie, opisy i usuwanie pozycji oraz stan magazynu',()=>{
+ const db=database(),issued=issueInventoryPart(db,{inventoryPartId:7,orderId:3,qty:1})
+ db.exec("UPDATE orders SET status='WYDANE' WHERE id=3")
+ assert.throws(()=>createOrderItem(db,3,{kind:'MATERIAL',name:'Czyściwo',qty:1,unit_cost:1,unit_price:2}),/zamknięte/)
+ assert.throws(()=>updateOrderItemDescription(db,issued.id,'zmieniony opis'),/zamknięte/)
+ assert.throws(()=>removeOrderItem(db,issued.id),/zamknięte/)
+ assert.equal(db.prepare('SELECT stock FROM inventory_parts WHERE id=7').get().stock,3)
+ assert.equal(db.prepare('SELECT COUNT(*) count FROM order_items WHERE id=?').get(issued.id).count,1)
 })
 
 test('brak stanu cofa całą operację',()=>{
@@ -77,5 +97,5 @@ test('edycja nie pozwala wydać większej ilości niż stan ani zmienić zamkni�
  assert.throws(()=>updateOrderItem(db,issued.id,{name:'Filtr',qty:6,unit_cost:20,unit_price:40}),/Za mało części/)
  assert.equal(db.prepare('SELECT stock FROM inventory_parts WHERE id=7').get().stock,3)
  db.exec("UPDATE orders SET status='WYDANE' WHERE id=3")
- assert.throws(()=>updateOrderItem(db,issued.id,{name:'Filtr',qty:1,unit_cost:20,unit_price:40}),/zamkniętego zlecenia/)
+ assert.throws(()=>updateOrderItem(db,issued.id,{name:'Filtr',qty:1,unit_cost:20,unit_price:40}),/zamknięte/)
 })

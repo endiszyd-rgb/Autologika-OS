@@ -3,6 +3,15 @@ function number(value){
   return Number.isFinite(parsed)?parsed:0
 }
 
+function requireEditableOrder(db,orderId){
+  const id=Number(orderId)
+  if(!Number.isInteger(id)||id<=0)throw new Error('Nie wybrano zlecenia.')
+  const order=db.prepare('SELECT id,status,archived_at FROM orders WHERE id=?').get(id)
+  if(!order)throw new Error('Zlecenie nie istnieje.')
+  if(order.archived_at||order.status==='WYDANE')throw new Error('Zlecenie jest zamknięte. Najpierw przywróć je do aktywnych, aby zmienić zakres lub rozliczenie.')
+  return order
+}
+
 function syncOrderTotals(db,orderId){
   const sums=db.prepare(`SELECT
     COALESCE(SUM(CASE WHEN kind='CZESC' THEN qty*unit_cost ELSE 0 END),0) parts_cost,
@@ -24,9 +33,7 @@ function issueInventoryPart(db,{inventoryPartId,orderId,qty,oeNumber=''}){
   return db.transaction(()=>{
     const part=db.prepare(`SELECT p.*,s.name supplier FROM inventory_parts p LEFT JOIN suppliers s ON s.id=p.supplier_id WHERE p.id=?`).get(partId)
     if(!part)throw new Error('Część nie istnieje w magazynie.')
-    const order=db.prepare('SELECT id,status,archived_at FROM orders WHERE id=?').get(targetOrderId)
-    if(!order)throw new Error('Zlecenie nie istnieje.')
-    if(order.archived_at||order.status==='WYDANE')throw new Error('Nie można wydać części do zamkniętego zlecenia.')
+    requireEditableOrder(db,targetOrderId)
     if(number(part.stock)+1e-9<amount)throw new Error(`Za mało części na stanie. Dostępne: ${number(part.stock).toLocaleString('pl-PL')}.`)
 
     const changed=db.prepare('UPDATE inventory_parts SET stock=stock-?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND stock>=?').run(amount,partId,amount)
@@ -53,6 +60,7 @@ function removeOrderItem(db,id){
   return db.transaction(()=>{
     const row=db.prepare('SELECT * FROM order_items WHERE id=?').get(itemId)
     if(!row)return{removed:false,restored:0}
+    requireEditableOrder(db,row.order_id)
     let restored=0
     if(row.inventory_part_id){
       const changed=db.prepare('UPDATE inventory_parts SET stock=stock+?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(number(row.qty),row.inventory_part_id)
@@ -79,9 +87,7 @@ function updateOrderItem(db,id,input={}){
   return db.transaction(()=>{
     const row=db.prepare('SELECT * FROM order_items WHERE id=?').get(itemId)
     if(!row)throw new Error('Pozycja zlecenia już nie istnieje.')
-    const order=db.prepare('SELECT status,archived_at FROM orders WHERE id=?').get(row.order_id)
-    if(!order)throw new Error('Zlecenie nie istnieje.')
-    if(order.archived_at||order.status==='WYDANE')throw new Error('Nie można edytować pozycji zamkniętego zlecenia.')
+    requireEditableOrder(db,row.order_id)
 
     if(row.inventory_part_id){
       const delta=qty-number(row.qty)
@@ -105,4 +111,39 @@ function updateOrderItem(db,id,input={}){
   })()
 }
 
-module.exports={issueInventoryPart,removeOrderItem,updateOrderItem,syncOrderTotals}
+function createOrderItem(db,orderId,input={}){
+  const targetOrderId=Number(orderId),name=String(input.name||'').trim()
+  const qty=number(input.qty),unitCost=number(input.unit_cost),unitPrice=number(input.unit_price)
+  if(!name)throw new Error('Nazwa pozycji jest wymagana.')
+  if(qty<=0)throw new Error('Ilość lub czas muszą być większe od zera.')
+  if(unitCost<0||unitPrice<0)throw new Error('Cena nie może być ujemna.')
+  const kind=String(input.kind||'CZESC').trim().toUpperCase()
+  if(!['CZESC','MATERIAL','USLUGA_ZEW','ROBOCIZNA'].includes(kind))throw new Error('Nieprawidłowy typ pozycji zlecenia.')
+  return db.transaction(()=>{
+    requireEditableOrder(db,targetOrderId)
+    const description=String(input.customer_description??input.notes??'').trim()
+    const hours=input.hours_snapshot??qty,price=input.price_snapshot??(qty*unitPrice)
+    const result=db.prepare(`INSERT INTO order_items(order_id,kind,name,qty,unit_cost,unit_price,part_no,oe_number,supplier,notes,catalog_work_id,catalog_variant_id,work_name,variant_name,customer_description,technical_description,hours_snapshot,price_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+      targetOrderId,kind,name,qty,unitCost,unitPrice,String(input.part_no||'').trim(),String(input.oe_number||'').trim(),String(input.supplier||'').trim(),description,input.catalog_work_id||null,input.catalog_variant_id||null,input.work_name||null,input.variant_name||null,description,String(input.technical_description||''),number(hours),number(price)
+    )
+    syncOrderTotals(db,targetOrderId)
+    db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(targetOrderId,'ORDER_ITEM_ADDED','Dodano pozycję zlecenia',`${name} · ${qty.toLocaleString('pl-PL')} × ${unitPrice.toFixed(2)} zł`)
+    return{id:Number(result.lastInsertRowid),orderId:targetOrderId}
+  })()
+}
+
+function updateOrderItemDescription(db,id,description=''){
+  const itemId=Number(id)
+  if(!Number.isInteger(itemId)||itemId<=0)throw new Error('Nie wybrano pozycji zlecenia.')
+  return db.transaction(()=>{
+    const row=db.prepare('SELECT order_id,customer_description,notes FROM order_items WHERE id=?').get(itemId)
+    if(!row)throw new Error('Pozycja zlecenia już nie istnieje.')
+    requireEditableOrder(db,row.order_id)
+    const value=String(description||'').trim()
+    db.prepare('UPDATE order_items SET customer_description=?,notes=? WHERE id=?').run(value,value,itemId)
+    db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(row.order_id,'ORDER_ITEM_UPDATED','Zmieniono opis pozycji zlecenia',value||'Usunięto opis dla klienta')
+    return true
+  })()
+}
+
+module.exports={createOrderItem,issueInventoryPart,removeOrderItem,requireEditableOrder,updateOrderItem,updateOrderItemDescription,syncOrderTotals}

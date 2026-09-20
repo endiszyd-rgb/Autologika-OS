@@ -16,7 +16,7 @@ const { decodeRegistrationPayload } = require('./registration-decoder.cjs')
 const { LOOKUP_VERSION, normalizeBarcode, normalizePartNumber, isGtin, lookupBarcodeOnline, lookupPartNumberOnline } = require('./part-catalog.cjs')
 const { deleteInventoryPart } = require('./inventory-record.cjs')
 const { readBarcodeCache, writeBarcodeHit, writeBarcodeMiss, pruneBarcodeCache } = require('./barcode-cache.cjs')
-const { issueInventoryPart, removeOrderItem, updateOrderItem } = require('./inventory-usage.cjs')
+const { createOrderItem, issueInventoryPart, removeOrderItem, requireEditableOrder, updateOrderItem, updateOrderItemDescription } = require('./inventory-usage.cjs')
 const { documentHtml: renderProtocolDocument } = require('./protocol-document.cjs')
 const { customerProfile } = require('./customer-profile.cjs')
 const { listDebtors } = require('./debtors.cjs')
@@ -479,7 +479,7 @@ ipcMain.handle('orders:updateWait',(_,{id,waitState})=>{
   return true
 })
 
-ipcMain.handle('orders:updateFinancials',(_,{id,data})=>{getDb().prepare(`UPDATE orders SET labor_hours=?,labor_rate=?,parts_cost=?,parts_sale=?,other_cost=?,other_sale=?,discount=?,diagnosis_fee=? WHERE id=?`).run(+data.labor_hours||0,+data.labor_rate||0,+data.parts_cost||0,+data.parts_sale||0,+data.other_cost||0,+data.other_sale||0,+data.discount||0,+data.diagnosis_fee||0,id);return true})
+ipcMain.handle('orders:updateFinancials',(_,{id,data})=>{const db=getDb();return db.transaction(()=>{requireEditableOrder(db,id);const values=['labor_hours','labor_rate','parts_cost','parts_sale','other_cost','other_sale','discount','diagnosis_fee'].map(key=>Number(data[key]||0));if(values.some(value=>!Number.isFinite(value)||value<0))throw new Error('Wartości finansowe muszą być liczbami nieujemnymi.');db.prepare(`UPDATE orders SET labor_hours=?,labor_rate=?,parts_cost=?,parts_sale=?,other_cost=?,other_sale=?,discount=?,diagnosis_fee=? WHERE id=?`).run(...values,id);db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(id,'FINANCIALS','Zmieniono parametry finansowe zlecenia',`Robocizna ${values[0].toFixed(2)} h × ${values[1].toFixed(2)} zł · rabat ${values[6].toFixed(2)} zł · diagnostyka ${values[7].toFixed(2)} zł`);return true})()})
 ipcMain.handle('orders:updateFinalPrice',(_,{id,price,note})=>{
   const db=getDb(),order=db.prepare('SELECT final_price FROM orders WHERE id=?').get(id)
   if(!order)throw new Error('Zlecenie nie istnieje.')
@@ -496,10 +496,10 @@ ipcMain.handle('orders:notesGet',(_,id)=>getDb().prepare('SELECT * FROM order_no
 ipcMain.handle('orders:notesSave',(_,{id,data})=>{getDb().prepare(`INSERT INTO order_notes(order_id,intake_notes,release_notes,qc_notes,updated_at) VALUES (?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(order_id) DO UPDATE SET intake_notes=excluded.intake_notes,release_notes=excluded.release_notes,qc_notes=excluded.qc_notes,updated_at=CURRENT_TIMESTAMP`).run(id,data.intake_notes||'',data.release_notes||'',data.qc_notes||'');return true})
 
 ipcMain.handle('items:list',(_,orderId)=>getDb().prepare('SELECT * FROM order_items WHERE order_id=? ORDER BY id DESC').all(orderId))
-ipcMain.handle('items:create',(_,{orderId,data})=>{const r=getDb().prepare(`INSERT INTO order_items(order_id,kind,name,qty,unit_cost,unit_price,part_no,oe_number,supplier,notes,catalog_work_id,catalog_variant_id,work_name,variant_name,customer_description,technical_description,hours_snapshot,price_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(orderId,data.kind||'CZESC',data.name,+data.qty||1,+data.unit_cost||0,+data.unit_price||0,data.part_no||'',data.oe_number||'',data.supplier||'',data.notes||data.customer_description||'',data.catalog_work_id||null,data.catalog_variant_id||null,data.work_name||null,data.variant_name||null,data.customer_description||data.notes||'',data.technical_description||'',data.hours_snapshot??(+data.qty||1),data.price_snapshot??(+data.unit_price||0));syncOrderItemTotals(orderId);return{id:r.lastInsertRowid}})
+ipcMain.handle('items:create',(_,{orderId,data})=>createOrderItem(getDb(),orderId,data))
 ipcMain.handle('items:remove',(_,id)=>removeOrderItem(getDb(),id).removed)
 ipcMain.handle('items:update',(_,{id,data})=>updateOrderItem(getDb(),id,data))
-ipcMain.handle('items:updateDescription',(_,{id,description})=>{getDb().prepare('UPDATE order_items SET customer_description=?,notes=? WHERE id=?').run(String(description||''),String(description||''),id);return true})
+ipcMain.handle('items:updateDescription',(_,{id,description})=>updateOrderItemDescription(getDb(),id,description))
 
 ipcMain.handle('diagnostics:get',(_,orderId)=>getDb().prepare('SELECT * FROM diagnostics WHERE order_id=? ORDER BY id DESC LIMIT 1').get(orderId)||null)
 ipcMain.handle('diagnostics:save',(_,{orderId,data})=>{const db=getDb();const ex=db.prepare('SELECT id FROM diagnostics WHERE order_id=?').get(orderId);if(ex)db.prepare(`UPDATE diagnostics SET symptom_confirmed=?,dtcs=?,measurements=?,hypothesis=?,conclusion=?,recommendation=?,time_hours=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(data.symptom_confirmed||'',data.dtcs||'',data.measurements||'',data.hypothesis||'',data.conclusion||'',data.recommendation||'',+data.time_hours||0,ex.id);else db.prepare(`INSERT INTO diagnostics(order_id,symptom_confirmed,dtcs,measurements,hypothesis,conclusion,recommendation,time_hours) VALUES (?,?,?,?,?,?,?,?)`).run(orderId,data.symptom_confirmed||'',data.dtcs||'',data.measurements||'',data.hypothesis||'',data.conclusion||'',data.recommendation||'',+data.time_hours||0);return true})
@@ -902,6 +902,7 @@ ipcMain.handle('workTemplates:remove',(_d,id)=>{getDb().prepare('UPDATE work_tem
 
 ipcMain.handle('procedures:list',(_,orderId)=>getDb().prepare('SELECT * FROM work_procedure_runs WHERE order_id=? ORDER BY id DESC').all(orderId).map(x=>{for(const k of ['pre_json','steps_json','qc_json','recommendations_json','safety_json','parts_json','materials_json','technical_json','progress_json']){try{x[k.replace('_json','')]=JSON.parse(x[k]|| (k==='progress_json'?'{}':'[]'))}catch{x[k.replace('_json','')]=k==='progress_json'?{}:[]}}return x}))
 ipcMain.handle('procedures:createBundle',(_,{orderId,data})=>{const db=getDb();const tx=db.transaction(()=>{
+  requireEditableOrder(db,orderId)
   const hours=+data.hours||1,unitPrice=+data.rate||0,total=hours*unitPrice
   const labor=db.prepare("INSERT INTO order_items(order_id,kind,name,qty,unit_cost,unit_price,notes,catalog_work_id,catalog_variant_id,work_name,variant_name,customer_description,technical_description,hours_snapshot,price_snapshot) VALUES (?,'ROBOCIZNA',?,?,?,?,?,?,?,?,?,?,?,?,?)").run(orderId,data.name,hours,0,unitPrice,data.scope||'',data.catalog_work_id||null,data.catalog_variant_id||null,data.title||data.name,data.variant||'',data.scope||'',data.technicalDescription||'',hours,total)
   const selectedParts=(data.parts||[]).filter(x=>x.selected!==false)

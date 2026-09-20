@@ -147,10 +147,10 @@ function OrderItemEditor({item,close,saved}){
  return <Modal wide title={`Edytuj pozycję · ${item.kind}`} close={close}><div className="orderItemEditSummary"><div><small>WARTOŚĆ PO ZMIANIE</small><b>{money(total)}</b></div>{item.inventory_part_id&&<span>Pozycja połączona z magazynem · zmiana ilości skoryguje stan</span>}</div><div className="formgrid"><label className="wide">Nazwa<input data-item-edit-name value={d.name} onChange={e=>setD({...d,name:e.target.value})}/></label><label>{labor?'Czas [h]':'Ilość'}<input data-item-edit-qty type="number" min="0.01" step={labor?'0.1':'1'} value={d.qty} onChange={e=>setD({...d,qty:e.target.value})}/></label>{!labor&&<label>Koszt zakupu / szt.<input type="number" min="0" step="0.01" value={d.unit_cost} onChange={e=>setD({...d,unit_cost:e.target.value})}/></label>}<label>{labor?'Stawka zł/h':'Cena sprzedaży / szt.'}<input data-item-edit-price type="number" min="0" step="0.01" value={d.unit_price} onChange={e=>setD({...d,unit_price:e.target.value})}/></label>{!labor&&<><label>Numer katalogowy<input value={d.part_no} onChange={e=>setD({...d,part_no:e.target.value})}/></label><label>Numer OE<input value={d.oe_number} onChange={e=>setD({...d,oe_number:e.target.value})}/></label><label>Dostawca<input value={d.supplier} onChange={e=>setD({...d,supplier:e.target.value})}/></label></>}<label className="wide">Opis dla klienta<textarea value={d.customer_description} onChange={e=>setD({...d,customer_description:e.target.value})}/></label></div>{error&&<div className="warnbox">{error}</div>}<div className="actionrow right"><button onClick={close}>Anuluj</button><button className="primary" data-item-edit-save disabled={busy||!d.name.trim()||Number(d.qty)<=0} onClick={save}>{busy?'Zapisywanie…':'Zapisz i przelicz zlecenie'}</button></div></Modal>
 }
 
-function PerformedWorkList({items,reload}){
+function PerformedWorkList({items,reload,locked=false}){
  const[editing,setEditing]=useState(null),works=items.filter(item=>item.kind==='ROBOCIZNA')
  if(!works.length)return <Empty text="Nie zapisano jeszcze wykonanych prac."/>
- return <><div className="performedWorks">{works.map(item=><article key={item.id} className="performedWork"><div><small>WYKONANA PRACA</small><h3>{item.work_name||item.name}</h3>{item.variant_name&&<b className="workVariant">{item.variant_name}</b>}<p>{item.customer_description||item.notes||'Brak opisu zakresu.'}</p></div><div className="workPrice"><b>{money(item.price_snapshot??item.qty*item.unit_price)}</b><span>{Number(item.hours_snapshot??item.qty??0).toFixed(1)} h</span><button data-edit-order-item={item.id} onClick={()=>setEditing(item)}>Edytuj pozycję</button><button className="danger" onClick={()=>confirm('Usunąć tę pracę ze zlecenia?')&&api.items.remove(item.id).then(reload)}>Usuń</button></div></article>)}</div>{editing&&<OrderItemEditor item={editing} close={()=>setEditing(null)} saved={()=>{setEditing(null);reload()}}/>}</>
+ return <><div className="performedWorks">{works.map(item=><article key={item.id} className="performedWork"><div><small>WYKONANA PRACA</small><h3>{item.work_name||item.name}</h3>{item.variant_name&&<b className="workVariant">{item.variant_name}</b>}<p>{item.customer_description||item.notes||'Brak opisu zakresu.'}</p></div><div className="workPrice"><b>{money(item.price_snapshot??item.qty*item.unit_price)}</b><span>{Number(item.hours_snapshot??item.qty??0).toFixed(1)} h</span><button data-edit-order-item={item.id} disabled={locked} title={locked?'Zamknięte zlecenie jest tylko do odczytu':''} onClick={()=>setEditing(item)}>Edytuj pozycję</button><button className="danger" disabled={locked} title={locked?'Zamknięte zlecenie jest tylko do odczytu':''} onClick={()=>confirm('Usunąć tę pracę ze zlecenia?')&&api.items.remove(item.id).then(reload)}>Usuń</button></div></article>)}</div>{editing&&!locked&&<OrderItemEditor item={editing} close={()=>setEditing(null)} saved={()=>{setEditing(null);reload()}}/>}</>
 }
 function OrderRows({rows,onSelect}){return rows?.length?<div>{rows.map(o=><div className="orderrow" data-order-id={o.id} key={o.id} onClick={()=>onSelect?.(o.id)}><div><b>{o.plate||'bez nr'} · {o.make} {o.model}</b><span>{o.title}</span><small>{o.customer}</small></div><div><em className={'tag '+String(o.status).toLowerCase()}>{labels[o.status]||o.status}</em>{o.total!=null&&<strong>{money(o.total)}</strong>}</div></div>)}</div>:<Empty/>}
 
@@ -701,7 +701,7 @@ function FinalPriceEditor({order,reload}){
  return <Panel title="Cena końcowa zlecenia"><div className="finalPriceEditor" data-final-price-active={active?'true':'false'}><div className="finalPriceCurrent"><small>WYLICZENIE Z POZYCJI</small><b>{money(order.calculated_total)}</b><span>{active?'Zastosowano ręczną cenę końcową':'Cena końcowa jest liczona automatycznie'}</span></div><div className="finalPriceForm"><label>Cena końcowa brutto<input data-final-price-input type="number" min="0" step="0.01" value={price} onChange={event=>setPrice(event.target.value)}/></label><label>Powód korekty<input data-final-price-note value={note} onChange={event=>setNote(event.target.value)} placeholder="np. uzgodniony rabat, prace dodatkowe"/></label><div className="actionrow"><button className="primary" data-final-price-save disabled={busy||price===''||!note.trim()} onClick={save}>{busy?'Zapisywanie…':'Zapisz cenę końcową'}</button>{active&&<button disabled={busy} onClick={reset}>Przywróć wyliczenie</button>}</div></div></div>{message&&<p className="muted finalPriceMessage">{message}</p>}<p className="financeNote">Zmiana trafia na oś czasu zlecenia. Zaakceptowany kosztorys pozostaje bez zmian jako zapis decyzji klienta.</p></Panel>
 }
 
-function SettlementPanel({order,rows,refs,items,actualMinutes,reload}){
+function SettlementPanel({order,rows,refs,items,actualMinutes,reload,locked=false}){
  const[editingItem,setEditingItem]=useState(null)
  const paid=rows.reduce((sum,row)=>sum+Number(row.amount||0),0)
  const total=Number(order.total||0), costs=Number(order.parts_cost||0)+Number(order.other_cost||0)
@@ -719,10 +719,10 @@ function SettlementPanel({order,rows,refs,items,actualMinutes,reload}){
      <div><FinalPriceEditor order={order} reload={reload}/><PaymentPanel order={order} rows={rows} refs={refs} reload={reload}/></div>
      <div className="centerGrid profitabilityGrid">
        <Panel title="Rentowność i przepływ gotówki"><div className="profitHero"><span>Marża kontrybucyjna</span><strong>{money(order.contribution)}</strong><span>Wynik gotówkowy po kosztach</span><b className={cashResult<0?'debt':''}>{money(cashResult)}</b></div><div className="centerFacts"><div><span>Koszty części i pozostałe</span><b>{money(costs)}</b></div><div><span>Realny czas</span><b>{durText(actualMinutes)}</b></div><div><span>Sprzedaż / realną h</span><b>{actualMinutes?money(total/(actualMinutes/60)):'—'}</b></div><div><span>Rabat</span><b>{money(order.discount)}</b></div></div><p className="financeNote">Marża opisuje opłacalność wykonanej pracy. Wpłata zmienia rozliczenie i wynik gotówkowy, dlatego oba wyniki są widoczne obok siebie.</p></Panel>
-       <Panel title="Pozycje sprzedane">{items.length?<table><thead><tr><th>Pozycja</th><th>Koszt</th><th>Sprzedaż</th><th>Różnica</th><th/></tr></thead><tbody>{items.map(x=><tr key={x.id}><td><b>{x.name}</b><small>{x.kind==='ROBOCIZNA'?`${Number((x.hours_snapshot??x.qty)||0).toFixed(1)} h`:x.part_no||x.oe_number||x.kind}</small></td><td>{money(x.qty*x.unit_cost)}</td><td>{money(x.qty*x.unit_price)}</td><td>{money(x.qty*(x.unit_price-x.unit_cost))}</td><td><button data-edit-order-item={x.id} onClick={()=>setEditingItem(x)}>Edytuj</button></td></tr>)}</tbody></table>:<Empty/>}</Panel>
+       <Panel title="Pozycje sprzedane">{items.length?<table><thead><tr><th>Pozycja</th><th>Koszt</th><th>Sprzedaż</th><th>Różnica</th><th/></tr></thead><tbody>{items.map(x=><tr key={x.id}><td><b>{x.name}</b><small>{x.kind==='ROBOCIZNA'?`${Number((x.hours_snapshot??x.qty)||0).toFixed(1)} h`:x.part_no||x.oe_number||x.kind}</small></td><td>{money(x.qty*x.unit_cost)}</td><td>{money(x.qty*x.unit_price)}</td><td>{money(x.qty*(x.unit_price-x.unit_cost))}</td><td><button data-edit-order-item={x.id} disabled={locked} title={locked?'Zamknięte zlecenie jest tylko do odczytu':''} onClick={()=>setEditingItem(x)}>Edytuj</button></td></tr>)}</tbody></table>:<Empty/>}</Panel>
      </div>
    </div>
-   {editingItem&&<OrderItemEditor item={editingItem} close={()=>setEditingItem(null)} saved={()=>{setEditingItem(null);reload()}}/>}
+   {editingItem&&!locked&&<OrderItemEditor item={editingItem} close={()=>setEditingItem(null)} saved={()=>{setEditingItem(null);reload()}}/>}
  </div>
 }
 
@@ -813,6 +813,7 @@ function OrderCenter({changed,initialId,openManual}){
  if(loadError)return <section><Panel title="Centrum zlecenia"><div className="warnbox closeoutError"><b>Nie udało się załadować zlecenia.</b><p>{loadError}</p><button className="primary" onClick={async()=>{await loadOrders();await load()}}>Spróbuj ponownie</button></div></Panel></section>
  if(!orders.length)return <section><Panel title="Centrum zlecenia"><Empty text="Najpierw utwórz zlecenie."/></Panel></section>
  if(!o)return <Loading/>
+ const locked=Boolean(o.archived_at)||o.status==='WYDANE'
  const actualMinutes=logs.reduce((s,x)=>s+Number(x.duration_minutes||(!x.ended_at?(Date.now()-new Date(x.started_at))/60000:0)),0)
  const active=logs.filter(x=>!x.ended_at)
  const partsOpen=parts.filter(x=>!['ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE'].includes(x.status))
@@ -830,6 +831,7 @@ function OrderCenter({changed,initialId,openManual}){
      <div><small>ZLECENIE #{o.id}</small><h2>{o.plate} · {o.make} {o.model}</h2><p>{o.customer} · {o.phone?<button className="phoneLink" onClick={()=>api.system.openPhone(o.phone)}>☎ {o.phone}</button>:'telefon brak'} · {o.vin||'VIN brak'}</p></div>
      <div className="centerHeroRight"><em className={'tag '+o.status.toLowerCase()}>{labels[o.status]}</em><b>{money(o.total)}</b><span>marża {money(o.contribution)}</span></div>
    </div>
+   {locked&&<div className="orderLockNotice"><b>✓ Zlecenie zamknięte — zakres prac jest chroniony</b><span>Możesz przeglądać dokumentację, wystawiać numery dokumentów i rejestrować późniejsze wpłaty. Pozycje, ceny składowe oraz stan magazynu pozostają niezmienne.</span></div>}
    {(()=>{const n=nextAction(o);return <div className={'nextAction '+n.tone}><div><small>NASTĘPNA CZYNNOŚĆ</small><b>{n.title}</b><span>{n.detail}</span></div><button className="primary" onClick={()=>n.tab&&setTab(n.tab)}>Przejdź →</button></div>})()}
    <div className="workflowAdvisor"><div><small>WORKFLOW 2.0 · SUGEROWANY KROK</small><b>{advice.title}</b><span>{advice.detail}</span></div><div className="actionrow">{advice.tab&&<button onClick={()=>setTab(advice.tab)}>Pokaż etap</button>}{(advice.status||advice.wait)&&<button className="primary" onClick={applyAdvice}>Zastosuj krok →</button>}</div></div>
    <div className="steps centerSteps">{statuses.map(s=><button key={s} className={o.status===s?'sel':''} disabled={s==='WYDANE'&&o.status!=='WYDANE'} title={s==='WYDANE'&&o.status!=='WYDANE'?'Wydanie potwierdź w zakładce QC / wydanie':''} onClick={async()=>{await api.orders.updateStatus(o.id,s);reload()}}>{labels[s]}</button>)}</div><div className="waitBar"><span>Oczekiwanie:</span>{[['BRAK','brak'],['KLIENT','na klienta'],['CZESCI','na części'],['DECYZJA','na decyzję']].map(([v,l])=><button key={v} className={(o.wait_state||'BRAK')===v?'active':''} onClick={async()=>{await api.orders.updateWait(o.id,v);reload()}}>{l}</button>)}</div>
@@ -848,7 +850,7 @@ function OrderCenter({changed,initialId,openManual}){
 
    {tab==='vehicle'&&<VehicleFindingsPanel order={o} findings={findings} health={vehicleHealth} reload={reload}/>}
 
-   {tab==='works'&&<><Panel title="Wykonane prace" action={<button className="primary" onClick={()=>setShowWork(true)}>+ Dodaj pakiet z katalogu</button>}><p className="muted">Jedno wybranie pracy może dodać robociznę, listę kontrolną, QC, materiały oraz części do kolejki DO ZAMÓWIENIA.</p><PerformedWorkList items={items} reload={reload}/></Panel><ProcedureRuns procedures={procedures} reload={reload}/></>}
+   {tab==='works'&&<><Panel title="Wykonane prace" action={<button className="primary" disabled={locked} title={locked?'Zamknięte zlecenie jest tylko do odczytu':''} onClick={()=>setShowWork(true)}>+ Dodaj pakiet z katalogu</button>}><p className="muted">Jedno wybranie pracy może dodać robociznę, listę kontrolną, QC, materiały oraz części do kolejki DO ZAMÓWIENIA.</p><PerformedWorkList items={items} reload={reload} locked={locked}/></Panel><ProcedureRuns procedures={procedures} reload={reload}/></>}
 
    {tab==='tech'&&<TechnicalDataPanel order={o} entries={technical} reload={reload}/>}
    {tab==='diagnosis'&&<><DiagnosticAssistant order={o} diag={diag} setDiag={setDiag} openWork={setShowWork}/><Panel title="Diagnostyka — jedna karta dla zlecenia"><div className="diagform">{[['symptom_confirmed','Potwierdzenie objawu'],['dtcs','DTC'],['measurements','Pomiary / live data / oscyloskop'],['hypothesis','Hipotezy i testy'],['conclusion','Wniosek / przyczyna'],['recommendation','Rekomendowana naprawa']].map(([key,label])=><label key={key}>{label}<VoiceTextarea value={diag?.[key]||''} onChange={value=>setDiag({...diag,[key]:value})} ariaLabel={label}/></label>)}</div><div className="actionrow"><button className="primary" onClick={async()=>{await api.diagnostics.save(o.id,diag);await reload()}}>Zapisz diagnostykę</button><button onClick={()=>api.knowledge.fromOrder(o.id)}>→ Zapisz jako przypadek w bazie wiedzy</button></div></Panel></>}
@@ -865,14 +867,14 @@ function OrderCenter({changed,initialId,openManual}){
    {tab==='contact'&&<CommunicationPanel order={o} rows={comms} reload={reload}/>}
 
 
-   {tab==='settlement'&&<SettlementPanel order={o} rows={payments} refs={salesRefs} items={items} actualMinutes={actualMinutes} reload={reload}/>}
+   {tab==='settlement'&&<SettlementPanel order={o} rows={payments} refs={salesRefs} items={items} actualMinutes={actualMinutes} reload={reload} locked={locked}/>}
    {tab==='reminders'&&<ReminderPanel order={o} rows={serviceReminders} reload={reload}/>}
    {tab==='timeline'&&<Timeline rows={timeline}/>}
 
    {tab==='release'&&<div className="releaseFlow"><PersistentQC order={o} notes={notes} setNotes={setNotes} rows={qcRows} reload={reload}/><CloseoutPanel order={o} data={closeout} payments={payments} onClosed={handleClosed} reload={reload}/></div>}
 
    </div>
-   {showWork&&<WorkCatalogModalV2 api={api} order={o} initialSelection={typeof showWork==='object'?showWork:{}} close={()=>setShowWork(false)} saved={()=>{setShowWork(false);reload()}}/>}
+   {showWork&&!locked&&<WorkCatalogModalV2 api={api} order={o} initialSelection={typeof showWork==='object'?showWork:{}} close={()=>setShowWork(false)} saved={()=>{setShowWork(false);reload()}}/>}
    {showQuote&&<QuoteModal order={o} close={()=>setShowQuote(false)} accepted={()=>{setShowQuote(false);reload()}}/>}
    {showPart&&<CenterNewPart order={o} close={()=>setShowPart(false)} saved={()=>{setShowPart(false);reload()}}/>}
  </section>

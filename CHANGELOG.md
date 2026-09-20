@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.44 — 2026-09-20
+
+### Ochrona rozliczonych zleceń
+
+- Zamknięte i zarchiwizowane zlecenia chronią zakres prac, pozycje finansowe oraz powiązany stan magazynowy przed przypadkową zmianą.
+- Dodawanie, edycja opisów i usuwanie pozycji korzystają teraz z jednej kontroli statusu po stronie bazy danych.
+- Ręcznie dodawane pozycje są walidowane, automatycznie przeliczają zlecenie i trafiają na oś czasu.
+- Centrum zlecenia pokazuje czytelny tryb chroniony oraz wyłącza edycję pozycji po wydaniu pojazdu.
+- Poprawiono wygląd edytora ceny końcowej i pozycji zlecenia przez podłączenie ich stylów do aktywnego interfejsu.
+
 ## 1.0.43 — 2026-09-20
 
 ### Pełna edycja pozycji zlecenia

@@ -711,6 +711,7 @@ app.on('browser-window-created', (_, win) => {
       await win.webContents.executeJavaScript(`[...document.querySelectorAll('.paletteResults button')].find(x=>x.querySelector('.paletteKind')?.textContent==='ARCHIWUM').click()`)
       await delay(300)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.centerHero').textContent.includes('PO 3WN90')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.orderLockNotice')?.textContent.includes('zakres prac jest chroniony')`),true)
       await win.webContents.executeJavaScript(`document.querySelector('.commandLauncher').click()`)
       await delay(200)
       await win.webContents.executeJavaScript(`{const input=document.querySelector('.commandPalette input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'Skoda');input.dispatchEvent(new Event('input',{bubbles:true}))}`)
