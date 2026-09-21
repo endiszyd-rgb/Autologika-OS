@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.47 — 2026-09-21
+
+### Kontrola połączeń przycisków i ekranów
+
+- Dodano automatyczny audyt wszystkich przycisków, metod API, kanałów Electron IPC i ekranów menu.
+- Audyt obejmuje 401 przycisków, 184 metody interfejsu, 200 kanałów IPC oraz 23 ekrany głównej nawigacji.
+- Naprawiono brakujące połączenie rejestru błędów interfejsu z procesem Electron, dzięki czemu awarie widoków są zapisywane w pliku diagnostycznym.
+- Pełny test przejść potwierdza działanie nawigacji, radaru, Centrum zlecenia, części, płatności, archiwum, skanera i profili klientów.
+
 ## 1.0.46 — 2026-09-21
 
 ### Pełny tryb odczytu po wydaniu pojazdu

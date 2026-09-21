@@ -1,12 +1,13 @@
 {
   "name": "autologika-os",
-  "version": "1.0.46",
+  "version": "1.0.47",
   "private": true,
   "description": "Autologika OS - system operacyjny warsztatu samochodowego",
   "author": "Autologika",
   "main": "electron/main.cjs",
   "scripts": {
-    "test": "node --test tests/*.test.cjs && node --experimental-default-type=module --test tests/*.test.mjs",
+    "test": "node --test tests/*.test.cjs && node --experimental-default-type=module --test tests/*.test.mjs && node scripts/audit-ui-connections.cjs",
+    "test:connections": "node scripts/audit-ui-connections.cjs",
     "test:catalog": "node --experimental-default-type=module scripts/audit-work-catalog.mjs",
     "test:migration": "node scripts/run-electron-smoke.cjs",
     "test:ui": "npm run build && node scripts/run-electron-smoke.cjs ui-preview.cjs",
@@ -29,6 +30,8 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@babel/parser": "^7.29.8",
+    "@babel/traverse": "^7.29.8",
     "@electron/rebuild": "^3.7.1",
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",

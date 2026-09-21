@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('autologika', {
+  diagnosticsLog: { write:payload=>ipcRenderer.invoke('renderer:log',payload), path:()=>ipcRenderer.invoke('renderer:logPath') },
   dashboard: () => ipcRenderer.invoke('dashboard:get'),
   customers: { list:(q='')=>ipcRenderer.invoke('customers:list',q), profile:id=>ipcRenderer.invoke('customers:profile',id), create:data=>ipcRenderer.invoke('customers:create',data), update:(id,data)=>ipcRenderer.invoke('customers:update',{id,data}), deletePreview:id=>ipcRenderer.invoke('customers:deletePreview',id), remove:id=>ipcRenderer.invoke('customers:remove',id) },
   vehicles: { list:(customerId=null)=>ipcRenderer.invoke('vehicles:list',customerId), create:data=>ipcRenderer.invoke('vehicles:create',data), update:(id,data)=>ipcRenderer.invoke('vehicles:update',{id,data}), history:id=>ipcRenderer.invoke('vehicles:history',id), profile:id=>ipcRenderer.invoke('vehicles:profile',id), findByVin:vin=>ipcRenderer.invoke('vehicles:findByVin',vin), deletePreview:id=>ipcRenderer.invoke('vehicles:deletePreview',id), remove:id=>ipcRenderer.invoke('vehicles:remove',id) },
