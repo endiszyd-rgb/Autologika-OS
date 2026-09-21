@@ -745,8 +745,8 @@ function ReminderPanel({order,rows,reload}){
 }
 
 const completionSteps=[
- ['customer_approved','Akceptacja klienta','Zatwierdzony zakres kosztów i prac','quote'],
  ['diagnosis_documented','Diagnoza','Zapisany wniosek lub rekomendacja','diagnosis'],
+ ['customer_approved','Akceptacja klienta','Zatwierdzony zakres kosztów i prac','quote'],
  ['parts_documented','Części','Brak otwartych zamówień części','parts'],
  ['work_logged','Czas pracy','Co najmniej jeden zakończony wpis czasu','time'],
  ['qc_done','Kontrola jakości','Wykonane wszystkie punkty QC','release'],
@@ -761,7 +761,7 @@ function OrderCompletionPanel({data,setTab}){
 function CloseoutPanel({order,data,payments,onClosed,reload,locked=false}){
  const [error,setError]=useState(''),[closing,setClosing]=useState(false)
  const paid=payments.reduce((s,x)=>s+Number(x.amount||0),0), balance=Math.max(0,Number(order.total||0)-paid)
- const labelsMap={customer_approved:'Akceptacja klienta zapisana',diagnosis_documented:'Diagnoza / wniosek zapisane',parts_documented:'Części rozliczone / zamknięte',work_logged:'Czas pracy zapisany',qc_done:'Kontrola jakości zakończona',payment_checked:'Płatność rozliczona',release_notes_done:'Zalecenia przy wydaniu zapisane'}
+ const labelsMap={diagnosis_documented:'Diagnoza / wniosek zapisane',customer_approved:'Akceptacja klienta zapisana',parts_documented:'Części rozliczone / zamknięte',work_logged:'Czas pracy zapisany',qc_done:'Kontrola jakości zakończona',payment_checked:'Płatność rozliczona',release_notes_done:'Zalecenia przy wydaniu zapisane'}
  const effective=Object.fromEntries(Object.keys(labelsMap).map(k=>[k,Boolean(data?.[k])]))
  const completed=Object.keys(labelsMap).filter(k=>effective[k]).length
  const canClose=completed===Object.keys(labelsMap).length

@@ -24,6 +24,7 @@ const { listDebtors } = require('./debtors.cjs')
 const { listServiceReminders, createServiceReminder, setServiceReminderStatus } = require('./service-reminders.cjs')
 const { buildVehicleHealth } = require('./vehicle-health.cjs')
 const { ORDER_BASE_SQL, ORDER_TOTAL_SQL, ORDER_COST_SQL, finalPriceChange } = require('./order-financials.cjs')
+const { deriveOrderReadiness } = require('./order-readiness.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -326,15 +327,17 @@ function syncOrderItemTotals(orderId){
 
 function syncCloseoutAutomation(orderId){
   const db=getDb()
-  const state=db.prepare(`SELECT
+  const raw=db.prepare(`SELECT
     EXISTS(SELECT 1 FROM approvals WHERE order_id=? AND status='APPROVED') customer_approved,
     EXISTS(SELECT 1 FROM diagnostics WHERE order_id=? AND (TRIM(COALESCE(conclusion,''))!='' OR TRIM(COALESCE(recommendation,''))!='')) diagnosis_documented,
     NOT EXISTS(SELECT 1 FROM job_part_orders WHERE order_id=? AND status NOT IN ('ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE')) parts_documented,
     EXISTS(SELECT 1 FROM work_logs WHERE order_id=? AND ended_at IS NOT NULL) work_logged,
     (SELECT COUNT(DISTINCT check_key) FROM order_qc WHERE order_id=? AND deleted_at IS NULL AND checked=1 AND check_key IN ('symptom','dtc','leaks','torque','road','warning','clean','recommend'))=8 qc_done,
-    COALESCE((SELECT SUM(amount) FROM payments WHERE order_id=?),0)+0.01 >= COALESCE((SELECT COALESCE(final_price,labor_hours*labor_rate+parts_sale+other_sale+diagnosis_fee-discount) FROM orders WHERE id=?),0) payment_checked,
+    COALESCE((SELECT SUM(amount) FROM payments WHERE order_id=?),0) paid_total,
+    COALESCE((SELECT COALESCE(final_price,labor_hours*labor_rate+parts_sale+other_sale+diagnosis_fee-discount) FROM orders WHERE id=?),0) billed_total,
     EXISTS(SELECT 1 FROM order_notes WHERE order_id=? AND TRIM(COALESCE(release_notes,''))!='') release_notes_done`)
     .get(orderId,orderId,orderId,orderId,orderId,orderId,orderId,orderId)
+  const state=deriveOrderReadiness(raw)
   db.prepare(`INSERT INTO closeout_checks(order_id,customer_approved,diagnosis_documented,parts_documented,work_logged,qc_done,payment_checked,release_notes_done,updated_at)
     VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)
     ON CONFLICT(order_id) DO UPDATE SET
@@ -752,7 +755,7 @@ ipcMain.handle('closeout:save',(_,{orderId,data})=>{
 ipcMain.handle('closeout:complete',(_,{orderId})=>{
   const db=getDb()
   const checks=syncCloseoutAutomation(orderId)
-  const fields=['customer_approved','diagnosis_documented','parts_documented','work_logged','qc_done','payment_checked','release_notes_done']
+  const fields=['diagnosis_documented','customer_approved','parts_documented','work_logged','qc_done','payment_checked','release_notes_done']
   const missing=fields.filter(key=>!checks[key])
   if(missing.length)return{ok:false,error:'Nie wszystkie warunki wydania są spełnione.',missing}
   const tx=db.transaction(()=>{

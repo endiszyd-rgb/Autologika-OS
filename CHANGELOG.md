@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.49 — 2026-09-21
+
+### Prawidłowa kolejność etapów zlecenia
+
+- Nowe zlecenie rozpoczyna proces od diagnozy, a następnie prowadzi przez akceptację klienta, części, czas pracy, kontrolę jakości, płatność i wydanie.
+- Brak zamówień części nie jest już błędnie traktowany jako ukończony etap w świeżym zleceniu.
+- Zerowa wartość nowego zlecenia nie oznacza już automatycznie rozliczonej płatności.
+- Każdy kolejny warunek gotowości aktywuje się dopiero po ukończeniu wcześniejszych etapów procesu.
+- Dodano testy regresyjne reguł gotowości oraz kontrolę kolejności i stanu etapów w rzeczywistym oknie Electron.
+
 ## 1.0.48 — 2026-09-21
 
 ### Czytelniejszy interfejs i przebudowany Workflow
