@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.51 — 2026-09-21
+
+### Czytelniejsze Centrum zlecenia i Workshop LIVE
+
+- Centrum zlecenia pokazuje teraz jeden spójny komunikat następnego kroku zamiast dwóch konkurujących podpowiedzi.
+- Etapy gotowości rozróżniają stan ukończony, bieżący i późniejszy; przyszłe kroki nie wyglądają już jak błędy wymagające natychmiastowej reakcji.
+- Ręczna zmiana statusu i oczekiwania została przeniesiona do rozwijanej sekcji, dzięki czemu główny widok jest spokojniejszy.
+- Trzy eksporty PDF połączono w jedno menu dokumentów.
+- Usunięto powieloną checklistę procesu oraz ograniczono szybkie akcje do najczęściej używanych poleceń.
+- Informacja o częściach nie oznacza już braku zamówień jako wykonanego etapu przed akceptacją zakresu.
+- W nagłówku zlecenia pokazano termin i saldo klienta, a dane o marży pozostawiono w sekcji finansowej.
+- Poprawiono czytelność Workshop LIVE, zwiększono opisy KPI oraz obszary kliknięcia punktów radaru.
+- Dodano spójne stany klawiatury, pól, przycisków, przewijania i animacji z obsługą ograniczenia ruchu.
+
 ## 1.0.50 — 2026-09-21
 
 ### Wyszukiwanie pojazdów

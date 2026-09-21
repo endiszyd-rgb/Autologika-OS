@@ -1,0 +1,194 @@
+/* Autologika OS — global interaction and motion polish. */
+:root{
+  --interaction-accent:#bff27d;
+  --interaction-accent-strong:#d6ff9d;
+  --interaction-focus:#c9f58a;
+  --interaction-focus-soft:rgba(191,242,125,.18);
+  --interaction-surface:#101512;
+  --interaction-surface-hover:#1b241d;
+  --interaction-border:#3b493f;
+  --interaction-border-hover:#64785f;
+  --interaction-danger:#f08a82;
+  --interaction-ease:cubic-bezier(.2,.75,.25,1);
+}
+
+html{
+  scrollbar-color:#53645a #0b100d;
+  scrollbar-width:thin;
+}
+
+body{
+  accent-color:var(--interaction-accent);
+  -webkit-tap-highlight-color:rgba(191,242,125,.13);
+}
+
+::selection{
+  background:rgba(191,242,125,.3);
+  color:#f8fff2;
+}
+
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-track{background:#0b100d}
+::-webkit-scrollbar-thumb{
+  min-height:34px;
+  border:3px solid #0b100d;
+  border-radius:999px;
+  background:#46564d;
+}
+::-webkit-scrollbar-thumb:hover{background:#64796a}
+::-webkit-scrollbar-corner{background:#0b100d}
+
+:where(button,[role="button"],a,input,select,textarea,summary,[tabindex]):focus{outline:none}
+:where(button,[role="button"],a,input,select,textarea,summary,[tabindex]):focus-visible{
+  outline:2px solid var(--interaction-focus);
+  outline-offset:3px;
+  box-shadow:0 0 0 5px var(--interaction-focus-soft);
+}
+
+:where(button,[role="button"],a,summary){
+  transition:
+    color .16s ease,
+    background-color .16s ease,
+    border-color .16s ease,
+    box-shadow .18s ease,
+    opacity .16s ease,
+    transform .16s var(--interaction-ease);
+}
+
+:where(button,[role="button"]):not(:disabled):not([aria-disabled="true"]){cursor:pointer}
+:where(button,[role="button"]):not(:disabled):not([aria-disabled="true"]):active{
+  transform:translateY(0) scale(.985);
+  transition-duration:.06s;
+}
+
+:where(button,[role="button"])[aria-pressed="true"],
+:where(button,[role="button"])[aria-selected="true"]{
+  border-color:#708858;
+  background-color:#253220;
+  color:#e5ffc4;
+}
+
+:where(button,input,select,textarea):disabled,
+:where(button,[role="button"])[aria-disabled="true"]{
+  cursor:not-allowed;
+  filter:grayscale(.35) saturate(.55);
+  opacity:.48;
+  box-shadow:none;
+  transform:none;
+}
+
+:where(input:not([type="checkbox"]):not([type="radio"]),select,textarea){
+  border-color:var(--interaction-border);
+  background:#0b100d;
+  color:#edf4ed;
+  caret-color:var(--interaction-accent);
+  transition:
+    background-color .16s ease,
+    border-color .16s ease,
+    box-shadow .18s ease;
+}
+
+:where(input:not([type="checkbox"]):not([type="radio"]),select,textarea):hover:not(:disabled){
+  border-color:#526359;
+  background:#0e1510;
+}
+
+:where(input:not([type="checkbox"]):not([type="radio"]),select,textarea):focus{
+  border-color:#8caf61;
+  background:#101712;
+  box-shadow:0 0 0 3px rgba(191,242,125,.1);
+}
+
+:where(input,textarea)::placeholder{
+  color:#7d8981;
+  opacity:1;
+}
+
+:where(input,textarea):user-invalid{
+  border-color:#a85855;
+  box-shadow:0 0 0 3px rgba(240,138,130,.1);
+}
+
+:where(input[type="checkbox"],input[type="radio"]){
+  width:17px;
+  height:17px;
+  cursor:pointer;
+}
+
+:where(input[type="checkbox"],input[type="radio"]):disabled{cursor:not-allowed}
+
+select{
+  color-scheme:dark;
+  cursor:pointer;
+}
+
+select:disabled{cursor:not-allowed}
+textarea{resize:vertical}
+
+:where(.panel,.metric,.workspaceCard,.case,.kanCol,.centerPart,.orderrow,.attentionItem){
+  transition:
+    background-color .18s ease,
+    border-color .18s ease,
+    box-shadow .2s ease,
+    transform .2s var(--interaction-ease);
+}
+
+:where(.workspaceCard,.case,.centerPart,.orderrow,.attentionItem):hover{
+  border-color:var(--interaction-border-hover);
+}
+
+:where(.tag,.badge,.statusDot){transition:color .16s ease,background-color .16s ease,border-color .16s ease}
+
+.modalback{
+  animation:interactionBackdropIn .18s ease-out both;
+}
+
+.modal{
+  transform-origin:50% 18%;
+  animation:interactionModalIn .22s var(--interaction-ease) both;
+}
+
+@media (prefers-reduced-motion:no-preference){
+  :where(.workspaceContent,.studioDashboard,.workflowPage,.customerVehiclesPage) > :where(.panel,.metric,.workspaceCard,.centerHero,.workflowSummary,.kanban){
+    animation:interactionPanelIn .28s var(--interaction-ease) both;
+  }
+
+  :where(.workspaceContent,.studioDashboard,.workflowPage,.customerVehiclesPage) > :where(.panel,.metric,.workspaceCard,.centerHero,.workflowSummary,.kanban):nth-child(2){animation-delay:35ms}
+  :where(.workspaceContent,.studioDashboard,.workflowPage,.customerVehiclesPage) > :where(.panel,.metric,.workspaceCard,.centerHero,.workflowSummary,.kanban):nth-child(3){animation-delay:70ms}
+  :where(.workspaceContent,.studioDashboard,.workflowPage,.customerVehiclesPage) > :where(.panel,.metric,.workspaceCard,.centerHero,.workflowSummary,.kanban):nth-child(4){animation-delay:105ms}
+}
+
+@keyframes interactionBackdropIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+
+@keyframes interactionModalIn{
+  from{opacity:0;transform:translateY(10px) scale(.985)}
+  to{opacity:1;transform:none}
+}
+
+@keyframes interactionPanelIn{
+  from{opacity:0;transform:translateY(7px)}
+  to{opacity:1;transform:none}
+}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto!important}
+
+  *,*::before,*::after{
+    scroll-behavior:auto!important;
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+  }
+
+  :where(button,[role="button"]):active{transform:none}
+}
+
+@media (forced-colors:active){
+  :where(button,[role="button"],a,input,select,textarea,summary,[tabindex]):focus-visible{
+    outline:2px solid Highlight;
+    box-shadow:none;
+  }
+}

@@ -53,6 +53,13 @@ tbody tr{transition:background-color .16s ease}
 }
 .orderCenterPage .centerPicker>label{font-size:10px;color:#aebaae}
 .orderCenterPage .centerPicker select{font-weight:650;color:#f4f8f2}
+.centerDocuments{position:relative}
+.centerDocuments>summary{display:flex;align-items:center;min-height:42px;padding:9px 13px;border:1px solid #4a594e;border-radius:9px;background:#202923;color:#edf4eb;font-size:11px;font-weight:750;cursor:pointer;list-style:none}
+.centerDocuments>summary::-webkit-details-marker{display:none}
+.centerDocuments[open]>summary{border-color:#78965d;background:#293723;color:#ddf8ba}
+.centerDocuments>div{position:absolute;top:calc(100% + 7px);right:0;z-index:50;display:grid;width:220px;padding:7px;border:1px solid #526056;border-radius:11px;background:#121914f7;box-shadow:0 20px 55px #000b;backdrop-filter:blur(18px)}
+.centerDocuments>div button{text-align:left;border-color:transparent;background:transparent}
+.centerDocuments>div button:hover{border-color:#405044;background:#202a22}
 .orderCenterPage .centerHero{
   position:relative;
   overflow:hidden;
@@ -116,6 +123,17 @@ tbody tr{transition:background-color .16s ease}
   background:var(--order-accent);
 }
 .orderTabGroup button i{position:absolute;top:4px;right:5px;min-width:17px;padding:2px 4px;border-radius:99px;background:#d6b457;color:#17130b;font-size:8px;font-style:normal}
+.centerManualProcess{margin:-3px 0 13px;border:1px solid #354139;border-radius:11px;background:#0f1511}
+.centerManualProcess>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 13px;color:#aeb9af;font-size:10px;font-weight:750;cursor:pointer;list-style:none}
+.centerManualProcess>summary::-webkit-details-marker{display:none}
+.centerManualProcess>summary:before{content:'▸';color:#9fca70;transition:transform .16s ease}
+.centerManualProcess[open]>summary:before{transform:rotate(90deg)}
+.centerManualProcess>summary>span{margin-right:auto}
+.centerManualProcess>summary>em{color:#7f8d82;font-size:9px;font-style:normal;font-weight:550}
+.centerManualProcess>div{padding:2px 13px 10px;border-top:1px solid #2c362f}
+.centerManualProcess .centerSteps{margin:9px 0}.centerManualProcess .waitBar{margin:0}
+.quickGrid.compact{grid-template-columns:repeat(2,minmax(0,1fr))}.quickGrid.compact button{min-height:52px}
+.pendingbox{margin:7px 0;padding:11px;border:1px solid #3b473f;border-radius:9px;background:#121814;color:#aab5ac}
 .orderCenterPage .workspaceContent{animation:uiContentIn .22s ease-out}
 .orderCenterPage .centerPart{transition:border-color .16s ease,background-color .16s ease}
 .orderCenterPage .centerPart:hover{border-color:#63765f;background:#19231a}
@@ -188,6 +206,7 @@ tbody tr{transition:background-color .16s ease}
   .orderCenterPage .centerHero h2{font-size:24px}
   .workflowSummary{align-items:stretch;flex-direction:column}
   .workflowLegend{flex-wrap:wrap;gap:10px 15px}
+  .centerPicker{align-items:stretch;flex-direction:column}.centerPicker .grow{display:none}.centerPicker>button,.centerDocuments,.centerDocuments>summary{width:100%}.centerDocuments>div{right:auto;left:0;width:100%}
 }
 @media(max-width:580px){
   .orderTabGroup>div{grid-template-columns:repeat(2,minmax(0,1fr))}
