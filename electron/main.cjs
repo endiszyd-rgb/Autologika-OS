@@ -25,6 +25,7 @@ const { listServiceReminders, createServiceReminder, setServiceReminderStatus } 
 const { buildVehicleHealth } = require('./vehicle-health.cjs')
 const { ORDER_BASE_SQL, ORDER_TOTAL_SQL, ORDER_COST_SQL, finalPriceChange } = require('./order-financials.cjs')
 const { deriveOrderReadiness } = require('./order-readiness.cjs')
+const { searchTechnicalManuals } = require('./manual-source-scraper.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -893,6 +894,33 @@ ipcMain.handle('technicalManual:removeHotspot',(_e,id)=>{getDb().prepare('DELETE
 ipcMain.handle('technicalManual:addStep',(_e,{pageId,data})=>{const db=getDb(),next=db.prepare('SELECT COALESCE(MAX(step_no),0)+1 n FROM technical_manual_steps WHERE manual_page_id=?').get(pageId).n,d=data||{},r=db.prepare(`INSERT INTO technical_manual_steps(manual_page_id,step_no,title,instruction,warning,tool,technical_data_id) VALUES (?,?,?,?,?,?,?)`).run(pageId,d.step_no||next,d.title||`Krok ${next}`,d.instruction||'',d.warning||'',d.tool||'',d.technical_data_id||null);return{id:Number(r.lastInsertRowid)}})
 ipcMain.handle('technicalManual:updateStep',(_e,{id,data})=>{const d=data||{};getDb().prepare('UPDATE technical_manual_steps SET step_no=?,title=?,instruction=?,warning=?,tool=?,technical_data_id=? WHERE id=?').run(+d.step_no||1,d.title||'',d.instruction||'',d.warning||'',d.tool||'',d.technical_data_id||null,id);return true})
 ipcMain.handle('technicalManual:removeStep',(_e,id)=>{getDb().prepare('DELETE FROM technical_manual_steps WHERE id=?').run(id);return true})
+ipcMain.handle('technicalManual:searchOnline',async(_e,data={})=>{
+  const result=await searchTechnicalManuals(fetch,data),db=getDb()
+  const save=db.prepare(`INSERT INTO technical_manual_sources(make,model,year,engine,engine_code,title,url,snippet,domain,source_kind,provider,relevance)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(make,model,year,engine_code,url) DO UPDATE SET title=excluded.title,snippet=excluded.snippet,domain=excluded.domain,source_kind=excluded.source_kind,provider=excluded.provider,relevance=excluded.relevance,last_checked_at=CURRENT_TIMESTAMP`)
+  const find=db.prepare(`SELECT id,status FROM technical_manual_sources WHERE make=? AND model=? AND year=? AND engine_code=? AND url=?`)
+  const persist=db.transaction(rows=>rows.map(row=>{save.run(row.make,row.model,row.year,row.engine||'',row.engine_code||'',row.title,row.url,row.snippet||'',row.domain||'',row.source_kind||'WEB',row.provider||'',Number(row.relevance)||0);const saved=find.get(row.make,row.model,row.year,row.engine_code||'',row.url);return{...row,db_id:saved?.id,status:saved?.status||'DISCOVERED'}}))
+  result.results=persist(result.results)
+  result.groups=result.groups.map(group=>({...group,results:result.results.filter(row=>row.engine_key===group.key)}))
+  return result
+})
+ipcMain.handle('technicalManual:onlineSources',(_e,filter={})=>{
+  const db=getDb(),where=['1=1'],args=[]
+  for(const key of ['make','model','year'])if(filter[key]!==undefined&&filter[key]!==''){where.push(`${key}=?`);args.push(filter[key])}
+  return db.prepare(`SELECT * FROM technical_manual_sources WHERE ${where.join(' AND ')} ORDER BY relevance DESC,title LIMIT 200`).all(...args)
+})
+ipcMain.handle('technicalManual:openOnlineSource',(_e,id)=>{const row=getDb().prepare('SELECT url FROM technical_manual_sources WHERE id=?').get(id);if(row?.url&&/^https?:\/\//i.test(row.url))shell.openExternal(row.url);return true})
+ipcMain.handle('technicalManual:importOnlineSource',(_e,id)=>{
+  const db=getDb(),source=db.prepare('SELECT * FROM technical_manual_sources WHERE id=?').get(id)
+  if(!source)throw new Error('Nie znaleziono wybranego źródła.')
+  const existing=db.prepare('SELECT id FROM technical_manual_pages WHERE source_ref=? LIMIT 1').get(source.url)
+  if(existing){db.prepare("UPDATE technical_manual_sources SET status='IMPORTED' WHERE id=?").run(id);return{id:existing.id,existing:true}}
+  const added=db.prepare(`INSERT INTO technical_manual_pages(title,section,subsection,make,model,year_from,year_to,engine,engine_code,page_type,source_type,source_name,source_ref,source_date,verification_level,notes)
+    VALUES (?,?,?,?,?,?,?,?,?,'LINK','ONLINE_INDEX',?,?,?,?,?)`).run(source.title,'Serwisówki online',source.source_kind||'WWW',source.make,source.model,source.year,source.year,source.engine||'',source.engine_code||'',source.provider||source.domain||'Internet',source.url,new Date().toISOString().slice(0,10),'UNVERIFIED',source.snippet||'Wynik indeksowania internetu. Zweryfikuj zgodność z VIN i kodem silnika przed użyciem.')
+  db.prepare("UPDATE technical_manual_sources SET status='IMPORTED' WHERE id=?").run(id)
+  return{id:Number(added.lastInsertRowid),existing:false}
+})
 
 // --- 0.32.2 DEV: procedure bundles -----------------------------------------
 // --- 0.34 DEV: custom workshop procedure templates ------------------------

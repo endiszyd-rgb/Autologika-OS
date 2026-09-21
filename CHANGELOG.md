@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.53 — 2026-09-21
+
+### Internetowy indeks serwisówek
+
+- Dodano wyszukiwanie dokumentacji technicznej po marce, modelu i roku produkcji.
+- Wyniki są automatycznie rozdzielane na warianty silnikowe i kody silników z katalogu pojazdów.
+- Wyszukiwarka łączy publiczne wyniki WWW i Internet Archive z odnośnikami do oficjalnych portali dokumentacji producentów.
+- Dopasowanie ocenia zgodność marki, modelu, rocznika, silnika i rodzaju dokumentu oraz odrzuca podejrzane domeny.
+- Znalezione źródła są zapisywane w lokalnym indeksie i można je dodać do biblioteki dokumentacji jednym przyciskiem.
+- Dokumenty internetowe mają osobny podgląd, adres źródłowy, datę pobrania i status wymagający weryfikacji przed naprawą.
+- Rozszerzono bazę danych do schematu 11 z automatyczną kopią bezpieczeństwa przy migracji.
+
 ## 1.0.52 — 2026-09-21
 
 ### Prosta diagnoza i opcjonalna diagnostyka elektroniczna

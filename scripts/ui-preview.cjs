@@ -82,7 +82,7 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Model')).querySelector('select').value`),'Corolla')
       console.log('GLOBAL_AZTEC_INTAKE','AZTEC captured over an active input and redirected from settings to populated quick intake')
       const inventoryDb=require('../electron/db.cjs').getDb()
-      assert.equal(inventoryDb.pragma('user_version',{simple:true}),10)
+      assert.equal(inventoryDb.pragma('user_version',{simple:true}),11)
       for(const column of ['barcode','brand','vehicle_fitment','cross_numbers','lookup_source','lookup_url'])assert.equal(inventoryDb.prepare('PRAGMA table_info(job_part_orders)').all().some(item=>item.name===column),true,`job_part_orders.${column}`)
       inventoryDb.prepare(`INSERT INTO inventory_parts(barcode,part_no,name,brand,vehicle_fitment,cross_numbers,stock,min_stock,unit_cost,sell_price,location) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run('4006381333931','W 712/95','Filtr oleju','MANN-FILTER','BMW 320d','11428507683\n11427854445',4,2,24.5,49,'A-03')
       const removablePart=inventoryDb.prepare(`INSERT INTO inventory_parts(part_no,name,brand,stock,min_stock,unit_cost,sell_price) VALUES (?,?,?,?,?,?,?)`).run('TEST-DELETE','Błędny wpis do usunięcia','TEST',0,0,0,0).lastInsertRowid
@@ -857,6 +857,19 @@ app.on('browser-window-created', (_, win) => {
         assert.equal(state.overflow,false,title)
       }
       console.log('NAVIGATION_AUDIT',`${auditPages.length+2} previously uncovered views rendered without errors; debtors open the linked order`)
+      await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Dokumentacja techniczna"]').click()`)
+      await delay(300)
+      await win.webContents.executeJavaScript(`document.querySelector('.manualOnlineButton').click()`)
+      await delay(100)
+      assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('[data-manual-online-search]')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.manualOnlineForm select').length`),3)
+      await capture('manual-online-search')
+      const manualDb=require('../electron/db.cjs').getDb()
+      const manualSource=manualDb.prepare(`INSERT INTO technical_manual_sources(make,model,year,engine,engine_code,title,url,snippet,domain,source_kind,provider,relevance) VALUES ('Volkswagen','Touran',2008,'1.9 TDI','BKC','Testowa serwisówka BKC','https://example.com/touran-bkc','Zakres napraw silnika','example.com','WEB','Test',20)`).run()
+      const imported=await win.webContents.executeJavaScript(`window.autologika.technicalManual.importOnlineSource(${Number(manualSource.lastInsertRowid)})`)
+      const importedPage=manualDb.prepare('SELECT page_type,make,model,engine_code,source_ref FROM technical_manual_pages WHERE id=?').get(imported.id)
+      assert.deepEqual(importedPage,{page_type:'LINK',make:'Volkswagen',model:'Touran',engine_code:'BKC',source_ref:'https://example.com/touran-bkc'})
+      console.log('MANUAL_ONLINE_INDEX','vehicle search UI opens and a source is saved to the local library with its engine code')
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Pulpit"]').click()`)
       await delay(400)
       // Verify the empty state using the same isolated database.

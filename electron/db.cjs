@@ -6,7 +6,7 @@ const { seedTechnicalReference } = require('./technical-seed.cjs')
 const { migrateLegacyServiceReminders } = require('./service-reminders.cjs')
 
 let db
-const SCHEMA_VERSION = 10
+const SCHEMA_VERSION = 11
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -120,7 +120,27 @@ function migrate(db,currentVersion=0) {
   }
   if(currentVersion<10){
     db.transaction(()=>{migrateSchemaV10(db);db.pragma('user_version = 10')})()
+    currentVersion=10
   }
+  if(currentVersion<11){
+    db.transaction(()=>{migrateSchemaV11(db);db.pragma('user_version = 11')})()
+  }
+}
+
+function migrateSchemaV11(db){
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS technical_manual_sources (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      make TEXT NOT NULL, model TEXT NOT NULL, year INTEGER NOT NULL,
+      engine TEXT, engine_code TEXT, title TEXT NOT NULL, url TEXT NOT NULL,
+      snippet TEXT, domain TEXT, source_kind TEXT NOT NULL DEFAULT 'WEB', provider TEXT,
+      relevance INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'DISCOVERED',
+      discovered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      last_checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(make,model,year,engine_code,url)
+    );
+    CREATE INDEX IF NOT EXISTS idx_manual_sources_vehicle ON technical_manual_sources(make,model,year,engine_code,relevance);
+  `)
 }
 
 function migrateSchemaV10(db){
