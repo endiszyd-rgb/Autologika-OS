@@ -4,6 +4,7 @@ const { DatabaseSync } = require('node:sqlite')
 const fs = require('node:fs')
 const vm = require('node:vm')
 const { findQuoteApproval, assertQuoteEditable } = require('../electron/quote-approval.cjs')
+const { requireEditableOrder } = require('../electron/inventory-usage.cjs')
 
 function setup(t) {
   const db = new DatabaseSync(':memory:')
@@ -20,7 +21,7 @@ function setup(t) {
   const source = fs.readFileSync(require.resolve('../electron/main.cjs'), 'utf8')
   vm.runInNewContext(source.slice(source.indexOf("ipcMain.handle('quotes:get'"), source.indexOf("ipcMain.handle('attachments:list'")), {
     ipcMain: { handle: (name, callback) => { handlers[name] = callback } },
-    getDb: () => db, findQuoteApproval, assertQuoteEditable, partMarkup: () => 0.2, syncOrderItemTotals: () => {},
+    getDb: () => db, findQuoteApproval, assertQuoteEditable, requireEditableOrder, partMarkup: () => 0.2, syncOrderItemTotals: () => {},
   })
   return { db, call: (name, arg) => handlers[`quotes:${name}`](null, arg) }
 }
@@ -72,4 +73,14 @@ test('accepted catalog labor keeps its snapshot in the order', t => {
   assert.equal(item.customer_description,'Opis zapisany w kosztorysie.')
   assert.equal(item.hours_snapshot,1.2)
   assert.equal(item.price_snapshot,360)
+})
+
+test('closed order rejects quote changes until it is reopened', t => {
+  const { db, call } = setup(t)
+  db.prepare("UPDATE orders SET status='WYDANE',archived_at=CURRENT_TIMESTAMP WHERE id=1").run()
+  assert.throws(() => call('addItem', { orderId: 1, data: { name: 'Pozycja po wydaniu' } }), /zamknięte/)
+  assert.throws(() => call('requestApproval', 10), /zamknięte/)
+  assert.throws(() => call('accept', 10), /zamknięte/)
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM quote_items').get().n, 0)
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM approvals').get().n, 0)
 })

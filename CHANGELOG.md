@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.46 — 2026-09-21
+
+### Pełny tryb odczytu po wydaniu pojazdu
+
+- Zamknięte i zarchiwizowane zlecenia blokują teraz zmiany diagnostyki, wycen, akceptacji, zamówień części, checklist, notatek QC oraz uruchamiania nowych liczników czasu.
+- Centrum zlecenia wyraźnie wyłącza pola i akcje, których nie wolno zmieniać po wydaniu auta.
+- Płatności, dokumenty sprzedaży, kontakt z klientem i dokumentacja zdjęciowa pozostają dostępne po zamknięciu zlecenia.
+- Zatrzymanie wcześniej uruchomionego licznika czasu nadal jest możliwe, aby historia pracy nie pozostała otwarta.
+- Korekta zakresu wymaga użycia audytowanego polecenia „Otwórz do korekty”.
+- Test interfejsu sprawdza zarówno stan kontrolek, jak i blokadę zapisu po stronie Electron IPC.
+
 ## 1.0.45 — 2026-09-20
 
 ### Kontrolowane ponowne otwieranie zleceń
