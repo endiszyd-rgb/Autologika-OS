@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.48 — 2026-09-21
+
+### Czytelniejszy interfejs i przebudowany Workflow
+
+- Powiększono teksty, etykiety formularzy, pola i przyciski oraz zwiększono kontrast opisów pomocniczych.
+- Wzmocniono wizualne oddzielenie paneli, tabel, aktywnych elementów i przycisków głównych.
+- Tablica Workflow otrzymała podsumowanie pracy, legendę kolorów etapów i liczniki realizacji.
+- Karty zleceń mają wyraźniejszą hierarchię, status, wartość oraz widoczny przycisk przejścia do Centrum zlecenia.
+- Puste kolumny Workflow pokazują czytelny stan i miejsce upuszczenia karty.
+- Usunięto poziomy pasek przewijania z menu bocznego.
+- Test interfejsu potwierdza przejście z karty Workflow do właściwego zlecenia.
+
 ## 1.0.47 — 2026-09-21
 
 ### Kontrola połączeń przycisków i ekranów

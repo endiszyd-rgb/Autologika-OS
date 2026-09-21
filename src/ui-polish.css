@@ -5,30 +5,40 @@
   --surface-hover:#1b241d;
 }
 
-button,input,select,textarea{font-size:11px}
-button:not(.wlBlip){min-height:38px}
-input,select{min-height:40px}
+button,input,select,textarea{font-size:12px}
+button:not(.wlBlip){min-height:40px}
+input,select{min-height:42px}
 textarea{line-height:1.55}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{
   outline:2px solid var(--focus-ring);
   outline-offset:2px;
 }
 
-.navSection button{min-height:42px;color:#aeb9b0}
-.navSection button em{font-size:11.5px;font-weight:600}
-.navSection>small{color:#708078}
+.navSection button{min-height:44px;color:#bbc5bc}
+.shell aside nav{overflow-x:hidden}
+.navSection button em{font-size:12.5px;font-weight:650}
+.navSection>small{color:#849188;font-size:8.5px}
 .navSection button.active{
   background:linear-gradient(90deg,#26331f 0%,#182019 76%,#111713 100%);
   border-color:#526640;
   box-shadow:inset 3px 0 0 #baf17b,0 8px 24px #0003;
 }
 
-.titleBlock h1{font-size:22px;letter-spacing:-.45px}
-.titleBlock p{color:#98a59b;font-size:11px}
-.panel,.metric,.workspaceCard{border-color:var(--surface-edge)}
-.panelhead h2,.panel h2{font-size:13px;line-height:1.35}
-.muted{color:#a4afa6;line-height:1.65}
-.formgrid label,.diagform label,.notes3 label{font-size:10px;color:#b4beb5}
+.titleBlock h1{font-size:24px;letter-spacing:-.5px}
+.titleBlock p{color:#a9b4ab;font-size:12px;line-height:1.5}
+.panel,.metric,.workspaceCard{border-color:#48574b;box-shadow:0 1px 0 #ffffff0a,0 16px 38px #0003}
+.panelhead{padding-bottom:12px;border-bottom-color:#465249}
+.panelhead h2,.panel h2{font-size:14px;line-height:1.35;letter-spacing:0}
+.muted{color:#b4beb6;font-size:11.5px;line-height:1.7}
+.formgrid label,.diagform label,.notes3 label{font-size:11px;color:#c5cec6;gap:7px}
+table{font-size:12px}
+th{color:#d1d8d1;font-size:10.5px;letter-spacing:.025em}
+td{color:#eef2ed;font-size:12px;line-height:1.5}
+td small{color:#9eaaa0;font-size:10.5px}
+button{font-weight:650;line-height:1.25}
+button.primary{box-shadow:0 7px 20px #a8db6420}
+button:disabled{opacity:.48;filter:saturate(.55);cursor:not-allowed}
+input::placeholder,textarea::placeholder{color:#718077;opacity:1}
 tbody tr{transition:background-color .16s ease}
 
 .modalback{animation:uiBackdropIn .18s ease-out}
@@ -110,6 +120,55 @@ tbody tr{transition:background-color .16s ease}
 .orderCenterPage .centerPart{transition:border-color .16s ease,background-color .16s ease}
 .orderCenterPage .centerPart:hover{border-color:#63765f;background:#19231a}
 
+/* Workflow — czytelna tablica procesu */
+.workflowPage{display:grid;gap:14px}
+.workflowSummary{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  padding:20px 22px;
+  border:1px solid #4a594c;
+  border-radius:15px;
+  background:radial-gradient(circle at 88% 0,#31452366,transparent 34%),linear-gradient(135deg,#182019,#111713 72%);
+  box-shadow:0 16px 42px #0003;
+}
+.workflowSummary small{color:#b3df7e;font-size:9px;font-weight:850;letter-spacing:.14em}
+.workflowSummary h2{margin:5px 0 3px;font-size:25px;letter-spacing:-.45px}
+.workflowSummary p{margin:0;color:#aeb9b0;font-size:11.5px}
+.workflowPulse{display:grid;grid-template-columns:repeat(2,minmax(110px,1fr));gap:8px}
+.workflowPulse>div{min-width:118px;padding:11px 14px;border:1px solid #455348;border-radius:11px;background:#0d130fbb}
+.workflowPulse span,.workflowPulse b{display:block}
+.workflowPulse span{color:#9eaaa0;font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+.workflowPulse b{margin-top:4px;color:#eaf4e5;font-size:20px}
+.workflowLegend{display:flex;align-items:center;gap:18px;padding:0 4px;color:#aab5ac;font-size:10.5px}
+.workflowLegend span{display:flex;align-items:center;gap:6px}
+.workflowLegend i{width:8px;height:8px;border-radius:50%;box-shadow:0 0 10px currentColor}
+.workflowLegend .received{background:#75a8cf;color:#75a8cf}.workflowLegend .diagnosis{background:#e2bd65;color:#e2bd65}.workflowLegend .approval{background:#e2915f;color:#e2915f}.workflowLegend .repair{background:#a28bd9;color:#a28bd9}.workflowLegend .ready{background:#9fda72;color:#9fda72}
+.workflowPage .kanban{gap:12px;align-items:stretch;overflow:visible}
+.workflowPage .kanCol{position:relative;min-height:500px;padding:10px;border-color:#425047;background:#0f1511;overflow:hidden}
+.workflowPage .kanCol:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--stage,#7e9182)}
+.workflowPage .stage-przyjete{--stage:#75a8cf}.workflowPage .stage-diagnoza{--stage:#e2bd65}.workflowPage .stage-akceptacja{--stage:#e2915f}.workflowPage .stage-naprawa{--stage:#a28bd9}.workflowPage .stage-gotowe{--stage:#9fda72}
+.workflowPage .kanHead{align-items:center;margin:0 -1px 10px;padding:10px 5px 13px;background:transparent;border-bottom-color:#3c493f}
+.workflowPage .kanHead>div small,.workflowPage .kanHead>div b{display:block}
+.workflowPage .kanHead>div small{margin-bottom:3px;color:#78877d;font-size:8px;letter-spacing:.12em}
+.workflowPage .kanHead>div b{font-size:14px}
+.workflowPage .kanHead>span{display:grid;place-items:center;min-width:26px;height:26px;padding:0 7px;background:#283229;color:#e9f2e7;font-weight:800}
+.workflowPage .kanCard{position:relative;margin-bottom:10px;padding:14px;border-color:#465449;background:linear-gradient(155deg,#1a221c,#141a16);box-shadow:0 9px 24px #0003}
+.workflowPage .kanCard:before{content:"";position:absolute;inset:12px auto 12px 0;width:2px;border-radius:99px;background:var(--stage)}
+.workflowPage .kanCardTop,.workflowPage .kanCardBottom{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.workflowPage .kanCardTop>b{font-size:15px;letter-spacing:.02em}
+.workflowPage .kanCardTop .tag{font-size:8px}
+.workflowPage .kanCard h3{margin:9px 0 5px;color:#edf2eb;font-size:12px;line-height:1.4}
+.workflowPage .kanCard>small{display:block;color:#9aa69c;font-size:10px}
+.workflowPage .kanCardBottom{margin-top:13px;padding-top:10px;border-top:1px solid #354138}
+.workflowPage .kanCardBottom em{margin:0;color:#ccec9f;font-size:12px;font-weight:800}
+.workflowPage .kanCardBottom button{min-height:30px;padding:5px 9px;border-color:#4c5b4f;background:#202a22;font-size:9.5px}
+.workflowPage .kanCardBottom button:hover{border-color:#9ecb70;background:#2a382b;color:#ddf5bd}
+.kanEmpty{display:grid;place-items:center;min-height:120px;padding:18px;text-align:center;border:1px dashed #354239;border-radius:10px;background:#111713}
+.kanEmpty span{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#233024;color:#9aca72}
+.kanEmpty b{margin:8px 0 3px;color:#a8b3aa;font-size:11px}.kanEmpty small{color:#718078;font-size:9.5px;line-height:1.45}
+
 @keyframes uiBackdropIn{from{opacity:0}to{opacity:1}}
 @keyframes uiModalIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
 @keyframes uiContentIn{from{opacity:.6;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -118,11 +177,17 @@ tbody tr{transition:background-color .16s ease}
   .orderTabDock{grid-template-columns:1fr 1fr}
   .orderTabGroup:last-child{grid-column:1/-1}
 }
+@media(max-width:1180px){
+  .workflowPage .kanban{grid-template-columns:repeat(5,240px);overflow-x:auto;padding-bottom:8px}
+  .workflowSummary{align-items:flex-start}
+}
 @media(max-width:850px){
   .navSection button{min-height:40px}
   .orderTabDock{position:static;grid-template-columns:1fr;box-shadow:0 10px 28px #0004}
   .orderTabGroup:last-child{grid-column:auto}
   .orderCenterPage .centerHero h2{font-size:24px}
+  .workflowSummary{align-items:stretch;flex-direction:column}
+  .workflowLegend{flex-wrap:wrap;gap:10px 15px}
 }
 @media(max-width:580px){
   .orderTabGroup>div{grid-template-columns:repeat(2,minmax(0,1fr))}
