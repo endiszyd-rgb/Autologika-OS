@@ -31,3 +31,13 @@ test('resolved findings no longer reduce the health score',()=>{
  assert.equal(result.score,100)
  assert.equal(result.issueCount,0)
 })
+
+test('basic fault description counts as a completed diagnosis without electronic data',()=>{
+ const result=buildVehicleHealth({
+  vehicle:{vin:'WVWZZZ1KZBW000001',mileage:210000},
+  orders:[{id:2,title:'Brak mocy silnika',complaint:'Brak mocy',status:'DIAGNOZA',opened_at:'2026-09-10T10:00:00Z'}],
+  findings:[],reminders:[],diagnostics:[{order_id:2,symptom_confirmed:'Pęknięty przewód podciśnienia'}]
+ },{now})
+ assert.equal(result.issueCount,0)
+ assert.ok(result.coverage>=32)
+})

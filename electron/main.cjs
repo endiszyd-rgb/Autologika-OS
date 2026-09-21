@@ -329,7 +329,7 @@ function syncCloseoutAutomation(orderId){
   const db=getDb()
   const raw=db.prepare(`SELECT
     EXISTS(SELECT 1 FROM approvals WHERE order_id=? AND status='APPROVED') customer_approved,
-    EXISTS(SELECT 1 FROM diagnostics WHERE order_id=? AND (TRIM(COALESCE(conclusion,''))!='' OR TRIM(COALESCE(recommendation,''))!='')) diagnosis_documented,
+    EXISTS(SELECT 1 FROM diagnostics WHERE order_id=? AND (TRIM(COALESCE(symptom_confirmed,''))!='' OR TRIM(COALESCE(conclusion,''))!='' OR TRIM(COALESCE(recommendation,''))!='')) diagnosis_documented,
     NOT EXISTS(SELECT 1 FROM job_part_orders WHERE order_id=? AND status NOT IN ('ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE')) parts_documented,
     EXISTS(SELECT 1 FROM work_logs WHERE order_id=? AND ended_at IS NOT NULL) work_logged,
     (SELECT COUNT(DISTINCT check_key) FROM order_qc WHERE order_id=? AND deleted_at IS NULL AND checked=1 AND check_key IN ('symptom','dtc','leaks','torque','road','warning','clean','recommend'))=8 qc_done,
@@ -509,7 +509,7 @@ ipcMain.handle('appointments:remove',(_,id)=>removeAppointment(getDb(),id))
 
 ipcMain.handle('knowledge:list',(_,q='')=>getDb().prepare(`SELECT * FROM knowledge_cases WHERE symptom LIKE ? OR COALESCE(dtcs,'') LIKE ? OR COALESCE(tags,'') LIKE ? OR COALESCE(vehicle,'') LIKE ? ORDER BY created_at DESC`).all(`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`))
 ipcMain.handle('knowledge:create',(_,d)=>{const r=getDb().prepare('INSERT INTO knowledge_cases(vehicle,engine,symptom,dtcs,measurements,cause,solution,tags,source_order_id) VALUES (?,?,?,?,?,?,?,?,?)').run(d.vehicle||'',d.engine||'',d.symptom,d.dtcs||'',d.measurements||'',d.cause||'',d.solution||'',d.tags||'',d.source_order_id||null);return{id:r.lastInsertRowid}})
-ipcMain.handle('knowledge:fromOrder',(_,orderId)=>{const db=getDb();const o=db.prepare(`${orderSelect} WHERE o.id=?`).get(orderId);const d=db.prepare('SELECT * FROM diagnostics WHERE order_id=? ORDER BY id DESC LIMIT 1').get(orderId);if(!o||!d)return{ok:false,error:'Brak zlecenia lub diagnostyki'};const r=db.prepare('INSERT INTO knowledge_cases(vehicle,engine,symptom,dtcs,measurements,cause,solution,tags,source_order_id) VALUES (?,?,?,?,?,?,?,?,?)').run(`${o.make} ${o.model}`,o.engine||'',o.complaint||o.title,d.dtcs||'',d.measurements||'',d.conclusion||'',d.recommendation||'',o.make||'',orderId);return{ok:true,id:r.lastInsertRowid}})
+ipcMain.handle('knowledge:fromOrder',(_,orderId)=>{const db=getDb();const o=db.prepare(`${orderSelect} WHERE o.id=?`).get(orderId);const d=db.prepare('SELECT * FROM diagnostics WHERE order_id=? ORDER BY id DESC LIMIT 1').get(orderId);if(!o||!d)return{ok:false,error:'Brak zlecenia lub diagnostyki'};const r=db.prepare('INSERT INTO knowledge_cases(vehicle,engine,symptom,dtcs,measurements,cause,solution,tags,source_order_id) VALUES (?,?,?,?,?,?,?,?,?)').run(`${o.make} ${o.model}`,o.engine||'',o.complaint||o.title,d.dtcs||'',d.measurements||'',d.conclusion||d.symptom_confirmed||'',d.recommendation||'',o.make||'',orderId);return{ok:true,id:r.lastInsertRowid}})
 
 ipcMain.handle('reminders:list',()=>listServiceReminders(getDb()))
 ipcMain.handle('reminders:create',(_,d)=>createServiceReminder(getDb(),{vehicleId:d.vehicle_id,data:d}))

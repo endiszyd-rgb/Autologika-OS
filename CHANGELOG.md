@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.52 — 2026-09-21
+
+### Prosta diagnoza i opcjonalna diagnostyka elektroniczna
+
+- Podstawowa diagnoza wymaga teraz tylko czytelnego opisu rozpoznanej usterki.
+- Wniosek końcowy i zalecenie pozostały dostępne jako pola opcjonalne.
+- Kody DTC, pomiary, hipotezy, plan testów i Diagnostic Copilot przeniesiono do rozwijanej sekcji zaawansowanej diagnostyki elektronicznej.
+- Sam opis usterki zalicza etap diagnozy w procesie zlecenia i gotowości do wydania.
+- Prosta diagnoza jest uwzględniana w wycenie klienta, bazie wiedzy, protokołach PDF i historii pojazdu.
+- Istniejąca zaawansowana diagnoza otwiera sekcję elektroniczną automatycznie, aby zapisane dane pozostały widoczne.
+
 ## 1.0.51 — 2026-09-21
 
 ### Czytelniejsze Centrum zlecenia i Workshop LIVE

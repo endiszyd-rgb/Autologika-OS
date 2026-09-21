@@ -36,7 +36,7 @@ function calculateCoverage({vehicle,orders,findings,reminders,diagnostics},now){
  if(orders.some(order=>now-dateMs(order.opened_at)<=365*86400000))value+=16
  if(findings.length)value+=16
  if(reminders.length)value+=10
- if(diagnostics.some(item=>String(item.conclusion||'').trim()))value+=16
+ if(diagnostics.some(item=>[item.symptom_confirmed,item.conclusion,item.recommendation].some(field=>String(field||'').trim())))value+=16
  return clamp(value)
 }
 
@@ -61,7 +61,7 @@ function buildVehicleHealth(input={},options={}){
  }
  const activeOrders=orders.filter(order=>!['GOTOWE','WYDANE'].includes(order.status))
  for(const order of activeOrders){
-   const related=diagnostics.find(item=>Number(item.order_id)===Number(order.id)),unresolved=!String(related?.conclusion||'').trim()
+   const related=diagnostics.find(item=>Number(item.order_id)===Number(order.id)),unresolved=![related?.symptom_confirmed,related?.conclusion,related?.recommendation].some(field=>String(field||'').trim())
    if(!unresolved)continue
    const system=systemFor([order.title,order.complaint,related?.symptom_confirmed,related?.dtcs].join(' '));if(!system)continue
    penalties[system.id].push({kind:'active-order',points:6,title:order.title||`Zlecenie #${order.id}`,detail:'diagnoza w toku',sourceId:order.id})

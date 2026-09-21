@@ -52,7 +52,7 @@ function documentHtml(order,items=[],diagnosis={},notes={},type='order',signatur
     body+=section(3,'Ustalenia diagnostyczne',`<div class="decisionGrid"><div><small>LIMIT DIAGNOSTYKI</small><b>${money(order.diagnosis_limit)}</b></div><div><small>PRIORYTET</small><b>${esc(order.priority||'NORMALNY')}</b></div><div><small>PLANOWANY TERMIN</small><b>${esc(order.due_at?dateTime(order.due_at):'do ustalenia')}</b></div></div><div class="legalNote">Klient potwierdza przekazanie pojazdu do diagnostyki lub realizacji zakresu opisanego w dokumencie. Dodatkowe prace wymagają uzgodnienia.</div>`)
     body+=section(4,'Potwierdzenie przekazania pojazdu',signatureSvg(signature,'Podpis przekazującego pojazd'),'signatureSection')
   }else if(type==='release'){
-    body+=section(1,'Wynik diagnostyki i przyczyna',textBlock(diagnosis?.conclusion,'Nie zapisano osobnego wniosku diagnostycznego.'))
+    body+=section(1,'Opis usterki i wynik diagnozy',textBlock(diagnosis?.conclusion||diagnosis?.symptom_confirmed,'Nie zapisano opisu usterki.'))
     body+=section(2,'Wykonane prace',workCards)
     body+=section(3,'Części, materiały i usługi',itemTable)
     body+=section(4,'Kontrola jakości',`${qcContent}${textBlock(notes?.qc_notes,'Brak dodatkowych uwag kontroli jakości.')}`)
@@ -60,7 +60,7 @@ function documentHtml(order,items=[],diagnosis={},notes={},type='order',signatur
     body+=section(6,'Rozliczenie i odbiór',`${financial}${signatureSvg(signature,'Podpis odbierającego pojazd')}`,'signatureSection')
   }else{
     body+=section(1,'Zgłoszenie i cel wizyty',textBlock(order.complaint,'Brak opisu zgłoszenia.'))
-    body+=section(2,'Ustalenia diagnostyczne',`<div class="diagnosisGrid"><div><small>KODY DTC</small>${textBlock(diagnosis?.dtcs,'Nie zapisano kodów DTC.')}</div><div><small>WNIOSEK / HIPOTEZA</small>${textBlock(diagnosis?.conclusion||diagnosis?.hypothesis,'Diagnostyka w toku.')}</div></div>`)
+    body+=section(2,'Ustalenia diagnostyczne',`<div class="diagnosisGrid"><div><small>OPIS USTERKI</small>${textBlock(diagnosis?.symptom_confirmed||diagnosis?.conclusion,'Diagnostyka w toku.')}</div><div><small>DANE ELEKTRONICZNE</small>${textBlock(diagnosis?.dtcs||diagnosis?.measurements,'Nie wykonywano zaawansowanej diagnostyki elektronicznej.')}</div></div>`)
     body+=section(3,'Zakres prac',workCards)
     body+=section(4,'Części, materiały i usługi',itemTable)
     body+=section(5,'Podsumowanie wartości',financial)
