@@ -463,6 +463,22 @@ app.on('browser-window-created', (_, win) => {
       const cascadeOrder=database.prepare("INSERT INTO orders(vehicle_id,title) VALUES (?,'Zlecenie do usunięcia')").run(cascadeVehicle).lastInsertRowid
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Klienci / auta"]').click()`)
       await delay(400)
+      await win.webContents.executeJavaScript(`{
+        const field=document.querySelector('input[aria-label="Szukaj pojazdu"]');
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,'ford');
+        field.dispatchEvent(new Event('input',{bubbles:true}));
+      }`)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.vehicleRecords tbody tr').length`),1)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.vehicleRecords tbody tr').textContent.includes('PO CASCADE')`),true)
+      await win.webContents.executeJavaScript(`{
+        const field=document.querySelector('input[aria-label="Szukaj pojazdu"]');
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,'po delete');
+        field.dispatchEvent(new Event('input',{bubbles:true}));
+      }`)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.vehicleRecords tbody tr').length`),1)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.vehicleRecords tbody tr').textContent.includes('Toyota Yaris')`),true)
+      await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Wyczyść wyszukiwanie pojazdów"]').click()`)
+      console.log('VEHICLE_SEARCH','vehicle list filters by make and registration and restores all records')
       await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Edytuj klienta Klient Pojazdu UI"]').click()`)
       await delay(200)
       await win.webContents.executeJavaScript(`{

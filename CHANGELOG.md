@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.50 — 2026-09-21
+
+### Wyszukiwanie pojazdów
+
+- Dodano osobną wyszukiwarkę bezpośrednio nad listą pojazdów.
+- Pojazdy można filtrować po numerze rejestracyjnym, marce, modelu, VIN-ie oraz właścicielu.
+- Wyniki pojawiają się natychmiast podczas wpisywania, a licznik pokazuje liczbę dopasowanych pojazdów.
+- Dodano szybkie czyszczenie wyszukiwania oraz czytelny komunikat, gdy nie znaleziono pasującego auta.
+- Wyszukiwanie działa niezależnie od wielkości liter i polskich znaków.
+
 ## 1.0.49 — 2026-09-21
 
 ### Prawidłowa kolejność etapów zlecenia
