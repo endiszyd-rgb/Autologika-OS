@@ -1,6 +1,6 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
-const {parseDuckDuckGoResults,parseBingRss,parseArchiveResults,parseWorkshopManualResults,parseProCarSearchResults,parseProCarDetail,normalizeEngines,normalizeRequest,resultScore,dedupeResults,searchTechnicalManuals,platformsCompatible}=require('../electron/manual-source-scraper.cjs')
+const {parseDuckDuckGoResults,parseBingRss,parseArchiveResults,parseWorkshopManualResults,parseProCarSearchResults,parseProCarDetail,normalizeEngines,normalizeRequest,resultScore,dedupeResults,searchTechnicalManuals,platformsCompatible,codeMatches}=require('../electron/manual-source-scraper.cjs')
 
 test('parses search metadata without copying remote manual contents',()=>{
  const html=`<a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fgolf-bkc.pdf" class="result-link">Volkswagen Golf BKC workshop manual PDF</a><td class="result-snippet">Repair and service instructions for 2007 1.9 TDI</td>`
@@ -47,6 +47,30 @@ test('rejects a manual for a conflicting vehicle generation',()=>{
 
 test('rejects an archived manual whose title covers a different year range',()=>{
  const rows=dedupeResults([{title:'1997-2003 Volkswagen Golf Repair Manual',snippet:'Factory workshop manual',url:'https://archive.org/details/golf-1997-2003',domain:'archive.org',source_kind:'ARCHIVE',engine_key:'ALL',make:'Volkswagen',model:'Golf',year:2007,request_generation:'V',matched_engine:false,relevance:30}])
+ assert.equal(rows.length,0)
+})
+
+test('rejects a conflicting engine variant from the same engine family',()=>{
+ assert.equal(codeMatches('BMW N47D16 workshop manual','N47D20'),false)
+ assert.equal(codeMatches('BMW N47 diesel engine workshop manual','N47D20'),true)
+})
+
+test('rejects a web manual for another make even when model and engine code match',async()=>{
+ const html='<a href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fmanual.example%2Fford-golf-bkc.pdf" class="result-link">Ford Golf 2007 BKC workshop repair manual</a><td class="result-snippet">Factory service instructions</td>'
+ const fetchImpl=async url=>{
+  if(url.includes('archive.org'))return{ok:true,json:async()=>({response:{docs:[]}})}
+  return{ok:true,status:200,text:async()=>html}
+ }
+ const result=await searchTechnicalManuals(fetchImpl,{make:'Volkswagen',model:'Golf',year:2007,engines:[{engine:'1.9 TDI',engine_code:'BKC'}]})
+ assert.equal(result.results.some(row=>row.url.includes('ford-golf-bkc')),false)
+})
+
+test('rejects an exact-engine manual whose title has a conflicting year range',()=>{
+ const rows=dedupeResults([{
+  title:'Volkswagen Golf BKC workshop manual 2015-2018',snippet:'Factory repair manual',url:'https://manual.example/golf-bkc-2015.pdf',
+  domain:'manual.example',source_kind:'WEB',engine_key:'BKC',make:'Volkswagen',model:'Golf',year:2007,
+  request_generation:'',matched_make:true,matched_year:false,matched_engine:true,relevance:30
+ }])
  assert.equal(rows.length,0)
 })
 

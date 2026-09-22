@@ -914,7 +914,12 @@ ipcMain.handle('technicalManual:openOnlineSource',(_e,id)=>{const row=getDb().pr
 ipcMain.handle('technicalManual:importOnlineSource',(_e,id)=>{
   const db=getDb(),source=db.prepare('SELECT * FROM technical_manual_sources WHERE id=?').get(id)
   if(!source)throw new Error('Nie znaleziono wybranego źródła.')
-  const existing=db.prepare('SELECT id FROM technical_manual_pages WHERE source_ref=? LIMIT 1').get(source.url)
+  const existing=db.prepare(`SELECT id FROM technical_manual_pages
+    WHERE source_ref=?
+      AND lower(COALESCE(make,''))=lower(?)
+      AND lower(COALESCE(model,''))=lower(?)
+      AND lower(COALESCE(engine_code,''))=lower(?)
+    LIMIT 1`).get(source.url,source.make,source.model,source.engine_code||'')
   if(existing){db.prepare("UPDATE technical_manual_sources SET status='IMPORTED' WHERE id=?").run(id);return{id:existing.id,existing:true}}
   const added=db.prepare(`INSERT INTO technical_manual_pages(title,section,subsection,make,model,year_from,year_to,engine,engine_code,page_type,source_type,source_name,source_ref,source_date,verification_level,notes)
     VALUES (?,?,?,?,?,?,?,?,?,'LINK','ONLINE_INDEX',?,?,?,?,?)`).run(source.title,'Serwisówki online',source.source_kind||'WWW',source.make,source.model,source.year,source.year,source.engine||'',source.engine_code||'',source.provider||source.domain||'Internet',source.url,new Date().toISOString().slice(0,10),'UNVERIFIED',source.snippet||'Wynik indeksowania internetu. Zweryfikuj zgodność z VIN i kodem silnika przed użyciem.')

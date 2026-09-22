@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.55 — 2026-09-22
+
+### Serwisówki dla konkretnego silnika
+
+- Dodano wybór konkretnej wersji silnikowej w wyszukiwarce dokumentacji oraz możliwość powrotu do przeszukiwania wszystkich wariantów.
+- Dokumentacja otwierana z Centrum zlecenia przejmuje teraz rocznik, generację, moc i kod silnika pojazdu oraz automatycznie wybiera właściwy wariant.
+- Pojazdy i silniki wpisane ręcznie, których nie ma jeszcze w katalogu Autologiki, zachowują swoje dane w formularzu wyszukiwania.
+- Ten sam dokument internetowy można przypisać niezależnie do kilku kodów silnika bez otwierania strony zapisanej wcześniej dla innego wariantu.
+- Rozdzielono podobne kody z tej samej rodziny, na przykład N47D16 i N47D20, pozostawiając obsługę ogólnych instrukcji rodziny N47.
+- Wyniki innej marki oraz dokumenty z jawnym, sprzecznym zakresem roczników są odrzucane nawet przy zgodnym kodzie silnika.
+- Rozszerzono test interfejsu o wybór silnika i import jednego źródła dla dwóch różnych kodów silnika.
+
 ## 1.0.54 — 2026-09-22
 
 ### Dokładniejsze wyszukiwanie dokumentacji technicznej
