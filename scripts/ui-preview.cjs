@@ -175,7 +175,9 @@ app.on('browser-window-created', (_, win) => {
       const destination = await inspect()
       assert.equal(destination.title, 'Centrum zlecenia')
       assert.equal(destination.fatal, false)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.centerHero h3').textContent.trim().length > 0`),true)
       assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.orderReadiness')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.readinessDetails').open`),false)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.readinessSteps > button').length`),7)
       assert.deepEqual(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.readinessSteps > button b')].map(x=>x.textContent)`),['Diagnoza','Akceptacja klienta','Części','Czas pracy','Kontrola jakości','Płatność','Wydanie'])
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.readinessSteps > button')].find(x=>x.textContent.includes('Części')).classList.contains('done')`),false)
@@ -198,6 +200,7 @@ app.on('browser-window-created', (_, win) => {
       win.setSize(1100, 800)
       await delay(300)
       assert.equal((await inspect()).overflow, false)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.orderTabDock').getBoundingClientRect().height < 80`),true)
       await capture('order-center-1100')
       win.setSize(1500, 940)
       const openOrderTab = async tab => {
@@ -332,6 +335,7 @@ app.on('browser-window-created', (_, win) => {
       centerDb.prepare("INSERT INTO work_logs(order_id,worker,started_at,ended_at,duration_minutes) VALUES (2,'Test',datetime('now','-1 hour'),CURRENT_TIMESTAMP,60)").run()
       centerDb.prepare("INSERT INTO order_notes(order_id,release_notes) VALUES (2,'Zalecenia przekazane klientowi') ON CONFLICT(order_id) DO UPDATE SET release_notes=excluded.release_notes").run()
       centerDb.prepare("UPDATE job_part_orders SET status='ZAMONTOWANE' WHERE order_id=2").run()
+      centerDb.prepare("UPDATE orders SET status='GOTOWE' WHERE id=2").run()
       const qcInsert=centerDb.prepare("INSERT INTO order_qc(order_id,check_key,label,checked,checked_at) VALUES (2,?,?,1,CURRENT_TIMESTAMP) ON CONFLICT(order_id,check_key) DO UPDATE SET checked=1,checked_at=CURRENT_TIMESTAMP,deleted_at=NULL")
       for(const [key,label] of [['symptom','Objaw'],['dtc','DTC'],['leaks','Szczelność'],['torque','Momenty'],['road','Jazda'],['warning','Kontrolki'],['clean','Przygotowanie'],['recommend','Zalecenia']])qcInsert.run(key,label)
       await win.webContents.executeJavaScript(`{

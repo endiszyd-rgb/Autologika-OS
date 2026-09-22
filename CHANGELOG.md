@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.56 — 2026-09-22
+
+### Czytelniejsze i bezpieczniejsze Centrum zlecenia
+
+- Tytuł naprawy jest stale widoczny w nagłówku obok pojazdu, statusu i rozliczenia.
+- Przegląd rozpoczyna się od zgłoszenia klienta i rzeczywistych blokad; pełna checklista przebiegu jest dostępna w rozwijanym panelu.
+- Główny panel pokazuje jedną konkretną następną akcję bez powielonych przycisków.
+- Proces naprawy prowadzi kolejno przez zakres wykonanych prac, zakończony wpis czasu, kontrolę jakości, rozliczenie i wydanie.
+- Nawigacja Centrum zlecenia przy węższym oknie mieści się w jednym przewijanym pasku i pozostaje pod głównym nagłówkiem.
+- Wydanie pojazdu jest sprawdzane również po stronie aplikacji głównej i jest możliwe wyłącznie dla aktywnego zlecenia w statusie Gotowe.
+- Gotowość uwzględnia najnowszą decyzję klienta, więc późniejsze odrzucenie zastępuje wcześniejszą akceptację.
+- Dodano testy kolejności procesu, blokady wydania oraz zachowania interfejsu przy szerokości 1100 px.
+
 ## 1.0.55 — 2026-09-22
 
 ### Serwisówki dla konkretnego silnika

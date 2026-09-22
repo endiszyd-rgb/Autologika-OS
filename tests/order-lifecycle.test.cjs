@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {archiveOrder,reopenOrder,updateOrderStatus,updateOrderWait}=require('../electron/order-lifecycle.cjs')
+const {archiveOrder,reopenOrder,requireOrderReadyForRelease,updateOrderStatus,updateOrderWait}=require('../electron/order-lifecycle.cjs')
 
 function database(){
  const db=new DatabaseSync(':memory:')
@@ -45,4 +45,13 @@ test('archiwizacja jest dozwolona dopiero dla gotowego zlecenia i również traf
  assert.equal(archiveOrder(db,3).ok,true)
  assert.ok(db.prepare('SELECT archived_at FROM orders WHERE id=3').get().archived_at)
  assert.equal(db.prepare("SELECT COUNT(*) count FROM order_events WHERE event_type='ORDER_ARCHIVED'").get().count,1)
+})
+
+
+test('wydanie wymaga aktywnego zlecenia w statusie GOTOWE',()=>{
+ const db=database()
+ assert.throws(()=>requireOrderReadyForRelease(db,1),/oznacz zlecenie jako gotowe/i)
+ assert.equal(requireOrderReadyForRelease(db,3).status,'GOTOWE')
+ db.prepare("UPDATE orders SET archived_at='2026-09-22' WHERE id=3").run()
+ assert.throws(()=>requireOrderReadyForRelease(db,3),/do korekty/i)
 })

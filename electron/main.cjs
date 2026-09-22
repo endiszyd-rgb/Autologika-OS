@@ -17,7 +17,7 @@ const { LOOKUP_VERSION, normalizeBarcode, normalizePartNumber, isGtin, lookupBar
 const { deleteInventoryPart } = require('./inventory-record.cjs')
 const { readBarcodeCache, writeBarcodeHit, writeBarcodeMiss, pruneBarcodeCache } = require('./barcode-cache.cjs')
 const { createOrderItem, issueInventoryPart, removeOrderItem, requireEditableOrder, updateOrderItem, updateOrderItemDescription } = require('./inventory-usage.cjs')
-const { archiveOrder, reopenOrder, updateOrderStatus, updateOrderWait } = require('./order-lifecycle.cjs')
+const { archiveOrder, reopenOrder, requireOrderReadyForRelease, updateOrderStatus, updateOrderWait } = require('./order-lifecycle.cjs')
 const { documentHtml: renderProtocolDocument } = require('./protocol-document.cjs')
 const { customerProfile } = require('./customer-profile.cjs')
 const { listDebtors } = require('./debtors.cjs')
@@ -329,7 +329,7 @@ function syncOrderItemTotals(orderId){
 function syncCloseoutAutomation(orderId){
   const db=getDb()
   const raw=db.prepare(`SELECT
-    EXISTS(SELECT 1 FROM approvals WHERE order_id=? AND status='APPROVED') customer_approved,
+    COALESCE((SELECT status='APPROVED' FROM approvals WHERE order_id=? ORDER BY id DESC LIMIT 1),0) customer_approved,
     EXISTS(SELECT 1 FROM diagnostics WHERE order_id=? AND (TRIM(COALESCE(symptom_confirmed,''))!='' OR TRIM(COALESCE(conclusion,''))!='' OR TRIM(COALESCE(recommendation,''))!='')) diagnosis_documented,
     NOT EXISTS(SELECT 1 FROM job_part_orders WHERE order_id=? AND status NOT IN ('ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE')) parts_documented,
     EXISTS(SELECT 1 FROM work_logs WHERE order_id=? AND ended_at IS NOT NULL) work_logged,
@@ -755,12 +755,13 @@ ipcMain.handle('closeout:save',(_,{orderId,data})=>{
 })
 ipcMain.handle('closeout:complete',(_,{orderId})=>{
   const db=getDb()
+  try{requireOrderReadyForRelease(db,orderId)}catch(error){return{ok:false,error:error.message}}
   const checks=syncCloseoutAutomation(orderId)
   const fields=['diagnosis_documented','customer_approved','parts_documented','work_logged','qc_done','payment_checked','release_notes_done']
   const missing=fields.filter(key=>!checks[key])
   if(missing.length)return{ok:false,error:'Nie wszystkie warunki wydania są spełnione.',missing}
   const tx=db.transaction(()=>{
-    const changed=db.prepare(`UPDATE orders SET status='WYDANE',wait_state='BRAK',closed_at=COALESCE(closed_at,CURRENT_TIMESTAMP) WHERE id=? AND status!='WYDANE'`).run(orderId)
+    const changed=db.prepare(`UPDATE orders SET status='WYDANE',wait_state='BRAK',closed_at=COALESCE(closed_at,CURRENT_TIMESTAMP) WHERE id=? AND status='GOTOWE' AND archived_at IS NULL`).run(orderId)
     if(!changed.changes)throw new Error('Zlecenie jest już zamknięte lub nie istnieje.')
     db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(orderId,'ORDER_RELEASED','Pojazd wydany','Zlecenie zamknięte po spełnieniu checklisty wydania')
   })

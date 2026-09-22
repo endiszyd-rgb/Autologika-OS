@@ -30,6 +30,7 @@ import {PartsWorkspace} from './parts-workspace.jsx'
 import {Care} from './care.jsx'
 import {matchingVehicleParts,oeNumbers,vehicleLabel} from './vehicle-part-match.js'
 import {ageLabel,attentionHeadline,attentionMeta,attentionStats,filterAttention} from './attention-center.mjs'
+import {deriveOrderAdvice,hasBasicDiagnosis} from './order-process.mjs'
 
 const api=window.autologika
 const money=n=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN',maximumFractionDigits:0}).format(Number(n||0))
@@ -43,25 +44,6 @@ const searchKey=value=>String(value||'').trim().toLocaleLowerCase('pl-PL').norma
 const catalogMatch=(items,value)=>items.find(item=>catalogKey(item)===catalogKey(value))||String(value||'').trim()
 const canonicalVehicleForm=form=>{const make=catalogMatch(vehicleMakes,form?.make),model=catalogMatch(vehicleModels(make),form?.model);return {...form,make,model}}
 const deletionImpact=preview=>{const c=preview?.counts||{};return [`Pojazdy: ${c.vehicles||0}`,`Zlecenia i ich dane: ${c.orders||0}`,`Załączniki: ${c.attachments||0}`,`Terminy odłączone od rekordu: ${c.appointments||0}`].join('\n')}
-const hasBasicDiagnosis=diag=>['symptom_confirmed','conclusion','recommendation'].some(key=>String(diag?.[key]||'').trim())
-const processAdvice=({order,diag,items,parts,approvals,notes,payments,qcRows=[]})=>{
- const o=order||{}, approved=(approvals||[]).some(x=>x.status==='APPROVED'), pending=(approvals||[]).some(x=>x.status==='PENDING')
- const openParts=(parts||[]).filter(x=>!['ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE'].includes(x.status))
- const qcDone=qcRows.length>=8&&qcRows.filter(x=>x.checked).length>=8, paid=(payments||[]).reduce((a,x)=>a+Number(x.amount||0),0), due=Math.max(0,Number(o.total||0)-paid)
- if(o.status==='PRZYJETE')return {title:'Przenieś do diagnozy',detail:'Auto jest przyjęte. Rozpocznij właściwy tok diagnostyczny.',status:'DIAGNOZA',wait:'BRAK'}
- if(o.status==='DIAGNOZA'&&!hasBasicDiagnosis(diag))return {title:'Opisz usterkę',detail:'Krótki opis rozpoznanej usterki wystarczy, aby zamknąć podstawową diagnozę.',tab:'diagnosis'}
- if(o.status==='DIAGNOZA'&&hasBasicDiagnosis(diag))return {title:'Przejdź do akceptacji',detail:'Diagnoza jest zapisana. Przygotuj zakres i uzyskaj decyzję klienta.',status:'AKCEPTACJA',wait:'DECYZJA',tab:'quote'}
- if(o.status==='AKCEPTACJA'&&!approved)return {title:pending?'Czekaj na decyzję klienta':'Zarejestruj akceptację klienta',detail:pending?'Akceptacja została wysłana i nadal jest oczekująca.':'Brak zatwierdzonego zakresu prac.',wait:'DECYZJA',tab:'quote'}
- if(o.status==='AKCEPTACJA'&&approved&&openParts.length)return {title:'Czekaj na części',detail:`Akceptacja jest. ${openParts.length} pozycji części nadal wymaga dostawy.`,wait:'CZESCI',tab:'parts'}
- if(o.status==='AKCEPTACJA'&&approved&&!openParts.length)return {title:'Rozpocznij naprawę',detail:'Zakres zaakceptowany i brak blokady części.',status:'NAPRAWA',wait:'BRAK'}
- if(o.status==='NAPRAWA'&&!qcDone)return {title:'Wykonaj QC',detail:'Przed oznaczeniem auta jako GOTOWE zapisz wynik kontroli jakości.',tab:'release'}
- if(o.status==='NAPRAWA'&&qcDone)return {title:'Oznacz jako gotowe',detail:'QC zapisane. Auto może przejść do rozliczenia i wydania.',status:'GOTOWE',wait:'BRAK'}
- if(o.status==='GOTOWE'&&due>0.01)return {title:'Rozlicz zlecenie',detail:`Pozostało do zapłaty ${money(due)}.`,tab:'settlement'}
- if(o.status==='GOTOWE')return {title:'Gotowe do wydania',detail:'Rozliczenie zamknięte. Sprawdź checklistę i potwierdź wydanie.',tab:'release'}
- return {title:'Proces zakończony',detail:'Zlecenie jest w historii.',tab:'timeline'}
-}
-
-
 class AppErrorBoundary extends React.Component{
  constructor(props){super(props);this.state={error:null}}
  static getDerivedStateFromError(error){return{error}}
@@ -773,7 +755,7 @@ const completionSteps=[
 ]
 function OrderCompletionPanel({data,setTab}){
  const done=completionSteps.filter(([key])=>Boolean(data?.[key])).length,percent=Math.round(done/completionSteps.length*100),currentIndex=completionSteps.findIndex(([key])=>!data?.[key]),next=currentIndex>=0?completionSteps[currentIndex]:null
- return <div className="orderReadiness"><Panel title="Kompletność zlecenia" action={<b className={done===completionSteps.length?'readinessScore ready':'readinessScore'}>{done}/{completionSteps.length} · {percent}%</b>}><div className="readinessTop"><div><small>GOTOWOŚĆ DO WYDANIA</small><b>{done===completionSteps.length?'Zlecenie kompletne':`${completionSteps.length-done} etapów pozostało`}</b><span>{next?`Teraz wykonaj: ${next[1]}`:'Możesz przejść do zamknięcia i wydania pojazdu.'}</span></div>{next&&<button className="primary" onClick={()=>setTab(next[3])}>Przejdź do: {next[1]} →</button>}</div><div className="readinessBar"><i style={{width:`${percent}%`}}/></div><div className="readinessSteps">{completionSteps.map(([key,title,detail,tab],index)=>{const state=data?.[key]?'done':index===currentIndex?'current':'locked',previous=completionSteps[index-1]?.[1];return <button key={key} className={state} disabled={state==='locked'} onClick={()=>setTab(tab)}><i>{state==='done'?'✓':state==='current'?'→':'·'}</i><span><b>{title}</b><small>{state==='done'?'Wykonano':state==='current'?detail:`Po etapie: ${previous}`}</small></span><em>{state==='done'?'gotowe':state==='current'?'teraz':'później'}</em></button>})}</div></Panel></div>
+ return <div className="orderReadiness"><Panel title="Przebieg zlecenia" action={<b className={done===completionSteps.length?'readinessScore ready':'readinessScore'}>{done}/{completionSteps.length} · {percent}%</b>}><div className="readinessTop"><div><small>GOTOWOŚĆ DO WYDANIA</small><b>{done===completionSteps.length?'Zlecenie kompletne':`${completionSteps.length-done} etapów pozostało`}</b><span>{next?`Teraz wykonaj: ${next[1]}`:'Możesz przejść do zamknięcia i wydania pojazdu.'}</span></div></div><div className="readinessBar"><i style={{width:`${percent}%`}}/></div><details className="readinessDetails"><summary><span>Pokaż wszystkie etapy</span><b>{next?`Następny: ${next[1]}`:'Wszystkie zakończone'}</b></summary><div className="readinessSteps">{completionSteps.map(([key,title,detail,tab],index)=>{const state=data?.[key]?'done':index===currentIndex?'current':'locked',previous=completionSteps[index-1]?.[1];return <button key={key} className={state} disabled={state==='locked'} onClick={()=>setTab(tab)}><i>{state==='done'?'✓':state==='current'?'→':'·'}</i><span><b>{title}</b><small>{state==='done'?'Wykonano':state==='current'?detail:`Po etapie: ${previous}`}</small></span><em>{state==='done'?'gotowe':state==='current'?'teraz':'później'}</em></button>})}</div></details></Panel></div>
 }
 
 function CloseoutPanel({order,data,payments,onClosed,reload,locked=false}){
@@ -782,7 +764,7 @@ function CloseoutPanel({order,data,payments,onClosed,reload,locked=false}){
  const labelsMap={diagnosis_documented:'Diagnoza / wniosek zapisane',customer_approved:'Akceptacja klienta zapisana',parts_documented:'Części rozliczone / zamknięte',work_logged:'Czas pracy zapisany',qc_done:'Kontrola jakości zakończona',payment_checked:'Płatność rozliczona',release_notes_done:'Zalecenia przy wydaniu zapisane'}
  const effective=Object.fromEntries(Object.keys(labelsMap).map(k=>[k,Boolean(data?.[k])]))
  const completed=Object.keys(labelsMap).filter(k=>effective[k]).length
- const canClose=completed===Object.keys(labelsMap).length
+ const statusReady=order.status==='GOTOWE',canClose=completed===Object.keys(labelsMap).length&&statusReady
  const complete=async()=>{
    setClosing(true);setError('')
    const result=await api.closeout.complete(order.id)
@@ -790,7 +772,7 @@ function CloseoutPanel({order,data,payments,onClosed,reload,locked=false}){
    if(!result?.ok){const missing=(result?.missing||[]).map(k=>labelsMap[k]).filter(Boolean);setError(missing.length?`Uzupełnij: ${missing.join(', ')}.`:(result?.error||'Nie udało się zamknąć zlecenia.'));await reload();return}
    await onClosed?.()
  }
- return <Panel title="Zamknięcie zlecenia"><div className="closeoutProgress"><b>{completed}/7</b><span>warunków zamknięcia</span><div><i style={{width:`${completed/7*100}%`}}/></div></div><p className="muted">Lista aktualizuje się automatycznie na podstawie akceptacji, naprawy, QC, dokumentacji i wpłat.</p><div className="closeoutChecks">{Object.entries(labelsMap).map(([k,l])=><label className={effective[k]?'ok':''} key={k}><input type="checkbox" checked={effective[k]} readOnly/><span>{l}</span><em>{effective[k]?'✓ automatycznie':'do wykonania'}</em></label>)}</div>{balance>0.01&&<div className="warnbox">Pozostało do zapłaty: <b>{money(balance)}</b></div>}{error&&<div className="warnbox closeoutError">{error}</div>}<div className="actionrow"><button onClick={()=>api.orders.exportPdf(order.id,'release')}>PDF wydania</button><button className="primary" disabled={locked||!canClose||closing} title={locked?'Zlecenie jest już zamknięte':''} onClick={complete}>{locked?'✓ ZLECENIE WYDANE':closing?'ZAMYKANIE…':'✓ ZAMKNIJ I OZNACZ JAKO WYDANE'}</button></div></Panel>
+ return <Panel title="Zamknięcie zlecenia"><div className="closeoutProgress"><b>{completed}/7</b><span>warunków zamknięcia</span><div><i style={{width:`${completed/7*100}%`}}/></div></div><p className="muted">Lista aktualizuje się automatycznie na podstawie akceptacji, naprawy, QC, dokumentacji i wpłat.</p><div className="closeoutChecks">{Object.entries(labelsMap).map(([k,l])=><label className={effective[k]?'ok':''} key={k}><input type="checkbox" checked={effective[k]} readOnly/><span>{l}</span><em>{effective[k]?'✓ automatycznie':'do wykonania'}</em></label>)}</div>{!locked&&!statusReady&&<div className="warnbox">Najpierw zakończ naprawę i oznacz zlecenie jako gotowe.</div>}{balance>0.01&&<div className="warnbox">Pozostało do zapłaty: <b>{money(balance)}</b></div>}{error&&<div className="warnbox closeoutError">{error}</div>}<div className="actionrow"><button onClick={()=>api.orders.exportPdf(order.id,'release')}>PDF wydania</button><button className="primary" disabled={locked||!canClose||closing} title={locked?'Zlecenie jest już zamknięte':!statusReady?'Najpierw oznacz zlecenie jako gotowe':''} onClick={complete}>{locked?'✓ ZLECENIE WYDANE':closing?'ZAMYKANIE…':'✓ ZAMKNIJ I OZNACZ JAKO WYDANE'}</button></div></Panel>
 }
 
 function Debtors({openOrder}){
@@ -849,7 +831,7 @@ function OrderCenter({changed,initialId,openManual}){
  const active=logs.filter(x=>!x.ended_at)
  const partsOpen=parts.filter(x=>!['ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE'].includes(x.status))
  const paidTotal=payments.reduce((sum,payment)=>sum+Number(payment.amount||0),0),balanceTotal=Math.max(0,Number(o.total||0)-paidTotal)
- const advice=processAdvice({order:o,diag,items,parts,approvals,notes,payments,qcRows})
+ const advice=deriveOrderAdvice({order:o,diagnosis:diag,items,parts,approvals,payments,qcRows,logs,procedures})
  const applyAdvice=async()=>{if(advice.status)await api.orders.updateStatus(o.id,advice.status);if(advice.wait)await api.orders.updateWait(o.id,advice.wait);if(advice.tab)setTab(advice.tab);await reload()}
  const tabs=[['overview','Przegląd'],['vehicle','Stan pojazdu'],['works','Wykonane prace'],['tech','Dane techniczne'],['diagnosis','Diagnostyka'],['quote','Wycena / akceptacja'],['parts','Części'],['time','Czas pracy'],['docs','Zdjęcia / dokumenty'],['contact','Kontakt'],['settlement','Płatność / wynik'],['reminders','Przypomnienia'],['timeline','Oś czasu'],['release','QC / wydanie']]
  const tabGroups=[
@@ -860,20 +842,20 @@ function OrderCenter({changed,initialId,openManual}){
  return <section className="orderCenterPage">
    <div className="centerPicker"><label>Aktywne zlecenie<select aria-label="Wybierz zlecenie" value={id||''} onChange={e=>{setId(Number(e.target.value));setTab('overview')}}>{orders.map(x=><option key={x.id} value={x.id}>#{x.id} · {x.plate} · {x.make} {x.model} · {x.title}</option>)}</select></label><div className="grow"/><button className="primary" onClick={()=>openManual?.(o)}>◫ Dokumentacja auta</button><details className="centerDocuments"><summary>Dokumenty PDF ▾</summary><div><button onClick={()=>api.orders.exportPdf(o.id,'intake')}>Protokół przyjęcia</button><button onClick={()=>api.orders.exportPdf(o.id,'order')}>Zlecenie serwisowe</button><button onClick={()=>api.orders.exportPdf(o.id,'release')}>Protokół wydania</button></div></details></div>
    <div className="centerHero">
-     <div><small>ZLECENIE #{o.id}</small><h2>{o.plate} · {o.make} {o.model}</h2><p>{o.customer} · {o.phone?<button className="phoneLink" onClick={()=>api.system.openPhone(o.phone)}>☎ {o.phone}</button>:'telefon brak'} · {o.vin||'VIN brak'}{o.due_at?` · termin ${new Date(o.due_at).toLocaleDateString('pl-PL')}`:''}</p></div>
+      <div><small>ZLECENIE #{o.id}</small><h2>{o.plate} · {o.make} {o.model}</h2><h3>{o.title||'Diagnostyka / naprawa'}</h3><p>{o.customer} · {o.phone?<button className="phoneLink" onClick={()=>api.system.openPhone(o.phone)}>☎ {o.phone}</button>:'telefon brak'} · {o.vin||'VIN brak'}{o.due_at?` · termin ${new Date(o.due_at).toLocaleDateString('pl-PL')}`:''}</p></div>
      <div className="centerHeroRight"><em className={'tag '+o.status.toLowerCase()}>{labels[o.status]}</em><b>{money(o.total)}</b><span>{balanceTotal>0.01?`do zapłaty ${money(balanceTotal)}`:'rozliczone'}</span></div>
    </div>
    {locked&&<div className="orderLockNotice"><div><b>✓ Zlecenie zamknięte — zakres prac jest chroniony</b><span>Możesz przeglądać dokumentację, wystawiać numery dokumentów i rejestrować późniejsze wpłaty. Pozycje, ceny składowe oraz stan magazynu pozostają niezmienne.</span></div><button onClick={()=>setReopen(true)}>↩ Otwórz do korekty</button></div>}
-   <div className="workflowAdvisor"><div><small>NASTĘPNY KROK</small><b>{advice.title}</b><span>{advice.detail}</span></div><div className="actionrow">{advice.tab&&<button onClick={()=>setTab(advice.tab)}>Otwórz etap</button>}{(advice.status||advice.wait)&&<button className="primary" disabled={locked} title={locked?'Najpierw otwórz zlecenie do korekty':''} onClick={applyAdvice}>Wykonaj krok →</button>}</div></div>
+    <div className="workflowAdvisor"><div><small>NASTĘPNY KROK</small><b>{advice.title}</b><span>{advice.detail}</span></div><div className="actionrow"><button className="primary" disabled={locked&&Boolean(advice.status||advice.wait)} title={locked&&Boolean(advice.status||advice.wait)?'Najpierw otwórz zlecenie do korekty':''} onClick={applyAdvice}>{advice.title} →</button></div></div>
    <details className="centerManualProcess"><summary><span>Ręczne sterowanie procesem</span><em>{labels[o.status]} · oczekiwanie: {{BRAK:'brak',KLIENT:'klient',CZESCI:'części',DECYZJA:'decyzja'}[o.wait_state||'BRAK']}</em></summary><div><div className="steps centerSteps">{statuses.map(s=><button key={s} className={o.status===s?'sel':''} disabled={locked||(s==='WYDANE'&&o.status!=='WYDANE')} title={locked?'Najpierw otwórz zlecenie do korekty':s==='WYDANE'&&o.status!=='WYDANE'?'Wydanie potwierdź w zakładce QC / wydanie':''} onClick={async()=>{await api.orders.updateStatus(o.id,s);reload()}}>{labels[s]}</button>)}</div><div className="waitBar"><span>Oczekiwanie:</span>{[['BRAK','brak'],['KLIENT','na klienta'],['CZESCI','na części'],['DECYZJA','na decyzję']].map(([v,l])=><button key={v} disabled={locked} title={locked?'Najpierw otwórz zlecenie do korekty':''} className={(o.wait_state||'BRAK')===v?'active':''} onClick={async()=>{await api.orders.updateWait(o.id,v);reload()}}>{l}</button>)}</div></div></details>
    <nav className="centerTabs orderTabDock" aria-label="Sekcje Centrum zlecenia">{tabGroups.map(([group,groupTabs])=><div className="orderTabGroup" key={group}><small>{group}</small><div>{groupTabs.map(([k,l])=><button data-order-tab={k} aria-current={tab===k?'page':undefined} className={tab===k?'active':''} key={k} onClick={()=>setTab(k)}>{l}{k==='parts'&&partsOpen.length>0?<i>{partsOpen.length}</i>:null}{k==='time'&&active.length>0?<i>{active.length}</i>:null}</button>)}</div></div>)}</nav>
 
    <div className="workspaceContent">
 
    {tab==='overview'&&<div className="centerGrid">
-      <OrderCompletionPanel data={closeout} setTab={setTab}/>
       <Panel title="Zgłoszenie klienta"><p className="complaint">{o.complaint||'Brak opisu objawu'}</p><div className="centerFacts"><div><span>Przebieg</span><b>{Number(o.mileage||0).toLocaleString('pl-PL')} km</b></div><div><span>Silnik</span><b>{o.engine||'—'}</b></div><div><span>Limit diagnozy</span><b>{money(o.diagnosis_limit)}</b></div><div><span>Priorytet</span><b>{o.priority}</b></div></div></Panel>
-     <Panel title="Co blokuje zlecenie">{partsOpen.length?<>{partsOpen.slice(0,6).map(p=><div className="blocker" key={p.id}><b>{p.name}</b><span>{p.status.replaceAll('_',' ')} {p.expected_at&&`· ETA ${new Date(p.expected_at).toLocaleString('pl-PL')}`}</span></div>)}</>:closeout?.parts_documented?<div className="okbox">✓ Części rozliczone i zamknięte</div>:<div className="pendingbox">○ Części zostaną sprawdzone po akceptacji zakresu</div>}{!hasBasicDiagnosis(diag)&&<div className="warnbox">! Brak opisu rozpoznanej usterki</div>}</Panel>
+      <Panel title="Co blokuje zlecenie">{partsOpen.length?<>{partsOpen.slice(0,6).map(p=><div className="blocker" key={p.id}><b>{p.name}</b><span>{p.status.replaceAll('_',' ')} {p.expected_at&&`· ETA ${new Date(p.expected_at).toLocaleString('pl-PL')}`}</span></div>)}</>:closeout?.parts_documented?<div className="okbox">✓ Części rozliczone i zamknięte</div>:<div className="pendingbox">○ Części zostaną sprawdzone po akceptacji zakresu</div>}{!hasBasicDiagnosis(diag)&&<div className="warnbox">! Brak opisu rozpoznanej usterki</div>}</Panel>
+      <OrderCompletionPanel data={closeout} setTab={setTab}/>
      <Panel title="Szybkie akcje"><div className="quickGrid compact"><button onClick={()=>openManual?.(o)}>◫ Manual pojazdu</button><button disabled={locked} title={locked?'Najpierw otwórz zlecenie do korekty':''} onClick={()=>setShowWork(true)}>✓ Dodaj pracę</button><button onClick={()=>api.attachments.pick(o.id,'PRZYJECIE').then(reload)}>▧ Dodaj zdjęcia</button><button onClick={()=>setTab('contact')}>✉ Kontakt / SMS</button></div></Panel>
       <Panel title="Podsumowanie realizacji"><div className="centerFacts"><div><span>Czas rzeczywisty</span><b>{durText(actualMinutes)}</b></div><div><span>Pozycje zlecenia</span><b>{items.length}</b></div><div><span>Zdjęcia / pliki</span><b>{files.length}</b></div><div><span>Otwarte części</span><b>{partsOpen.length}</b></div></div></Panel>
    </div>}

@@ -34,6 +34,13 @@ function updateOrderWait(db,id,waitState){
   })()
 }
 
+function requireOrderReadyForRelease(db,id){
+  const order=getOrder(db,id)
+  if(order.archived_at)throw new Error('Zarchiwizowane zlecenie trzeba najpierw otworzyć do korekty.')
+  if(order.status!=='GOTOWE')throw new Error('Przed wydaniem oznacz zlecenie jako gotowe.')
+  return order
+}
+
 function archiveOrder(db,id){
   const order=getOrder(db,id)
   if(order.archived_at)return{ok:true}
@@ -56,4 +63,4 @@ function reopenOrder(db,id,note){
   })()
 }
 
-module.exports={STATUSES,WAIT_STATES,archiveOrder,reopenOrder,updateOrderStatus,updateOrderWait}
+module.exports={STATUSES,WAIT_STATES,archiveOrder,reopenOrder,requireOrderReadyForRelease,updateOrderStatus,updateOrderWait}
