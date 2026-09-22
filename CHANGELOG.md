@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.54 — 2026-09-22
+
+### Dokładniejsze wyszukiwanie dokumentacji technicznej
+
+- Dodano bezpośrednie przeszukiwanie publicznych katalogów instrukcji warsztatowych wraz z analizą stron dokumentów pod kątem kodów silnika.
+- Zapytania internetowe są łączone, dzięki czemu wyszukiwarka rzadziej uruchamia blokady antybotowe i szybciej kończy pracę.
+- Wyniki z niewłaściwego rocznika lub generacji pojazdu, w tym generacji zapisanych cyframi rzymskimi, są automatycznie odrzucane.
+- Zaostrzono filtrowanie ogłoszeń, instrukcji obsługi, podejrzanych domen oraz stron bez potwierdzonej zgodności z modelem.
+- Każdy wynik pokazuje teraz poziom dopasowania: kod silnika, model z rocznikiem, model albo portal producenta.
+- Gdy nie znaleziono dokumentu potwierdzonego kodem silnika, aplikacja wyświetla czytelne ostrzeżenie zamiast sugerować zgodność wyniku ogólnego.
+- Dodano testy regresji dla zakresów roczników, platform BMW i generacji Volkswagena oraz ekstrakcji kodu silnika z katalogu serwisowego.
+
 ## 1.0.53 — 2026-09-21
 
 ### Internetowy indeks serwisówek
