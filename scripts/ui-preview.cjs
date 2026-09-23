@@ -470,6 +470,23 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(database.prepare("SELECT COUNT(*) n FROM vehicles WHERE plate='PO TEST1' AND make='Audi'").get().n,1)
       console.log('NEW_ORDER_VEHICLE', 'existing vehicle list and inline customer/vehicle creation verified')
       await delay(250)
+      await win.webContents.executeJavaScript(`{
+        const setValue=(element,value)=>{const prototype=element.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(prototype,'value').set.call(element,value);element.dispatchEvent(new Event('input',{bubbles:true}));element.dispatchEvent(new Event('change',{bubbles:true}))};
+        setValue(document.querySelector('input[aria-label="Szukaj zlecenia"]'),'POTEST1');
+        setValue(document.querySelector('select[aria-label="Filtr etapu zlecenia"]'),'PRZYJETE');
+        setValue(document.querySelector('select[aria-label="Filtr priorytetu zlecenia"]'),'NORMALNY');
+      }`)
+      await delay(200)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.orderrow').length`),1)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.orderrow').textContent.includes('PO TEST1')`),true)
+      await win.webContents.executeJavaScript(`document.querySelector('input[aria-label="Szukaj zlecenia"]').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`)
+      await delay(180)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.orderRepairDetail h2').textContent`),'PO TEST1')
+      await capture('orders-search-filters')
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.orderFilterBar button')].find(button=>button.textContent.includes('Wyczyść')).click()`)
+      await delay(180)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.orderrow').length>1`),true)
+      console.log('ORDER_SEARCH_FILTERS','order list search ignores registration spacing and combines stage with priority filters')
       await win.webContents.executeJavaScript(`[...document.querySelectorAll('.orderrow')].find(x=>x.textContent.includes('PO TEST1')).click()`)
       await delay(250)
       await win.webContents.executeJavaScript(`window.confirm=()=>true;document.querySelector('.deleteOrderButton').click()`)
