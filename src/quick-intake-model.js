@@ -36,6 +36,11 @@ export function clearIntakeVehicle(current){
 
 export function vehiclesForIntakeCustomer(vehicles,customerId){return (vehicles||[]).filter(vehicle=>!customerId||same(vehicle.customer_id,customerId))}
 
+export function findActiveIntakeOrder(orders,vehicleId){
+ if(!vehicleId)return null
+ return (orders||[]).find(order=>same(order.vehicle_id,vehicleId)&&order.status!=='WYDANE'&&!order.archived_at)||null
+}
+
 export function findScannedIntakeVehicle(vehicles,scan){
  const vin=clean(scan?.registration?.form?.vin||scan?.vin).replace(/\s/g,'').toUpperCase(),plate=clean(scan?.registration?.form?.plate).replace(/\s/g,'').toUpperCase()
  return (vehicles||[]).find(vehicle=>(vin&&clean(vehicle.vin).replace(/\s/g,'').toUpperCase()===vin)||(plate&&clean(vehicle.plate).replace(/\s/g,'').toUpperCase()===plate))||null

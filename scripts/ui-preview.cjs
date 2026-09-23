@@ -81,19 +81,29 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Marka')).querySelector('select').value`),'Toyota')
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Model')).querySelector('select').value`),'Corolla')
       console.log('GLOBAL_AZTEC_INTAKE','AZTEC captured over an active input and redirected from settings to populated quick intake')
+      const inventoryDb=require('../electron/db.cjs').getDb()
+      const intakeActive=inventoryDb.prepare(`SELECT o.id order_id,o.vehicle_id,v.customer_id FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE o.archived_at IS NULL AND o.status!='WYDANE' ORDER BY o.id LIMIT 1`).get()
+      assert.ok(intakeActive)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.intakeRecordPicker select')[0].options.length>1`),true)
       await win.webContents.executeJavaScript(`{
         const customerSelect=document.querySelectorAll('.intakeRecordPicker select')[0];
-        const savedCustomer=[...customerSelect.options].find(option=>option.value);
-        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(customerSelect,savedCustomer.value);
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(customerSelect,${JSON.stringify(String(intakeActive.customer_id))});
         customerSelect.dispatchEvent(new Event('change',{bubbles:true}));
       }`)
       await delay(250)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.intakeRecordPicker select')[1].options.length>1`),true)
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Imię / firma')).querySelector('input').readOnly`),true)
+      await win.webContents.executeJavaScript(`{
+        const vehicleSelect=document.querySelectorAll('.intakeRecordPicker select')[1];
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(vehicleSelect,${JSON.stringify(String(intakeActive.vehicle_id))});
+        vehicleSelect.dispatchEvent(new Event('change',{bubbles:true}));
+      }`)
+      await delay(250)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.intakeDuplicateWarning b').textContent.includes(${JSON.stringify(`#${intakeActive.order_id}`)})`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.stickyIntake .primary').disabled`),true)
       assert.equal((await inspect()).overflow,false)
-      console.log('QUICK_INTAKE_CUSTOMER_PICKER','saved customer selection autofilled contact data and narrowed the vehicle list')
-      const inventoryDb=require('../electron/db.cjs').getDb()
+      await capture('intake-duplicate-warning')
+      console.log('QUICK_INTAKE_CUSTOMER_PICKER','saved customer and vehicle autofilled the form and blocked an accidental duplicate active order')
       assert.equal(inventoryDb.pragma('user_version',{simple:true}),11)
       for(const column of ['barcode','brand','vehicle_fitment','cross_numbers','lookup_source','lookup_url'])assert.equal(inventoryDb.prepare('PRAGMA table_info(job_part_orders)').all().some(item=>item.name===column),true,`job_part_orders.${column}`)
       inventoryDb.prepare(`INSERT INTO inventory_parts(barcode,part_no,name,brand,vehicle_fitment,cross_numbers,stock,min_stock,unit_cost,sell_price,location) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run('4006381333931','W 712/95','Filtr oleju','MANN-FILTER','BMW 320d','11428507683\n11427854445',4,2,24.5,49,'A-03')

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {clearIntakeVehicle,filterIntakeCustomers,findScannedIntakeVehicle,selectIntakeCustomer,selectIntakeVehicle,vehiclesForIntakeCustomer} from '../src/quick-intake-model.js'
+import {clearIntakeVehicle,filterIntakeCustomers,findActiveIntakeOrder,findScannedIntakeVehicle,selectIntakeCustomer,selectIntakeVehicle,vehiclesForIntakeCustomer} from '../src/quick-intake-model.js'
 
 const customers=[{id:1,name:'Anna Nowak',phone:'500 600 700',email:'anna@example.pl',company:'Auto Anna'},{id:2,name:'Jan Kowalski',phone:'700800900'}]
 const vehicles=[{id:10,customer_id:1,plate:'WA 1234',vin:'ABC123',make:'Volvo',model:'V60',mileage:125000},{id:20,customer_id:2,plate:'KR 55',vin:'XYZ789',make:'Ford',model:'Focus'}]
@@ -32,4 +32,11 @@ test('lista i wyszukiwanie ograniczają dane do wybranego klienta',()=>{
 test('skan rozpoznaje pojazd zapisany już w kartotece',()=>{
  assert.equal(findScannedIntakeVehicle(vehicles,{vin:'abc 123'}).id,10)
  assert.equal(findScannedIntakeVehicle(vehicles,{registration:{form:{plate:'kr55'}}}).id,20)
+})
+
+test('wykrywa aktywne zlecenie dla wybranego pojazdu',()=>{
+ const orders=[{id:31,vehicle_id:10,status:'NAPRAWA'},{id:32,vehicle_id:20,status:'WYDANE'},{id:33,vehicle_id:20,status:'PRZYJETE',archived_at:'2026-09-20'}]
+ assert.equal(findActiveIntakeOrder(orders,10)?.id,31)
+ assert.equal(findActiveIntakeOrder(orders,20),null)
+ assert.equal(findActiveIntakeOrder(orders,''),null)
 })
