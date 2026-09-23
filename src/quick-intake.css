@@ -1,0 +1,6 @@
+.intakeSections>.panel{min-width:0}.intakeRecordPicker{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.3fr) auto;gap:10px;align-items:end;margin-bottom:16px;padding:14px;border:1px solid #3b4a3d;border-radius:11px;background:linear-gradient(120deg,#141d16,#0d120f)}
+.intakeSections>.panel:nth-child(2) .intakeRecordPicker{grid-template-columns:1fr}
+.intakeRecordPicker label{margin:0}.intakeRecordPicker small{display:block;margin:0 0 6px;color:#92a388;font-size:8px;font-weight:800;letter-spacing:1.1px}.intakeRecordPicker select,.intakeRecordPicker input{width:100%}
+.intakeRecordPicker button{min-height:38px;white-space:nowrap}.intakeRecordState{display:flex;align-items:center;gap:8px;grid-column:1/-1;padding-top:2px;color:#8e9a91;font-size:10px}.intakeRecordState b{color:#c9e7aa}.intakeRecordState i{width:6px;height:6px;border-radius:50%;background:#a9dc75;box-shadow:0 0 9px #a9dc7566}
+.intakeSelectedHint{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:-4px 0 13px;padding:9px 11px;border:1px solid #3d513b;border-radius:8px;background:#172117;color:#9eac9f;font-size:10px}.intakeSelectedHint b{color:#d5edbd}.intakeSelectedHint button{padding:6px 9px;font-size:9px}
+@media(max-width:850px){.intakeRecordPicker{grid-template-columns:1fr}.intakeRecordState{grid-column:auto}}

@@ -81,6 +81,18 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Marka')).querySelector('select').value`),'Toyota')
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Model')).querySelector('select').value`),'Corolla')
       console.log('GLOBAL_AZTEC_INTAKE','AZTEC captured over an active input and redirected from settings to populated quick intake')
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.intakeRecordPicker select')[0].options.length>1`),true)
+      await win.webContents.executeJavaScript(`{
+        const customerSelect=document.querySelectorAll('.intakeRecordPicker select')[0];
+        const savedCustomer=[...customerSelect.options].find(option=>option.value);
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(customerSelect,savedCustomer.value);
+        customerSelect.dispatchEvent(new Event('change',{bubbles:true}));
+      }`)
+      await delay(250)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.intakeRecordPicker select')[1].options.length>1`),true)
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Imię / firma')).querySelector('input').readOnly`),true)
+      assert.equal((await inspect()).overflow,false)
+      console.log('QUICK_INTAKE_CUSTOMER_PICKER','saved customer selection autofilled contact data and narrowed the vehicle list')
       const inventoryDb=require('../electron/db.cjs').getDb()
       assert.equal(inventoryDb.pragma('user_version',{simple:true}),11)
       for(const column of ['barcode','brand','vehicle_fitment','cross_numbers','lookup_source','lookup_url'])assert.equal(inventoryDb.prepare('PRAGMA table_info(job_part_orders)').all().some(item=>item.name===column),true,`job_part_orders.${column}`)

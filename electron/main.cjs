@@ -447,14 +447,19 @@ ipcMain.handle('intake:create',(_,d)=>{
   const db=getDb()
   const tx=db.transaction(()=>{
     const phone=String(d.customer_phone||'').trim(), vin=String(d.vin||'').trim().toUpperCase(), plate=String(d.plate||'').trim().toUpperCase()
-    let customer=phone?db.prepare("SELECT * FROM customers WHERE REPLACE(REPLACE(phone,' ',''),'-','')=? ORDER BY id DESC LIMIT 1").get(phone.replace(/[ -]/g,'')):null
+    const selectedCustomerId=Number(d.customer_id)||0,selectedVehicleId=Number(d.vehicle_id)||0
+    let customer=selectedCustomerId?db.prepare('SELECT * FROM customers WHERE id=?').get(selectedCustomerId):null
+    if(selectedCustomerId&&!customer)throw new Error('Wybrany klient nie istnieje już w kartotece. Odśwież listę i wybierz go ponownie.')
+    if(!customer&&phone)customer=db.prepare("SELECT * FROM customers WHERE REPLACE(REPLACE(phone,' ',''),'-','')=? ORDER BY id DESC LIMIT 1").get(phone.replace(/[ -]/g,''))
     if(!customer){
       const cr=db.prepare('INSERT INTO customers(name,phone,email,company,notes) VALUES (?,?,?,?,?)').run(d.customer_name||'Klient',phone,d.customer_email||'',d.company||'',d.customer_notes||'')
       customer={id:cr.lastInsertRowid}
     }
-    let vehicle=null
-    if(vin) vehicle=db.prepare('SELECT * FROM vehicles WHERE UPPER(vin)=? LIMIT 1').get(vin)
+    let vehicle=selectedVehicleId?db.prepare('SELECT * FROM vehicles WHERE id=?').get(selectedVehicleId):null
+    if(selectedVehicleId&&!vehicle)throw new Error('Wybrany pojazd nie istnieje już w kartotece. Odśwież listę i wybierz go ponownie.')
+    if(!vehicle&&vin) vehicle=db.prepare('SELECT * FROM vehicles WHERE UPPER(vin)=? LIMIT 1').get(vin)
     if(!vehicle && plate) vehicle=db.prepare('SELECT * FROM vehicles WHERE customer_id=? AND UPPER(plate)=? ORDER BY id DESC LIMIT 1').get(customer.id,plate)
+    if(selectedCustomerId&&vehicle&&Number(vehicle.customer_id)!==Number(customer.id))throw new Error('Wybrany pojazd nie należy do wskazanego klienta.')
     if(!vehicle){
       const vr=db.prepare('INSERT INTO vehicles(customer_id,plate,vin,make,model,generation,year,engine,power_hp,engine_code,mileage,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(customer.id,plate,vin,d.make||'',d.model||'',d.generation||'',d.year||null,d.engine||'',+d.power_hp||null,d.engine_code||'',+d.mileage||0,d.vehicle_notes||'')
       vehicle={id:vr.lastInsertRowid}
