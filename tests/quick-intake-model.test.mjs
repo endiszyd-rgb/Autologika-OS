@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {clearIntakeVehicle,filterIntakeCustomers,findActiveIntakeOrder,findScannedIntakeVehicle,selectIntakeCustomer,selectIntakeVehicle,vehiclesForIntakeCustomer} from '../src/quick-intake-model.js'
+import {clearIntakeVehicle,filterIntakeCustomers,findActiveIntakeOrder,findScannedIntakeVehicle,intakeMileageState,selectIntakeCustomer,selectIntakeVehicle,vehiclesForIntakeCustomer} from '../src/quick-intake-model.js'
 
 const customers=[{id:1,name:'Anna Nowak',phone:'500 600 700',email:'anna@example.pl',company:'Auto Anna'},{id:2,name:'Jan Kowalski',phone:'700800900'}]
 const vehicles=[{id:10,customer_id:1,plate:'WA 1234',vin:'ABC123',make:'Volvo',model:'V60',mileage:125000},{id:20,customer_id:2,plate:'KR 55',vin:'XYZ789',make:'Ford',model:'Focus'}]
@@ -39,4 +39,11 @@ test('wykrywa aktywne zlecenie dla wybranego pojazdu',()=>{
  assert.equal(findActiveIntakeOrder(orders,10)?.id,31)
  assert.equal(findActiveIntakeOrder(orders,20),null)
  assert.equal(findActiveIntakeOrder(orders,''),null)
+})
+
+test('chroni historię pojazdu przed przypadkowym cofnięciem przebiegu',()=>{
+ assert.equal(intakeMileageState({mileage:125000},124999).invalid,true)
+ assert.equal(intakeMileageState({mileage:125000},125001).increased,true)
+ assert.equal(intakeMileageState({mileage:125000},'').invalid,false)
+ assert.equal(intakeMileageState(null,90000).invalid,false)
 })

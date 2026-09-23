@@ -464,8 +464,10 @@ ipcMain.handle('intake:create',(_,d)=>{
       const vr=db.prepare('INSERT INTO vehicles(customer_id,plate,vin,make,model,generation,year,engine,power_hp,engine_code,mileage,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(customer.id,plate,vin,d.make||'',d.model||'',d.generation||'',d.year||null,d.engine||'',+d.power_hp||null,d.engine_code||'',+d.mileage||0,d.vehicle_notes||'')
       vehicle={id:vr.lastInsertRowid}
     } else {
+      const suppliedMileage=Number(d.mileage)||0,storedMileage=Number(vehicle.mileage)||0
+      if(suppliedMileage>0&&suppliedMileage<storedMileage)throw new Error(`Przebieg nie może być niższy niż zapisane ${storedMileage.toLocaleString('pl-PL')} km.`)
       db.prepare(`UPDATE vehicles SET plate=COALESCE(NULLIF(?,''),plate),vin=COALESCE(NULLIF(?,''),vin),make=COALESCE(NULLIF(?,''),make),model=COALESCE(NULLIF(?,''),model),generation=COALESCE(NULLIF(?,''),generation),year=COALESCE(?,year),engine=COALESCE(NULLIF(?,''),engine),power_hp=COALESCE(?,power_hp),engine_code=COALESCE(NULLIF(?,''),engine_code),mileage=CASE WHEN ?>0 THEN ? ELSE mileage END WHERE id=?`)
-        .run(plate,vin,d.make||'',d.model||'',d.generation||'',d.year||null,d.engine||'',+d.power_hp||null,d.engine_code||'',+d.mileage||0,+d.mileage||0,vehicle.id)
+        .run(plate,vin,d.make||'',d.model||'',d.generation||'',d.year||null,d.engine||'',+d.power_hp||null,d.engine_code||'',suppliedMileage,suppliedMileage,vehicle.id)
     }
     const or=db.prepare(`INSERT INTO orders(vehicle_id,title,complaint,status,priority,diagnosis_limit,labor_rate,diagnosis_fee,source,due_at,wait_state) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
       .run(vehicle.id,d.title||'Nowe zlecenie',d.complaint||'','PRZYJETE',d.priority||'NORMALNY',+d.diagnosis_limit||0,+d.labor_rate||220,+d.diagnosis_fee||0,d.source||'nieznane',d.due_at||null,'BRAK')

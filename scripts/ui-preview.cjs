@@ -82,7 +82,7 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Model')).querySelector('select').value`),'Corolla')
       console.log('GLOBAL_AZTEC_INTAKE','AZTEC captured over an active input and redirected from settings to populated quick intake')
       const inventoryDb=require('../electron/db.cjs').getDb()
-      const intakeActive=inventoryDb.prepare(`SELECT o.id order_id,o.vehicle_id,v.customer_id FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE o.archived_at IS NULL AND o.status!='WYDANE' ORDER BY o.id LIMIT 1`).get()
+      const intakeActive=inventoryDb.prepare(`SELECT o.id order_id,o.vehicle_id,v.customer_id,v.mileage FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE o.archived_at IS NULL AND o.status!='WYDANE' ORDER BY o.id LIMIT 1`).get()
       assert.ok(intakeActive)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.intakeRecordPicker select')[0].options.length>1`),true)
       await win.webContents.executeJavaScript(`{
@@ -101,6 +101,19 @@ app.on('browser-window-created', (_, win) => {
       await delay(250)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.intakeDuplicateWarning b').textContent.includes(${JSON.stringify(`#${intakeActive.order_id}`)})`),true)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.stickyIntake .primary').disabled`),true)
+      if(Number(intakeActive.mileage)>0){
+        await win.webContents.executeJavaScript(`{const input=[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Przebieg')).querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(String(Number(intakeActive.mileage)-1))});input.dispatchEvent(new Event('input',{bubbles:true}));}`)
+        await delay(150)
+        assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.mileageInvalid')`),true)
+        assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.stickyIntake .primary').textContent`),'POPRAW PRZEBIEG')
+        await win.webContents.executeJavaScript(`{const input=document.querySelector('.mileageInvalid input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(String(intakeActive.mileage))});input.dispatchEvent(new Event('input',{bubbles:true}));}`)
+        await delay(150)
+        assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.mileageInvalid')`),false)
+        const intakeCountBefore=inventoryDb.prepare('SELECT COUNT(*) count FROM orders').get().count
+        const mileageError=await win.webContents.executeJavaScript(`window.autologika.intake.create({customer_id:${Number(intakeActive.customer_id)},vehicle_id:${Number(intakeActive.vehicle_id)},title:'Błędny przebieg',mileage:${Number(intakeActive.mileage)-1}}).then(()=>null).catch(error=>error.message||String(error))`)
+        assert.equal(String(mileageError).includes('Przebieg nie może być niższy'),true)
+        assert.equal(inventoryDb.prepare('SELECT COUNT(*) count FROM orders').get().count,intakeCountBefore)
+      }
       assert.equal((await inspect()).overflow,false)
       await capture('intake-duplicate-warning')
       console.log('QUICK_INTAKE_CUSTOMER_PICKER','saved customer and vehicle autofilled the form and blocked an accidental duplicate active order')

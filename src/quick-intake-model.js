@@ -41,6 +41,11 @@ export function findActiveIntakeOrder(orders,vehicleId){
  return (orders||[]).find(order=>same(order.vehicle_id,vehicleId)&&order.status!=='WYDANE'&&!order.archived_at)||null
 }
 
+export function intakeMileageState(vehicle,input){
+ const previous=Math.max(0,Number(vehicle?.mileage)||0),current=Math.max(0,Number(input)||0)
+ return {previous,current,invalid:Boolean(vehicle&&current>0&&current<previous),increased:Boolean(vehicle&&current>previous)}
+}
+
 export function findScannedIntakeVehicle(vehicles,scan){
  const vin=clean(scan?.registration?.form?.vin||scan?.vin).replace(/\s/g,'').toUpperCase(),plate=clean(scan?.registration?.form?.plate).replace(/\s/g,'').toUpperCase()
  return (vehicles||[]).find(vehicle=>(vin&&clean(vehicle.vin).replace(/\s/g,'').toUpperCase()===vin)||(plate&&clean(vehicle.plate).replace(/\s/g,'').toUpperCase()===plate))||null
