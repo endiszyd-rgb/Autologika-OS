@@ -2,7 +2,7 @@ const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
 const {createOrderItem,issueInventoryPart,removeOrderItem,updateOrderItem,updateOrderItemDescription}=require('../electron/inventory-usage.cjs')
-const {ensureInstalledJobPart}=require('../electron/job-part-installation.cjs')
+const {ensureInstalledJobPart,syncJobPartBilling}=require('../electron/job-part-installation.cjs')
 
 function database(){
  const db=new DatabaseSync(':memory:')
@@ -134,4 +134,15 @@ test('montaż części jest idempotentny także dla operacji grupowej',()=>{
  assert.equal(first.itemId,second.itemId)
  assert.equal(db.prepare("SELECT COUNT(*) count FROM order_items WHERE technical_description='AUTOLOGIKA_JOB_PART:job-part-cloud-12'").get().count,1)
  assert.deepEqual({...db.prepare('SELECT parts_cost,parts_sale FROM orders WHERE id=3').get()},{parts_cost:160,parts_sale:250})
+})
+
+test('cofnięcie statusu zamontowane usuwa powiązane naliczenie',()=>{
+ const db=database()
+ db.exec(`INSERT INTO job_part_orders VALUES(12,3,'Czujnik',2,80,125,'CAT-1','OE-1','Dostawca','ZAMONTOWANE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'job-part-cloud-12')`)
+ const part=db.prepare('SELECT * FROM job_part_orders WHERE id=12').get()
+ ensureInstalledJobPart(db,part)
+ const result=syncJobPartBilling(db,part,'ODEBRANE')
+ assert.equal(result.removed,true)
+ assert.equal(db.prepare("SELECT COUNT(*) count FROM order_items WHERE technical_description='AUTOLOGIKA_JOB_PART:job-part-cloud-12'").get().count,0)
+ assert.deepEqual({...db.prepare('SELECT parts_cost,parts_sale FROM orders WHERE id=3').get()},{parts_cost:0,parts_sale:0})
 })
