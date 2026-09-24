@@ -17,7 +17,7 @@ const { LOOKUP_VERSION, normalizeBarcode, normalizePartNumber, isGtin, lookupBar
 const { deleteInventoryPart } = require('./inventory-record.cjs')
 const { readBarcodeCache, writeBarcodeHit, writeBarcodeMiss, pruneBarcodeCache } = require('./barcode-cache.cjs')
 const { createOrderItem, issueInventoryPart, removeOrderItem, requireEditableOrder, updateOrderItem, updateOrderItemDescription } = require('./inventory-usage.cjs')
-const { archiveOrder, reopenOrder, requireOrderReadyForRelease, updateOrderStatus, updateOrderWait } = require('./order-lifecycle.cjs')
+const { archiveOrder, reopenOrder, releaseOrder, updateOrderStatus, updateOrderWait } = require('./order-lifecycle.cjs')
 const { documentHtml: renderProtocolDocument } = require('./protocol-document.cjs')
 const { customerProfile } = require('./customer-profile.cjs')
 const { listDebtors } = require('./debtors.cjs')
@@ -762,17 +762,10 @@ ipcMain.handle('closeout:save',(_,{orderId,data})=>{
 })
 ipcMain.handle('closeout:complete',(_,{orderId})=>{
   const db=getDb()
-  try{requireOrderReadyForRelease(db,orderId)}catch(error){return{ok:false,error:error.message}}
   const checks=syncCloseoutAutomation(orderId)
   const fields=['diagnosis_documented','customer_approved','parts_documented','work_logged','qc_done','payment_checked','release_notes_done']
-  const missing=fields.filter(key=>!checks[key])
-  if(missing.length)return{ok:false,error:'Nie wszystkie warunki wydania są spełnione.',missing}
-  const tx=db.transaction(()=>{
-    const changed=db.prepare(`UPDATE orders SET status='WYDANE',wait_state='BRAK',closed_at=COALESCE(closed_at,CURRENT_TIMESTAMP) WHERE id=? AND status='GOTOWE' AND archived_at IS NULL`).run(orderId)
-    if(!changed.changes)throw new Error('Zlecenie jest już zamknięte lub nie istnieje.')
-    db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(orderId,'ORDER_RELEASED','Pojazd wydany','Zlecenie zamknięte po spełnieniu checklisty wydania')
-  })
-  try{tx();return{ok:true}}catch(error){return{ok:false,error:error.message}}
+  const completed=fields.filter(key=>checks[key]).length
+  try{return releaseOrder(db,orderId,{completed,total:fields.length})}catch(error){return{ok:false,error:error.message}}
 })
 
 ipcMain.handle('salesRefs:list',(_,orderId)=>getDb().prepare(`SELECT * FROM sales_refs WHERE order_id=? ORDER BY issued_at DESC,id DESC`).all(orderId))
@@ -958,4 +951,4 @@ ipcMain.handle('procedures:createBundle',(_,{orderId,data})=>{const db=getDb();c
  });return tx()})
 ipcMain.handle('procedures:toggle',(_,{id,key,checked})=>{const db=getDb();const row=db.prepare('SELECT order_id,progress_json FROM work_procedure_runs WHERE id=?').get(id);if(!row)return false;requireEditableOrder(db,row.order_id);let p={};try{p=JSON.parse(row.progress_json||'{}')}catch{}p[key]=!!checked;db.prepare('UPDATE work_procedure_runs SET progress_json=? WHERE id=?').run(JSON.stringify(p),id);return true})
 ipcMain.handle('procedures:remove',(_,id)=>{const db=getDb(),row=db.prepare('SELECT order_id FROM work_procedure_runs WHERE id=?').get(id);if(!row)return false;requireEditableOrder(db,row.order_id);db.prepare('DELETE FROM work_procedure_runs WHERE id=?').run(id);return true})
-ipcMain.handle('jobParts:update',(_,{id,data})=>{const db=getDb(),part=db.prepare('SELECT order_id FROM job_part_orders WHERE id=?').get(id);if(!part)return false;requireEditableOrder(db,part.order_id);let price=+data.unit_price||0;if(!price&&+data.unit_cost>0)price=Math.round((+data.unit_cost)*(1+partMarkup(+data.unit_cost))*100)/100;const supplierName=data.supplier_name||(data.supplier_id?db.prepare('SELECT name FROM suppliers WHERE id=?').get(data.supplier_id)?.name:'')||'';db.prepare(`UPDATE job_part_orders SET supplier_id=?,supplier_name=?,part_no=?,oe_number=?,inventory_part_id=?,barcode=?,brand=?,vehicle_fitment=?,cross_numbers=?,lookup_source=?,lookup_url=?,name=?,qty=?,unit_cost=?,unit_price=?,external_order_no=?,expected_at=?,notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(data.supplier_id||null,supplierName,data.part_no||'',data.oe_number||'',data.inventory_part_id||null,normalizeBarcode(data.barcode||''),data.brand||'',data.vehicle_fitment||'',data.cross_numbers||'',data.lookup_source||'',data.lookup_url||'',data.name||'',+data.qty||1,+data.unit_cost||0,price,data.external_order_no||'',data.expected_at||null,data.notes||'',id);return true})
+ipcMain.handle('jobParts:update',(_,{id,data})=>{const db=getDb(),part=db.prepare('SELECT * FROM job_part_orders WHERE id=?').get(id);if(!part)return false;requireEditableOrder(db,part.order_id);let price=+data.unit_price||0;if(!price&&+data.unit_cost>0)price=Math.round((+data.unit_cost)*(1+partMarkup(+data.unit_cost))*100)/100;const supplierName=data.supplier_name||(data.supplier_id?db.prepare('SELECT name FROM suppliers WHERE id=?').get(data.supplier_id)?.name:'')||'';const qty=+data.qty||1,cost=+data.unit_cost||0;const tx=db.transaction(()=>{db.prepare(`UPDATE job_part_orders SET supplier_id=?,supplier_name=?,part_no=?,oe_number=?,inventory_part_id=?,barcode=?,brand=?,vehicle_fitment=?,cross_numbers=?,lookup_source=?,lookup_url=?,name=?,qty=?,unit_cost=?,unit_price=?,external_order_no=?,expected_at=?,notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(data.supplier_id||null,supplierName,data.part_no||'',data.oe_number||'',data.inventory_part_id||null,normalizeBarcode(data.barcode||''),data.brand||'',data.vehicle_fitment||'',data.cross_numbers||'',data.lookup_source||'',data.lookup_url||'',data.name||'',qty,cost,price,data.external_order_no||'',data.expected_at||null,data.notes||'',id);if(part.status==='ZAMONTOWANE'){const installed=db.prepare("SELECT id FROM order_items WHERE order_id=? AND kind='CZESC' AND name=? AND ABS(qty-?)<0.0001 AND ABS(unit_cost-?)<0.0001 ORDER BY id DESC LIMIT 1").get(part.order_id,part.name,part.qty,part.unit_cost);if(installed){db.prepare(`UPDATE order_items SET name=?,qty=?,unit_cost=?,unit_price=?,part_no=?,oe_number=?,supplier=?,notes=? WHERE id=?`).run(data.name||'',qty,cost,price,data.part_no||'',data.oe_number||'',supplierName,data.notes||'',installed.id);syncOrderItemTotals(part.order_id)}}db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(part.order_id,'PART_PRICE_UPDATED','Zmieniono cenę części',`${data.name||part.name} · zakup ${cost.toFixed(2)} zł · klient ${price.toFixed(2)} zł`);return true});return tx()})

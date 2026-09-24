@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {archiveOrder,reopenOrder,requireOrderReadyForRelease,updateOrderStatus,updateOrderWait}=require('../electron/order-lifecycle.cjs')
+const {archiveOrder,reopenOrder,releaseOrder,requireOrderReadyForRelease,updateOrderStatus,updateOrderWait}=require('../electron/order-lifecycle.cjs')
 
 function database(){
  const db=new DatabaseSync(':memory:')
@@ -48,10 +48,22 @@ test('archiwizacja jest dozwolona dopiero dla gotowego zlecenia i również traf
 })
 
 
-test('wydanie wymaga aktywnego zlecenia w statusie GOTOWE',()=>{
+test('wydanie wymaga aktywnego zlecenia, ale nie wymaga statusu GOTOWE',()=>{
  const db=database()
- assert.throws(()=>requireOrderReadyForRelease(db,1),/oznacz zlecenie jako gotowe/i)
+ assert.equal(requireOrderReadyForRelease(db,1).status,'NAPRAWA')
  assert.equal(requireOrderReadyForRelease(db,3).status,'GOTOWE')
  db.prepare("UPDATE orders SET archived_at='2026-09-22' WHERE id=3").run()
  assert.throws(()=>requireOrderReadyForRelease(db,3),/do korekty/i)
+})
+
+test('zamknięcie nie wymaga uzupełnienia opcjonalnej checklisty',()=>{
+ const db=database()
+ const result=releaseOrder(db,1,{completed:0,total:7})
+ assert.deepEqual({...result},{ok:true,id:1,status:'WYDANE'})
+ const order=db.prepare('SELECT status,wait_state,closed_at FROM orders WHERE id=1').get()
+ assert.equal(order.status,'WYDANE')
+ assert.equal(order.wait_state,'BRAK')
+ assert.ok(order.closed_at)
+ assert.match(db.prepare("SELECT details FROM order_events WHERE event_type='ORDER_RELEASED'").get().details,/0\/7/)
+ assert.throws(()=>releaseOrder(db,1,{completed:7,total:7}),/już zamknięte/i)
 })

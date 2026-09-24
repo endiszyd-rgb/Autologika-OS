@@ -37,8 +37,22 @@ function updateOrderWait(db,id,waitState){
 function requireOrderReadyForRelease(db,id){
   const order=getOrder(db,id)
   if(order.archived_at)throw new Error('Zarchiwizowane zlecenie trzeba najpierw otworzyć do korekty.')
-  if(order.status!=='GOTOWE')throw new Error('Przed wydaniem oznacz zlecenie jako gotowe.')
+  if(order.status==='WYDANE')throw new Error('Zlecenie jest już zamknięte.')
   return order
+}
+
+function releaseOrder(db,id,{completed=0,total=0}={}){
+  const order=requireOrderReadyForRelease(db,id)
+  return db.transaction(()=>{
+    const changed=db.prepare(`UPDATE orders SET status='WYDANE',wait_state='BRAK',closed_at=COALESCE(closed_at,CURRENT_TIMESTAMP) WHERE id=? AND status!='WYDANE' AND archived_at IS NULL`).run(order.id)
+    if(!changed.changes)throw new Error('Zlecenie jest już zamknięte lub nie istnieje.')
+    const checklistTotal=Math.max(0,Number(total)||0),checklistCompleted=Math.min(checklistTotal,Math.max(0,Number(completed)||0))
+    const details=checklistTotal
+      ?`Zlecenie zamknięte ręcznie · opcjonalna checklista: ${checklistCompleted}/${checklistTotal}`
+      :'Zlecenie zamknięte ręcznie'
+    db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(order.id,'ORDER_RELEASED','Pojazd wydany',details)
+    return{ok:true,id:order.id,status:'WYDANE'}
+  })()
 }
 
 function archiveOrder(db,id){
@@ -63,4 +77,4 @@ function reopenOrder(db,id,note){
   })()
 }
 
-module.exports={STATUSES,WAIT_STATES,archiveOrder,reopenOrder,requireOrderReadyForRelease,updateOrderStatus,updateOrderWait}
+module.exports={STATUSES,WAIT_STATES,archiveOrder,reopenOrder,releaseOrder,requireOrderReadyForRelease,updateOrderStatus,updateOrderWait}
