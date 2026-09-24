@@ -3,6 +3,17 @@ function number(value){
   return Number.isFinite(parsed)?parsed:0
 }
 
+const JOB_PART_LINK_PREFIX='AUTOLOGIKA_JOB_PART:'
+function jobPartTechnicalDescription(cloudId){
+  const value=String(cloudId||'').trim()
+  if(!value)throw new Error('Część zamówienia nie ma identyfikatora synchronizacji.')
+  return `${JOB_PART_LINK_PREFIX}${value}`
+}
+function linkedJobPartCloudId(value){
+  const match=String(value||'').match(/^AUTOLOGIKA_JOB_PART:([a-zA-Z0-9-]+)$/)
+  return match?match[1]:null
+}
+
 function requireEditableOrder(db,orderId){
   const id=Number(orderId)
   if(!Number.isInteger(id)||id<=0)throw new Error('Nie wybrano zlecenia.')
@@ -66,13 +77,15 @@ function removeOrderItem(db,id){
       const changed=db.prepare('UPDATE inventory_parts SET stock=stock+?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(number(row.qty),row.inventory_part_id)
       if(changed.changes===1)restored=number(row.qty)
     }
+    const linkedCloudId=linkedJobPartCloudId(row.technical_description)
+    if(linkedCloudId)db.prepare("UPDATE job_part_orders SET status='ODEBRANE',installed_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE cloud_id=? AND order_id=?").run(linkedCloudId,row.order_id)
     db.prepare('DELETE FROM order_items WHERE id=?').run(itemId)
     syncOrderTotals(db,row.order_id)
     db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(
       row.order_id,'ORDER_ITEM_REMOVED',restored?'Usunięto pozycję i zwrócono część na magazyn':'Usunięto pozycję zlecenia',
       `${row.name} · ${number(row.qty).toLocaleString('pl-PL')} szt.`
     )
-    return{removed:true,orderId:row.order_id,restored,inventoryPartId:row.inventory_part_id||null}
+    return{removed:true,orderId:row.order_id,restored,inventoryPartId:row.inventory_part_id||null,linkedJobPartCloudId:linkedCloudId}
   })()
 }
 
@@ -103,11 +116,14 @@ function updateOrderItem(db,id,input={}){
     const isLabor=row.kind==='ROBOCIZNA',hours=isLabor?qty:Number(row.hours_snapshot??qty),price=isLabor?Math.round(qty*unitPrice*100)/100:Number(row.price_snapshot??qty*unitPrice)
     db.prepare(`UPDATE order_items SET name=?,qty=?,unit_cost=?,unit_price=?,part_no=?,oe_number=?,supplier=?,notes=?,customer_description=?,hours_snapshot=?,price_snapshot=? WHERE id=?`)
       .run(name,qty,unitCost,unitPrice,String(input.part_no||'').trim(),String(input.oe_number||'').trim(),String(input.supplier||'').trim(),description,description,hours,price,itemId)
+    const linkedCloudId=linkedJobPartCloudId(row.technical_description)
+    if(linkedCloudId)db.prepare(`UPDATE job_part_orders SET name=?,qty=?,unit_cost=?,unit_price=?,part_no=?,oe_number=?,supplier_name=?,updated_at=CURRENT_TIMESTAMP WHERE cloud_id=? AND order_id=?`)
+      .run(name,qty,unitCost,unitPrice,String(input.part_no||'').trim(),String(input.oe_number||'').trim(),String(input.supplier||'').trim(),linkedCloudId,row.order_id)
     syncOrderTotals(db,row.order_id)
     const before=`${row.name} · ${number(row.qty).toLocaleString('pl-PL')} × ${number(row.unit_price).toFixed(2)} zł`
     const after=`${name} · ${qty.toLocaleString('pl-PL')} × ${unitPrice.toFixed(2)} zł`
     db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(row.order_id,'ORDER_ITEM_UPDATED','Zmieniono pozycję zlecenia',`${before} → ${after}`)
-    return{updated:true,orderId:row.order_id,inventoryPartId:row.inventory_part_id||null,stockDelta:row.inventory_part_id?number(row.qty)-qty:0}
+    return{updated:true,orderId:row.order_id,inventoryPartId:row.inventory_part_id||null,stockDelta:row.inventory_part_id?number(row.qty)-qty:0,linkedJobPartCloudId:linkedCloudId}
   })()
 }
 
@@ -146,4 +162,4 @@ function updateOrderItemDescription(db,id,description=''){
   })()
 }
 
-module.exports={createOrderItem,issueInventoryPart,removeOrderItem,requireEditableOrder,updateOrderItem,updateOrderItemDescription,syncOrderTotals}
+module.exports={createOrderItem,issueInventoryPart,jobPartTechnicalDescription,linkedJobPartCloudId,removeOrderItem,requireEditableOrder,updateOrderItem,updateOrderItemDescription,syncOrderTotals}

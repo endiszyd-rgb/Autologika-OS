@@ -10,6 +10,7 @@ function database(){
   CREATE TABLE inventory_parts(id INTEGER PRIMARY KEY,supplier_id INTEGER,name TEXT,part_no TEXT,location TEXT,stock REAL,unit_cost REAL,sell_price REAL,updated_at TEXT);
   CREATE TABLE orders(id INTEGER PRIMARY KEY,status TEXT,archived_at TEXT,parts_cost REAL DEFAULT 0,parts_sale REAL DEFAULT 0,other_cost REAL DEFAULT 0,other_sale REAL DEFAULT 0);
   CREATE TABLE order_items(id INTEGER PRIMARY KEY,order_id INTEGER,kind TEXT,name TEXT,qty REAL,unit_cost REAL,unit_price REAL,part_no TEXT,oe_number TEXT,supplier TEXT,notes TEXT,catalog_work_id TEXT,catalog_variant_id TEXT,work_name TEXT,variant_name TEXT,customer_description TEXT,technical_description TEXT,hours_snapshot REAL,price_snapshot REAL,inventory_part_id INTEGER);
+  CREATE TABLE job_part_orders(id INTEGER PRIMARY KEY,order_id INTEGER,name TEXT,qty REAL,unit_cost REAL,unit_price REAL,part_no TEXT,oe_number TEXT,supplier_name TEXT,status TEXT,installed_at TEXT,updated_at TEXT,cloud_id TEXT);
   CREATE TABLE order_events(id INTEGER PRIMARY KEY,order_id INTEGER,event_type TEXT,title TEXT,details TEXT);
   INSERT INTO suppliers VALUES(1,'Moto Dostawca');
   INSERT INTO inventory_parts VALUES(7,1,'Filtr oleju','W 712/95','A-03',4,24.5,49,NULL);
@@ -97,5 +98,27 @@ test('edycja nie pozwala wydać większej ilości niż stan ani zmienić zamkni�
  assert.throws(()=>updateOrderItem(db,issued.id,{name:'Filtr',qty:6,unit_cost:20,unit_price:40}),/Za mało części/)
  assert.equal(db.prepare('SELECT stock FROM inventory_parts WHERE id=7').get().stock,3)
  db.exec("UPDATE orders SET status='WYDANE' WHERE id=3")
- assert.throws(()=>updateOrderItem(db,issued.id,{name:'Filtr',qty:1,unit_cost:20,unit_price:40}),/zamknięte/)
+  assert.throws(()=>updateOrderItem(db,issued.id,{name:'Filtr',qty:1,unit_cost:20,unit_price:40}),/zamknięte/)
+})
+
+test('edycja naliczonej części aktualizuje powiązane zamówienie',()=>{
+ const db=database()
+ db.exec(`INSERT INTO job_part_orders VALUES(12,3,'Czujnik',1,80,120,'CAT-1','OE-1','Dostawca','ZAMONTOWANE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'job-part-cloud-12')`)
+ const item=createOrderItem(db,3,{kind:'CZESC',name:'Czujnik',qty:1,unit_cost:80,unit_price:120})
+ db.prepare('UPDATE order_items SET technical_description=? WHERE id=?').run('AUTOLOGIKA_JOB_PART:job-part-cloud-12',item.id)
+ const result=updateOrderItem(db,item.id,{name:'Czujnik ciśnienia',qty:2,unit_cost:75,unit_price:145,part_no:'CAT-2',oe_number:'OE-2',supplier:'Nowy dostawca'})
+ assert.equal(result.linkedJobPartCloudId,'job-part-cloud-12')
+ assert.deepEqual({...db.prepare('SELECT name,qty,unit_cost,unit_price,part_no,oe_number,supplier_name,status FROM job_part_orders WHERE id=12').get()},{name:'Czujnik ciśnienia',qty:2,unit_cost:75,unit_price:145,part_no:'CAT-2',oe_number:'OE-2',supplier_name:'Nowy dostawca',status:'ZAMONTOWANE'})
+})
+
+test('usunięcie naliczonej części cofa powiązane zamówienie do odebranych',()=>{
+ const db=database()
+ db.exec(`INSERT INTO job_part_orders VALUES(12,3,'Czujnik',1,80,120,'CAT-1','OE-1','Dostawca','ZAMONTOWANE',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,'job-part-cloud-12')`)
+ const item=createOrderItem(db,3,{kind:'CZESC',name:'Czujnik',qty:1,unit_cost:80,unit_price:120})
+ db.prepare('UPDATE order_items SET technical_description=? WHERE id=?').run('AUTOLOGIKA_JOB_PART:job-part-cloud-12',item.id)
+ const result=removeOrderItem(db,item.id)
+ assert.equal(result.linkedJobPartCloudId,'job-part-cloud-12')
+ const linked=db.prepare('SELECT status,installed_at FROM job_part_orders WHERE id=12').get()
+ assert.equal(linked.status,'ODEBRANE')
+ assert.equal(linked.installed_at,null)
 })
