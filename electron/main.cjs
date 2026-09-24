@@ -179,7 +179,14 @@ ipcMain.handle('settings:resetCatalogOverride',(_e,variantId)=>{const map=readCa
 const orderSelect = `SELECT o.*,v.id vehicle_id,v.plate,v.make,v.model,v.generation,v.year,v.vin,v.mileage,v.engine,v.power_hp,v.engine_code,c.name customer,c.phone,c.email,
   ROUND(${ORDER_BASE_SQL},2) calculated_total,
   ROUND(${ORDER_TOTAL_SQL},2) total,
-  ROUND((${ORDER_TOTAL_SQL})-(${ORDER_COST_SQL}),2) contribution
+  ROUND((${ORDER_TOTAL_SQL})-(${ORDER_COST_SQL}),2) contribution,
+  COALESCE((SELECT group_concat(item_label,' • ') FROM (
+    SELECT COALESCE(NULLIF(TRIM(oi.work_name),''),NULLIF(TRIM(oi.name),'')) item_label
+    FROM order_items oi
+    WHERE oi.order_id=o.id AND UPPER(COALESCE(oi.kind,'')) NOT IN ('CZESC','CZĘŚĆ','PART')
+    ORDER BY oi.id LIMIT 4
+  )),'') work_summary,
+  (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=o.id AND UPPER(COALESCE(oi.kind,'')) NOT IN ('CZESC','CZĘŚĆ','PART')) work_count
   FROM orders o JOIN vehicles v ON v.id=o.vehicle_id LEFT JOIN customers c ON c.id=v.customer_id`
 
 
