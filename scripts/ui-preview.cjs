@@ -290,10 +290,26 @@ app.on('browser-window-created', (_, win) => {
       await delay(400)
       assert.equal(inventoryDb.prepare('SELECT unit_price FROM job_part_orders WHERE id=?').get(scannedJobPart.id).unit_price,199.9)
       assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('[data-job-part-price]')`),false)
+      await win.webContents.executeJavaScript(`{const select=document.querySelector('[data-edit-job-part="${scannedJobPart.id}"]').closest('.centerPart').querySelector('select');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,'ZAMONTOWANE');select.dispatchEvent(new Event('change',{bubbles:true}))}`)
+      await delay(450)
+      const billedPart=inventoryDb.prepare("SELECT id,unit_price FROM order_items WHERE order_id=1 AND kind='CZESC' AND name='Czujnik parkowania — tył' ORDER BY id DESC LIMIT 1").get()
+      assert.ok(billedPart)
+      assert.equal(billedPart.unit_price,199.9)
+      assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('[data-edit-billed-part="${billedPart.id}"]')`),true)
+      await win.webContents.executeJavaScript(`document.querySelector('[data-edit-billed-part="${billedPart.id}"]').click()`)
+      await delay(150)
+      await win.webContents.executeJavaScript(`{const input=document.querySelector('[data-item-edit-price]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'249.90');input.dispatchEvent(new Event('input',{bubbles:true}))}`)
+      await win.webContents.executeJavaScript(`document.querySelector('[data-item-edit-save]').click()`)
+      await delay(400)
+      assert.equal(inventoryDb.prepare('SELECT unit_price FROM order_items WHERE id=?').get(billedPart.id).unit_price,249.9)
       await win.webContents.executeJavaScript(`window.confirm=()=>true;document.querySelector('[data-remove-job-part="${scannedJobPart.id}"]').click()`)
       await delay(450)
       assert.equal(inventoryDb.prepare('SELECT COUNT(*) n FROM job_part_orders WHERE id=?').get(scannedJobPart.id).n,0)
       assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('[data-remove-job-part="${scannedJobPart.id}"]')`),false)
+      assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('[data-remove-billed-part="${billedPart.id}"]')`),true)
+      await win.webContents.executeJavaScript(`document.querySelector('[data-remove-billed-part="${billedPart.id}"]').click()`)
+      await delay(400)
+      assert.equal(inventoryDb.prepare('SELECT COUNT(*) n FROM order_items WHERE id=?').get(billedPart.id).n,0)
       await win.webContents.executeJavaScript(`[...document.querySelectorAll('.workspaceContent button')].find(x=>x.textContent.includes('+ Część')).click()`)
       await delay(250)
       await win.webContents.executeJavaScript(`{const input=document.querySelector('.jobPartCatalogNumber input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'W 712/95');input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));}`)
@@ -310,7 +326,7 @@ app.on('browser-window-created', (_, win) => {
       await delay(350)
       console.log('ORDER_PART_BARCODE_LOOKUP','global Zebra EAN stayed in Order Center and saved the selected manufacturer, catalog number and OE reference')
       console.log('ORDER_PART_NUMBER_LOOKUP','catalog number selected a local part and added its OE reference to the order')
-      console.log('ORDER_PART_PRICE_EDIT','ordered part price changed directly in Order Center')
+      console.log('ORDER_PART_PRICE_EDIT','ordered and billed part prices changed directly in Order Center and recalculated the order')
       console.log('ORDER_PART_REMOVE','ordered part removed from the order and disappeared from its list')
       await win.webContents.executeJavaScript(`window.SpeechRecognition=class{start(){this.onstart?.();setTimeout(()=>{const result=Object.assign([{transcript:'stuki z przodu kropka'}],{isFinal:true});this.onresult?.({results:[result]});this.onend?.()},30)}stop(){this.onend?.()}abort(){}};true`)
       await openOrderTab('diagnosis')
@@ -343,6 +359,9 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`window.autologika.closeout.get(1).then(x=>Boolean(x.diagnosis_documented))`),true)
       await openOrderTab('settlement')
       await win.webContents.executeJavaScript(`{
+        const price=document.querySelector('[data-final-price-input]');
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(price,'600');
+        price.dispatchEvent(new Event('input',{bubbles:true}));
         const note=document.querySelector('[data-final-price-note]');
         Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(note,'Cena końcowa potwierdzona w teście');
         note.dispatchEvent(new Event('input',{bubbles:true}));
