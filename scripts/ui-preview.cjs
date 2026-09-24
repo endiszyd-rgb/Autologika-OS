@@ -780,6 +780,16 @@ app.on('browser-window-created', (_, win) => {
       overnightStart.setDate(overnightStart.getDate()+1)
       overnightStart.setHours(22,30,0,0)
       const overnightEnd = new Date(overnightStart.getTime()+2*60*60*1000)
+      const linkedStart = new Date(overnightStart)
+      linkedStart.setHours(10,0,0,0)
+      const linked = require('../electron/appointments.cjs').createAppointment(require('../electron/db.cjs').getDb(),{
+        order_id:customOrderId,
+        title:'Serwis ze zlecenia UI',
+        start_at:linkedStart.toISOString(),
+        end_at:new Date(linkedStart.getTime()+60*60*1000).toISOString(),
+        bay:'Stanowisko 2',
+        status:'POTWIERDZONY'
+      })
       const overnight = require('../electron/appointments.cjs').createAppointment(require('../electron/db.cjs').getDb(),{
         title:'Wizyta nocna UI',
         start_at:overnightStart.toISOString(),
@@ -799,6 +809,14 @@ app.on('browser-window-created', (_, win) => {
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Terminarz 2.0"]').click()`)
       await delay(500)
       assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.plannerBoard')`),true)
+      const linkedText = await win.webContents.executeJavaScript(`document.querySelector('[data-appointment-id="${linked.id}"]').textContent`)
+      assert.equal(linkedText.includes('ZAKRES PRAC'),true)
+      assert.equal(linkedText.includes('Centrum zlecenia'),true)
+      await win.webContents.executeJavaScript(`document.querySelector('[data-appointment-id="${linked.id}"] .plannerOrderLink').click()`)
+      await delay(300)
+      assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.orderCenterPage')`),true)
+      await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Terminarz 2.0"]').click()`)
+      await delay(300)
       const overnightSegments = await win.webContents.executeJavaScript(`[
         ...document.querySelectorAll('[data-appointment-id="${overnight.id}"]')
       ].map(x=>x.textContent)`)

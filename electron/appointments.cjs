@@ -26,7 +26,22 @@ function normalizeAppointment(db, input, existing={}) {
 function listAppointments(db,from,to){
  const start=new Date(from),end=new Date(to)
  if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end<=start)throw new Error('Nieprawidłowy zakres terminarza.')
- return db.prepare(`SELECT a.*,v.plate,v.make,v.model,c.name customer FROM appointments a LEFT JOIN vehicles v ON v.id=a.vehicle_id LEFT JOIN customers c ON c.id=v.customer_id WHERE datetime(a.start_at)<datetime(?) AND datetime(a.end_at)>datetime(?) ORDER BY a.start_at`).all(end.toISOString(),start.toISOString()).map(row=>({...row,status:appointmentStatus(row.status)}))
+ return db.prepare(`SELECT a.*,v.plate,v.make,v.model,c.name customer,o.title order_title,o.status order_status,
+  COALESCE((SELECT group_concat(item_label,' • ') FROM (
+   SELECT COALESCE(NULLIF(TRIM(oi.work_name),''),NULLIF(TRIM(oi.name),'')) item_label
+   FROM order_items oi
+   WHERE oi.order_id=a.order_id
+    AND UPPER(COALESCE(oi.kind,'')) NOT IN ('CZESC','CZĘŚĆ','PART')
+    AND COALESCE(NULLIF(TRIM(oi.work_name),''),NULLIF(TRIM(oi.name),'')) IS NOT NULL
+   ORDER BY oi.id LIMIT 4
+  )),'') work_summary,
+  (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=a.order_id AND UPPER(COALESCE(oi.kind,'')) NOT IN ('CZESC','CZĘŚĆ','PART')) work_count
+  FROM appointments a
+  LEFT JOIN vehicles v ON v.id=a.vehicle_id
+  LEFT JOIN customers c ON c.id=v.customer_id
+  LEFT JOIN orders o ON o.id=a.order_id
+  WHERE datetime(a.start_at)<datetime(?) AND datetime(a.end_at)>datetime(?)
+  ORDER BY a.start_at`).all(end.toISOString(),start.toISOString()).map(row=>({...row,status:appointmentStatus(row.status)}))
 }
 function createAppointment(db,input){
  const d=normalizeAppointment(db,input)

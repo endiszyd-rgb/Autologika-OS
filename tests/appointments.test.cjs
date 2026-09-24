@@ -8,11 +8,13 @@ function fixture(){
  db.exec(`
   CREATE TABLE customers(id INTEGER PRIMARY KEY,name TEXT);
   CREATE TABLE vehicles(id INTEGER PRIMARY KEY,customer_id INTEGER,plate TEXT,make TEXT,model TEXT);
-  CREATE TABLE orders(id INTEGER PRIMARY KEY,vehicle_id INTEGER);
+  CREATE TABLE orders(id INTEGER PRIMARY KEY,vehicle_id INTEGER,title TEXT,status TEXT);
+  CREATE TABLE order_items(id INTEGER PRIMARY KEY,order_id INTEGER,kind TEXT,name TEXT,work_name TEXT);
   CREATE TABLE appointments(id INTEGER PRIMARY KEY,order_id INTEGER,vehicle_id INTEGER,title TEXT,start_at TEXT,end_at TEXT,bay TEXT,status TEXT,notes TEXT);
   INSERT INTO customers VALUES(1,'Jan Kowalski');
   INSERT INTO vehicles VALUES(1,1,'PO 1234A','Toyota','Corolla'),(2,1,'PO 5678B','Ford','Focus');
-  INSERT INTO orders VALUES(1,1);
+  INSERT INTO orders VALUES(1,1,'Serwis okresowy','NAPRAWA');
+  INSERT INTO order_items VALUES(1,1,'ROBOCIZNA','Wymiana oleju',NULL),(2,1,'LABOR','Kontrola hamulców','Diagnostyka układu hamulcowego'),(3,1,'CZESC','Filtr oleju',NULL);
  `)
  return db
 }
@@ -26,6 +28,9 @@ test('appointment linked to an order inherits its vehicle and legacy status',()=
  assert.equal(rows[0].vehicle_id,1)
  assert.equal(rows[0].customer,'Jan Kowalski')
  assert.equal(rows[0].status,'W_TRAKCIE')
+ assert.equal(rows[0].order_title,'Serwis okresowy')
+ assert.equal(rows[0].work_summary,'Wymiana oleju • Diagnostyka układu hamulcowego')
+ assert.equal(rows[0].work_count,2)
 })
 
 test('appointment validation protects order linkage, status and deletion',()=>{
