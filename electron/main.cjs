@@ -27,6 +27,7 @@ const { buildVehicleHealth } = require('./vehicle-health.cjs')
 const { ORDER_BASE_SQL, ORDER_TOTAL_SQL, ORDER_COST_SQL, finalPriceChange } = require('./order-financials.cjs')
 const { deriveOrderReadiness } = require('./order-readiness.cjs')
 const { searchTechnicalManuals } = require('./manual-source-scraper.cjs')
+const { getWorkshopLayout, setWorkshopLayout } = require('./workshop-settings.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -395,6 +396,8 @@ ipcMain.handle('finance:analytics',()=>{
   const previousRevenue=db.prepare(`SELECT COALESCE(SUM(${ORDER_TOTAL_SQL}),0) value FROM orders o WHERE strftime('%Y-%m',opened_at)=strftime('%Y-%m','now','localtime','-1 month')`).get().value
   return {current:{...current,paid:Number(paid||0),receivables:Number(receivables||0),previous_revenue:Number(previousRevenue||0),labor_revenue:Number(current.legacy_labor||0)+Number(itemLabor||0),parts_margin:Number(current.parts_sale||0)-Number(current.parts_cost||0),actual_hours:Number(actualMinutes||0)/60},daily,mix}
 })
+ipcMain.handle('settings:getWorkshopLayout',()=>getWorkshopLayout(getDb()))
+ipcMain.handle('settings:setWorkshopLayout',(_e,value)=>setWorkshopLayout(getDb(),value))
 
 ipcMain.handle('customers:list',(_,q='')=>getDb().prepare(`SELECT c.*, COUNT(DISTINCT v.id) vehicles, COUNT(DISTINCT o.id) orders FROM customers c LEFT JOIN vehicles v ON v.customer_id=c.id LEFT JOIN orders o ON o.vehicle_id=v.id WHERE c.name LIKE ? OR COALESCE(c.phone,'') LIKE ? OR COALESCE(c.company,'') LIKE ? GROUP BY c.id ORDER BY c.created_at DESC`).all(`%${q}%`,`%${q}%`,`%${q}%`))
 ipcMain.handle('customers:profile',(_,id)=>customerProfile(getDb(),id))

@@ -147,6 +147,8 @@ table{border:1px solid #25343e;border-radius:10px;overflow:hidden}th{font-size:9
 
 /* 0.24.0 — cele warsztatu */
 .targetSettings{align-items:end}.targetPresets{display:flex;gap:8px;align-items:end;flex-wrap:wrap;padding-bottom:2px}.targetPresets button{min-width:64px}.notice>span{display:block;margin-top:5px;color:var(--muted,#8797a3);font-size:12px;line-height:1.5}
+.workshopSettingsGrid{grid-template-columns:repeat(4,minmax(140px,1fr))}.workshopBaySettings{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:9px;margin:14px 0}.workshopBaySettings label{display:flex;align-items:center;gap:9px;padding:8px;border:1px solid #35443a;border-radius:10px;background:#0c120e}.workshopBaySettings label>span{display:grid;place-items:center;width:30px;height:30px;flex:0 0 30px;border:1px solid #667c55;border-radius:8px;background:#1b2619;color:#ccecaa;font-size:10px;font-weight:900}.workshopBaySettings input{min-width:0}
+@media(max-width:1100px){.workshopSettingsGrid{grid-template-columns:repeat(2,1fr)}}
 
 /* 0.25.0 — global command palette + interactive radar */
 .commandLauncher{display:flex;align-items:center;gap:8px;height:38px;padding:0 10px 0 12px;border:1px solid #2a3b46;background:#0d161c;color:#9fafb9;border-radius:10px;font-size:12px;font-weight:750}.commandLauncher:hover{border-color:#80651e;background:#121b20;color:#e7edf0}.commandLauncher span{color:#e2b64b;font-size:16px}.commandLauncher kbd{margin-left:5px;border:1px solid #344650;background:#131e25;color:#7f929d;border-radius:5px;padding:2px 6px;font:700 9px/1.4 ui-monospace,monospace}
