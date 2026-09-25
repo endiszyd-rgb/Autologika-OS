@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {migrateSchemaV9,migrateSchemaV10}=require('../electron/db.cjs')
+const {migrateSchemaV9,migrateSchemaV10,migrateSchemaV12}=require('../electron/db.cjs')
 
 test('schema v9 preserves ordered parts and adds scanned catalog fields',()=>{
  const db=new DatabaseSync(':memory:')
@@ -38,5 +38,16 @@ test('schema v10 adds an auditable final price without changing existing orders'
  const row=db.prepare('SELECT * FROM orders WHERE id=7').get()
  assert.equal(row.title,'Naprawa')
  assert.equal(row.final_price,null)
+ db.close()
+})
+
+test('schema v12 adds immutable remote approval evidence and stable vehicle archive mapping',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE vehicles(id INTEGER PRIMARY KEY,vin TEXT);CREATE TABLE approvals(id INTEGER PRIMARY KEY,order_id INTEGER,status TEXT,amount REAL,scope TEXT);INSERT INTO approvals VALUES(4,9,'APPROVED',1200,'Wycena #3');`)
+ migrateSchemaV12(db);migrateSchemaV12(db)
+ const columns=db.prepare('PRAGMA table_info(approvals)').all().map(row=>row.name)
+ for(const column of ['remote_id','snapshot_json','snapshot_hash','signature_storage_path','signature_hash','pdf_storage_path','pdf_hash','local_pdf_path','approval_sequence','previously_approved_total'])assert.ok(columns.includes(column),column)
+ assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='approval_archive_vehicles'").get())
+ assert.equal(db.prepare('SELECT status,amount FROM approvals WHERE id=4').get().amount,1200)
  db.close()
 })

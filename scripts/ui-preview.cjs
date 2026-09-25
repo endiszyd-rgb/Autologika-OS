@@ -117,7 +117,7 @@ app.on('browser-window-created', (_, win) => {
       assert.equal((await inspect()).overflow,false)
       await capture('intake-duplicate-warning')
       console.log('QUICK_INTAKE_CUSTOMER_PICKER','saved customer and vehicle autofilled the form and blocked an accidental duplicate active order')
-      assert.equal(inventoryDb.pragma('user_version',{simple:true}),11)
+      assert.equal(inventoryDb.pragma('user_version',{simple:true}),12)
       for(const column of ['barcode','brand','vehicle_fitment','cross_numbers','lookup_source','lookup_url'])assert.equal(inventoryDb.prepare('PRAGMA table_info(job_part_orders)').all().some(item=>item.name===column),true,`job_part_orders.${column}`)
       inventoryDb.prepare(`INSERT INTO inventory_parts(barcode,part_no,name,brand,vehicle_fitment,cross_numbers,stock,min_stock,unit_cost,sell_price,location) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run('4006381333931','W 712/95','Filtr oleju','MANN-FILTER','BMW 320d','11428507683\n11427854445',4,2,24.5,49,'A-03')
       const removablePart=inventoryDb.prepare(`INSERT INTO inventory_parts(part_no,name,brand,stock,min_stock,unit_cost,sell_price) VALUES (?,?,?,?,?,?,?)`).run('TEST-DELETE','Błędny wpis do usunięcia','TEST',0,0,0,0).lastInsertRowid

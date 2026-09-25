@@ -1,0 +1,33 @@
+const fs = require('fs')
+const path = require('path')
+const crypto = require('crypto')
+
+const WINDOWS_RESERVED=/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i
+function safeSegment(value,fallback='POJAZD'){
+  const raw=String(value||'');if(/[\/\\]/.test(raw))return fallback
+  let name=raw.normalize('NFKC').replace(/[<>:"/\\|?*\x00-\x1f]/g,' ').replace(/\s+/g,' ').trim().replace(/[. ]+$/g,'').toUpperCase()
+  if(!name||name==='.'||name==='..'||WINDOWS_RESERVED.test(name))name=fallback
+  return name.slice(0,80)
+}
+function safeFileSegment(value,fallback='DOKUMENT'){return safeSegment(value,fallback).replace(/\s+/g,'-')}
+function ensureInside(base,candidate){const root=path.resolve(base),target=path.resolve(candidate);if(target!==root&&!target.startsWith(root+path.sep))throw new Error('Nieprawidłowa ścieżka archiwum.');return target}
+function archiveBasePath(app,db){const row=db.prepare("SELECT value FROM sync_meta WHERE key='approval_archive_path' LIMIT 1").get();return path.resolve(String(row?.value||'').trim()||path.join(app.getPath('desktop'),'AutoLogika - Akceptacje'))}
+function vehicleArchiveFolder(db,base,vehicle){
+  const existing=db.prepare('SELECT * FROM approval_archive_vehicles WHERE vehicle_id=?').get(vehicle.id)
+  const folderName=existing?.folder_name||safeSegment(vehicle.plate,vehicle.vin?safeSegment(vehicle.vin):`POJAZD-${vehicle.id}`)
+  if(!existing)db.prepare('INSERT INTO approval_archive_vehicles(vehicle_id,vin,folder_name) VALUES (?,?,?)').run(vehicle.id,vehicle.vin||'',folderName)
+  else if(String(existing.vin||'')!==String(vehicle.vin||''))db.prepare('UPDATE approval_archive_vehicles SET vin=?,updated_at=CURRENT_TIMESTAMP WHERE vehicle_id=?').run(vehicle.vin||'',vehicle.id)
+  fs.mkdirSync(base,{recursive:true});const root=fs.realpathSync(base),folder=ensureInside(root,path.join(root,folderName));fs.mkdirSync(folder,{recursive:true});const realFolder=ensureInside(root,fs.realpathSync(folder));return {folder:realFolder,folderName}
+}
+function approvalFileName(snapshot,decidedAt){
+  const date=new Date(decidedAt||Date.now()).toISOString().slice(0,10),orderNo=safeFileSegment(snapshot.documentNo||`AL-${snapshot.orderId}`,'ZLECENIE')
+  return `${date}_${orderNo}_Akceptacja-${String(snapshot.approvalSequence||1).padStart(2,'0')}${snapshot.additionalScope?'_Dodatkowy-zakres':''}.pdf`
+}
+function fileHash(file){return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')}
+function chooseDestination(folder,name,expectedHash=''){
+  const preferred=ensureInside(folder,path.join(folder,name));if(!fs.existsSync(preferred)||expectedHash&&fileHash(preferred)===expectedHash)return preferred
+  const ext=path.extname(name),stem=path.basename(name,ext);for(let index=2;index<1000;index++){const candidate=ensureInside(folder,path.join(folder,`${stem}_Kopia-${String(index).padStart(2,'0')}${ext}`));if(!fs.existsSync(candidate))return candidate}
+  throw new Error('Nie można wybrać bezpiecznej nazwy pliku archiwum.')
+}
+
+module.exports={safeSegment,safeFileSegment,ensureInside,archiveBasePath,vehicleArchiveFolder,approvalFileName,fileHash,chooseDestination}

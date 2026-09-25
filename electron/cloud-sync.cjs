@@ -5,6 +5,8 @@ const crypto = require('crypto')
 const { app, net } = require('electron')
 const { EventEmitter } = require('events')
 const { getDb } = require('./db.cjs')
+const { buildApprovalSnapshot, sha256 } = require('./remote-approval.cjs')
+const { archiveBasePath, vehicleArchiveFolder, approvalFileName, fileHash, chooseDestination } = require('./approval-archive.cjs')
 
 const SYNC_TABLES = ['app_settings','customers','suppliers','inventory_parts','vehicles','orders','diagnostics','order_notes','job_part_orders','payments','appointments','order_items','work_logs','communications','approvals','order_events','sales_refs','service_reminders_v2','attachments','signatures','work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps']
 const events = new EventEmitter()
@@ -31,6 +33,7 @@ function safeName(name){return String(name||'file').replace(/[^a-zA-Z0-9._-]+/g,
 function attachmentRemotePath(workshopId,orderCloudId,cloudId,name){return `${workshopId}/${orderCloudId||'bez-zlecenia'}/${cloudId}-${safeName(name)}`}
 async function storageUpload(c,storagePath,filePath,mime){const t=await token(c);const body=fs.readFileSync(filePath);const r=await cloudFetch(`${t.c.url}/storage/v1/object/order-files/${storagePath.split('/').map(encodeURIComponent).join('/')}`,{method:'POST',headers:{'apikey':t.c.key,'Authorization':`Bearer ${t.bearer}`,'Content-Type':mime||'application/octet-stream','x-upsert':'true'},body});if(!r.ok)throw new Error(`Storage upload ${r.status}: ${(await r.text()).slice(0,350)}`);return true}
 async function storageDownload(c,storagePath,dest){const t=await token(c);const r=await cloudFetch(`${t.c.url}/storage/v1/object/authenticated/order-files/${storagePath.split('/').map(encodeURIComponent).join('/')}`,{headers:{'apikey':t.c.key,'Authorization':`Bearer ${t.bearer}`}});if(!r.ok)throw new Error(`Storage download ${r.status}: ${(await r.text()).slice(0,350)}`);const buf=Buffer.from(await r.arrayBuffer());fs.mkdirSync(path.dirname(dest),{recursive:true});fs.writeFileSync(dest,buf);return buf.length}
+async function storageDownloadFrom(c,bucket,storagePath,dest){const t=await token(c);const r=await cloudFetch(`${t.c.url}/storage/v1/object/authenticated/${encodeURIComponent(bucket)}/${storagePath.split('/').map(encodeURIComponent).join('/')}`,{headers:{'apikey':t.c.key,'Authorization':`Bearer ${t.bearer}`}});if(!r.ok)throw new Error(`Storage download ${r.status}: ${(await r.text()).slice(0,350)}`);const buf=Buffer.from(await r.arrayBuffer());fs.mkdirSync(path.dirname(dest),{recursive:true});const temp=`${dest}.part-${process.pid}-${Date.now()}`;fs.writeFileSync(temp,buf);fs.renameSync(temp,dest);return buf.length}
 async function storageDelete(c,storagePath){if(!storagePath)return false;const t=await token(c);const r=await cloudFetch(`${t.c.url}/storage/v1/object/order-files`,{method:'DELETE',headers:{'apikey':t.c.key,'Authorization':`Bearer ${t.bearer}`,'Content-Type':'application/json'},body:JSON.stringify({prefixes:[storagePath]})});if(!r.ok&&r.status!==404)throw new Error(`Storage delete ${r.status}: ${(await r.text()).slice(0,350)}`);return true}
 async function prepareAttachmentForPush(c,db,row){if(!row?.file_path||!fs.existsSync(row.file_path))return row;const orderCloudId=db.prepare('SELECT cloud_id FROM orders WHERE id=?').get(row.order_id)?.cloud_id||'';const workshopId=c.workshopId||c.user?.id;const storagePath=row.storage_path||attachmentRemotePath(workshopId,orderCloudId,row.cloud_id,row.name);if(!row.storage_path){await storageUpload(c,storagePath,row.file_path,row.mime);db.prepare("INSERT INTO sync_meta(key,value) VALUES ('applying_remote','1') ON CONFLICT(key) DO UPDATE SET value='1'").run();try{db.prepare('UPDATE attachments SET storage_path=?,size_bytes=?,sha256=? WHERE id=?').run(storagePath,fs.statSync(row.file_path).size,crypto.createHash('sha256').update(fs.readFileSync(row.file_path)).digest('hex'),row.id)}finally{db.prepare("INSERT INTO sync_meta(key,value) VALUES ('applying_remote','0') ON CONFLICT(key) DO UPDATE SET value='0'").run()}}return db.prepare('SELECT * FROM attachments WHERE id=?').get(row.id)}
 async function materializeAttachment(c,db,cloudId,payload){if(!payload?.storage_path)return payload;const orderId=localByCloud(db,'orders',payload.order_cloud_id);if(!orderId)return payload;const ext=path.extname(payload.name||'')||'.bin';const dir=path.join(app.getPath('userData'),'attachments',String(orderId));const dest=path.join(dir,`${cloudId}${ext}`);if(!fs.existsSync(dest)){try{await storageDownload(c,payload.storage_path,dest)}catch(e){return {...payload,file_path:''}}}return {...payload,file_path:dest}}
@@ -115,14 +118,38 @@ function materializeApprovedQuote(db,approval){
   return {prepared:true,parts,quoteId};
 }
 
+function remoteApprovalFields(){return 'id,approval_local_id,status,customer_note,decided_at,created_at,expires_at,snapshot,snapshot_hash,hash_algorithm,terms_version,terms_text,signature_storage_path,signature_hash,pdf_storage_path,pdf_hash,client_user_agent,document_no,approval_sequence,previously_approved_total,security_event'}
+function updateLocalEvidence(db,approvalId,row){
+  db.prepare(`UPDATE approvals SET remote_id=?,snapshot_json=?,snapshot_hash=?,hash_algorithm=?,terms_version=?,terms_text=?,signature_storage_path=?,signature_hash=?,pdf_storage_path=?,pdf_hash=?,remote_expires_at=?,remote_synced_at=CURRENT_TIMESTAMP,client_user_agent=?,document_no=?,approval_sequence=?,previously_approved_total=? WHERE id=?`).run(
+    row.id||null,JSON.stringify(row.snapshot||{}),row.snapshot_hash||'',row.hash_algorithm||'SHA-256',row.terms_version||'',row.terms_text||'',row.signature_storage_path||'',row.signature_hash||'',row.pdf_storage_path||'',row.pdf_hash||'',row.expires_at||null,row.client_user_agent||'',row.document_no||'',Number(row.approval_sequence||1),Number(row.previously_approved_total||0),Number(approvalId))
+}
+async function archiveApprovalPdf(approvalId,{force=false,c=loadConfig(),db=getDb()}={}){
+  const approval=db.prepare('SELECT * FROM approvals WHERE id=?').get(Number(approvalId));if(!approval)throw new Error('Akceptacja nie istnieje.')
+  if(!approval.pdf_storage_path)throw new Error('Dokument PDF nie jest jeszcze dostępny w chmurze.')
+  if(approval.local_pdf_path&&fs.existsSync(approval.local_pdf_path)&&(!approval.pdf_hash||fileHash(approval.local_pdf_path)===approval.pdf_hash))return {ok:true,path:approval.local_pdf_path,downloaded:false}
+  const vehicle=db.prepare(`SELECT v.* FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE o.id=?`).get(approval.order_id);if(!vehicle)throw new Error('Nie znaleziono pojazdu dla dokumentu.')
+  let snapshot={};try{snapshot=JSON.parse(approval.snapshot_json||'{}')}catch{}
+  const base=archiveBasePath(app,db),archive=vehicleArchiveFolder(db,base,vehicle),name=approvalFileName(snapshot,approval.decided_at),dest=chooseDestination(archive.folder,name,approval.pdf_hash||'')
+  await storageDownloadFrom(c,'approval-evidence',approval.pdf_storage_path,dest)
+  if(approval.pdf_hash&&fileHash(dest)!==approval.pdf_hash){try{fs.unlinkSync(dest)}catch{};throw new Error('Suma kontrolna pobranego PDF jest niezgodna.')}
+  db.prepare("INSERT INTO sync_meta(key,value) VALUES ('applying_remote','1') ON CONFLICT(key) DO UPDATE SET value='1'").run();try{db.prepare('UPDATE approvals SET local_pdf_path=?,archive_vehicle_key=?,remote_synced_at=CURRENT_TIMESTAMP WHERE id=?').run(dest,archive.folderName,approval.id)}finally{db.prepare("INSERT INTO sync_meta(key,value) VALUES ('applying_remote','0') ON CONFLICT(key) DO UPDATE SET value='0'").run()}
+  db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(approval.order_id,'APPROVAL_SYNCED','Dokument akceptacji zapisany lokalnie',dest)
+  if(approval.remote_id)try{const workshopId=c.workshopId||c.user?.id;await request(c,'/rest/v1/customer_approval_events',{method:'POST',body:JSON.stringify({workshop_id:workshopId,approval_id:approval.remote_id,event_type:'APPROVAL_SYNCED',details:{device_id:c.deviceId||'',local_hash:approval.pdf_hash||''}})})}catch{}
+  return {ok:true,path:dest,folder:archive.folder,downloaded:true}
+}
+async function syncApprovalArchive(){const db=getDb(),rows=db.prepare("SELECT id,local_pdf_path FROM approvals WHERE status='APPROVED' AND pdf_storage_path!='' ORDER BY id").all().filter(row=>!row.local_pdf_path||!fs.existsSync(row.local_pdf_path));let downloaded=0;const errors=[];for(const row of rows){try{await archiveApprovalPdf(row.id);downloaded++}catch(error){errors.push({id:row.id,error:String(error.message||error)})}}return {ok:errors.length===0,downloaded,errors,pending:rows.length-downloaded}}
+async function downloadApprovalSignature(approvalId){const db=getDb(),row=db.prepare('SELECT signature_storage_path,signature_hash FROM approvals WHERE id=?').get(Number(approvalId));if(!row?.signature_storage_path)throw new Error('Podpis nie jest jeszcze dostępny.');const dest=path.join(app.getPath('userData'),'approval-evidence-cache',`signature-${Number(approvalId)}.png`);if(!fs.existsSync(dest)||row.signature_hash&&fileHash(dest)!==row.signature_hash)await storageDownloadFrom(loadConfig(),'approval-evidence',row.signature_storage_path,dest);if(row.signature_hash&&fileHash(dest)!==row.signature_hash)throw new Error('Suma kontrolna podpisu jest niezgodna.');return {ok:true,path:dest}}
+
 async function scanRemoteApprovals(c=loadConfig(),db=getDb()){
   const workshopId=c.workshopId||c.user?.id;if(!workshopId)return [];
-  const rows=await request(c,`/rest/v1/customer_approval_links?select=approval_local_id,status,customer_note,decided_at,created_at&workshop_id=eq.${encodeURIComponent(workshopId)}&status=neq.PENDING&order=decided_at.desc&limit=100`,{method:'GET'})||[];
+  const rows=await request(c,`/rest/v1/customer_approval_links?select=${remoteApprovalFields()}&workshop_id=eq.${encodeURIComponent(workshopId)}&status=neq.PENDING&order=decided_at.desc&limit=100`,{method:'GET'})||[];
   const changed=[];
   for(const r of rows){
     const approval=db.prepare('SELECT * FROM approvals WHERE id=?').get(Number(r.approval_local_id));
-    if(!approval||approval.status!=='PENDING')continue;
-    const order=db.prepare(`SELECT o.id,o.title,v.plate,v.make,v.model FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE o.id=?`).get(approval.order_id)||{};
+    if(!approval)continue;
+    updateLocalEvidence(db,approval.id,r)
+    if(approval.status!=='PENDING'){if(r.status==='APPROVED'&&r.pdf_storage_path&&!approval.local_pdf_path)try{await archiveApprovalPdf(approval.id,{c,db})}catch{};continue}
+    const order=db.prepare(`SELECT o.id,o.title,v.plate,v.make,v.model,c.name customer FROM orders o JOIN vehicles v ON v.id=o.vehicle_id LEFT JOIN customers c ON c.id=v.customer_id WHERE o.id=?`).get(approval.order_id)||{};
     const decidedAt=r.decided_at||new Date().toISOString();
     let prepared={prepared:false,parts:0};
     db.transaction(()=>{
@@ -130,8 +157,9 @@ async function scanRemoteApprovals(c=loadConfig(),db=getDb()){
       if(r.status==='APPROVED')prepared=materializeApprovedQuote(db,approval);else db.prepare(`UPDATE orders SET wait_state='DECYZJA' WHERE id=?`).run(approval.order_id);
       db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(approval.order_id,'REMOTE_APPROVAL',r.status==='APPROVED'?'Klient zaakceptował kosztorys online':'Klient odrzucił kosztorys online',`${Number(approval.amount||0).toFixed(2)} zł${r.customer_note?` · ${r.customer_note}`:''}`);
     })();
-    const item={approvalId:approval.id,orderId:approval.order_id,status:r.status,amount:Number(approval.amount||0),note:r.customer_note||'',decidedAt,plate:order.plate||'',vehicle:`${order.make||''} ${order.model||''}`.trim(),title:order.title||'',prepared:prepared.prepared,partsPrepared:prepared.parts||0};
+    const item={approvalId:approval.id,orderId:approval.order_id,status:r.status,amount:Number(approval.amount||0),note:r.customer_note||'',decidedAt,customer:order.customer||'',plate:order.plate||'',vehicle:`${order.make||''} ${order.model||''}`.trim(),title:order.title||'',prepared:prepared.prepared,partsPrepared:prepared.parts||0};
     changed.push(item);events.emit('remote-approval',item);
+    if(r.status==='APPROVED'&&r.pdf_storage_path)try{await archiveApprovalPdf(approval.id,{c,db})}catch(error){item.archiveError=String(error.message||error)}
   }
   return changed;
 }
@@ -170,20 +198,21 @@ async function retryPending(id){const db=getDb(),row=db.prepare('SELECT id FROM 
 function startAuto(){stopAuto();const c=loadConfig();if(c.enabled&&isConfigured(c)&&c.accessToken){timer=setInterval(()=>syncNow().catch(()=>{}),c.intervalSeconds*1000);setTimeout(()=>syncNow().catch(()=>{}),2500)}}
 function stopAuto(){if(timer){clearInterval(timer);timer=null}}
 
-async function createRemoteApproval(snapshot){
+async function createRemoteApproval(input){
   let c=loadConfig(); const t=await token(c); c=t.c; const workshopId=c.workshopId||c.user?.id; if(!workshopId)throw new Error('Brak ID warsztatu.');
-  const tokenValue=crypto.randomBytes(24).toString('hex');
-  const row={workshop_id:workshopId,token:tokenValue,approval_local_id:Number(snapshot.approvalId),order_local_id:Number(snapshot.orderId),snapshot};
-  await request(c,'/rest/v1/customer_approval_links',{method:'POST',body:JSON.stringify(row)});
-  return {ok:true,token:tokenValue,url:`${c.url}/functions/v1/approval?t=${tokenValue}`};
+  const built=buildApprovalSnapshot(getDb(),Number(input?.approvalId)),tokenValue=crypto.randomBytes(32).toString('hex'),tokenHash=sha256(tokenValue)
+  const row={workshop_id:workshopId,token:tokenHash,token_hash:tokenHash,approval_local_id:built.approval.id,approval_cloud_id:built.approval.cloud_id||null,order_local_id:built.approval.order_id,order_cloud_id:built.order.cloud_id||null,snapshot:built.snapshot,snapshot_hash:built.snapshotHash,hash_algorithm:built.hashAlgorithm,terms_version:built.snapshot.terms.version,terms_text:built.snapshot.terms.text,document_no:built.snapshot.approvalDocumentNo,approval_sequence:built.sequence,previously_approved_total:built.previouslyApprovedTotal,expires_at:new Date(Date.now()+7*24*60*60*1000).toISOString()}
+  const inserted=await request(c,'/rest/v1/customer_approval_links',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)}),remote=Array.isArray(inserted)?inserted[0]:inserted
+  updateLocalEvidence(getDb(),built.approval.id,{...row,id:remote?.id||null})
+  return {ok:true,url:`${c.url}/functions/v1/approval?t=${tokenValue}`,expiresAt:row.expires_at,snapshotHash:built.snapshotHash};
 }
 async function pullRemoteApproval(approvalId){
   let c=loadConfig(); const workshopId=c.workshopId||c.user?.id; if(!workshopId)throw new Error('Brak ID warsztatu.');
-  const rows=await request(c,`/rest/v1/customer_approval_links?select=status,customer_note,decided_at&approval_local_id=eq.${Number(approvalId)}&workshop_id=eq.${encodeURIComponent(workshopId)}&order=created_at.desc&limit=1`,{method:'GET'})||[];
+  const rows=await request(c,`/rest/v1/customer_approval_links?select=${remoteApprovalFields()}&approval_local_id=eq.${Number(approvalId)}&workshop_id=eq.${encodeURIComponent(workshopId)}&order=created_at.desc&limit=1`,{method:'GET'})||[];
   const r=rows[0]; if(!r)return {ok:false,reason:'NOT_FOUND'};
   if(r.status!=='PENDING')await scanRemoteApprovals(c,getDb());
   const local=getDb().prepare('SELECT status,note,decided_at FROM approvals WHERE id=?').get(Number(approvalId));
   return {ok:true,...r,status:local?.status||r.status,customer_note:local?.note||r.customer_note||'',decided_at:local?.decided_at||r.decided_at};
 }
 
-module.exports={loadConfig,saveConfig,publicConfig,status,syncNow,retryPending,startAuto,stopAuto,login,signup,logout,account,testConnection,createRemoteApproval,pullRemoteApproval,scanRemoteApprovals,on:(name,fn)=>events.on(name,fn),_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute}}
+module.exports={loadConfig,saveConfig,publicConfig,status,syncNow,retryPending,startAuto,stopAuto,login,signup,logout,account,testConnection,createRemoteApproval,pullRemoteApproval,scanRemoteApprovals,archiveApprovalPdf,syncApprovalArchive,downloadApprovalSignature,on:(name,fn)=>events.on(name,fn),_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute}}

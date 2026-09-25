@@ -24,6 +24,7 @@ const { customerProfile } = require('./customer-profile.cjs')
 const { listDebtors } = require('./debtors.cjs')
 const { listServiceReminders, createServiceReminder, setServiceReminderStatus } = require('./service-reminders.cjs')
 const { buildVehicleHealth } = require('./vehicle-health.cjs')
+const { archiveBasePath, vehicleArchiveFolder } = require('./approval-archive.cjs')
 const { ORDER_BASE_SQL, ORDER_TOTAL_SQL, ORDER_COST_SQL, finalPriceChange } = require('./order-financials.cjs')
 const { deriveOrderReadiness } = require('./order-readiness.cjs')
 const { searchTechnicalManuals } = require('./manual-source-scraper.cjs')
@@ -252,7 +253,7 @@ cloudSync.on('remote-approval',data=>{
   try{
     if(Notification.isSupported()){
       const approved=data.status==='APPROVED'
-      const n=new Notification({title:approved?'✓ Klient zaakceptował kosztorys':'× Klient odrzucił kosztorys',body:`${data.plate||'Zlecenie #'+data.orderId} · ${Number(data.amount||0).toLocaleString('pl-PL',{style:'currency',currency:'PLN'})}`})
+      const n=new Notification({title:approved?'✓ Klient zaakceptował kosztorys':'× Klient odrzucił kosztorys',body:[data.customer,data.vehicle||data.plate,Number(data.amount||0).toLocaleString('pl-PL',{style:'currency',currency:'PLN'}),data.decidedAt?new Date(data.decidedAt).toLocaleString('pl-PL'):null].filter(Boolean).join(' · ')})
       n.on('click',()=>{const w=BrowserWindow.getAllWindows()[0];if(w&&!w.isDestroyed()){w.show();w.focus();w.webContents.send('cloud:remoteApprovalOpen',data)}})
       n.show()
     }
@@ -612,6 +613,7 @@ ipcMain.handle('orders:exportPdf',async(_,{id,type='order'})=>{
     try{fs.unlinkSync(tempHtml)}catch{}
   }
 })
+ipcMain.handle('quotes:newVersion',(_,orderId)=>{const db=getDb();requireEditableOrder(db,orderId);const draft=db.prepare("SELECT * FROM quotes WHERE order_id=? AND status='ROBOCZA' ORDER BY id DESC LIMIT 1").get(orderId);if(draft){const approval=findQuoteApproval(db,orderId,draft.id);if(!approval)return{ok:true,id:draft.id,existing:true};if(approval.status==='PENDING')throw new Error('Najpierw poczekaj na decyzję klienta lub zakończ bieżącą akceptację.');db.prepare("UPDATE quotes SET status='ZAMKNIETA' WHERE id=?").run(draft.id)}const r=db.prepare("INSERT INTO quotes(order_id,status) VALUES (?,'ROBOCZA')").run(orderId);db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(orderId,'QUOTE_VERSION','Utworzono dodatkowy zakres naprawy',`Kosztorys #${r.lastInsertRowid}`);return{ok:true,id:r.lastInsertRowid}})
 
 ipcMain.handle('system:dbPath',()=>databasePath())
 ipcMain.handle('system:backup',async()=>{const {filePath,canceled}=await dialog.showSaveDialog({defaultPath:`autologika-backup-${new Date().toISOString().slice(0,10)}.db`,filters:[{name:'SQLite database',extensions:['db']}]});if(canceled||!filePath)return{canceled:true};await getDb().backup(filePath);if(!fs.existsSync(filePath)||fs.statSync(filePath).size===0)throw new Error('Kopia bazy nie została utworzona poprawnie.');return{canceled:false,filePath}})
@@ -827,6 +829,14 @@ ipcMain.handle('approvals:decide',(_,{id,status,note})=>{
   syncCloseoutAutomation(row.order_id)
   return true
 })
+ipcMain.handle('approvals:openPdf',async(_,id)=>{const row=getDb().prepare('SELECT local_pdf_path FROM approvals WHERE id=?').get(Number(id));if(!row?.local_pdf_path||!fs.existsSync(row.local_pdf_path))throw new Error('Brak lokalnej kopii PDF. Pobierz dokument ponownie.');const error=await shell.openPath(row.local_pdf_path);if(error)throw new Error(error);return true})
+ipcMain.handle('approvals:openFolder',async(_,id)=>{const db=getDb(),row=db.prepare('SELECT order_id,local_pdf_path FROM approvals WHERE id=?').get(Number(id));if(!row)throw new Error('Akceptacja nie istnieje.');let target=row.local_pdf_path&&fs.existsSync(row.local_pdf_path)?path.dirname(row.local_pdf_path):'';if(!target){const vehicle=db.prepare('SELECT v.* FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE o.id=?').get(row.order_id);target=vehicle?vehicleArchiveFolder(db,archiveBasePath(app,db),vehicle).folder:archiveBasePath(app,db)}fs.mkdirSync(target,{recursive:true});const error=await shell.openPath(target);if(error)throw new Error(error);return true})
+ipcMain.handle('approvals:redownload',(_,id)=>cloudSync.archiveApprovalPdf(Number(id),{force:true}))
+ipcMain.handle('approvals:openSignature',async(_,id)=>{const result=await cloudSync.downloadApprovalSignature(Number(id)),error=await shell.openPath(result.path);if(error)throw new Error(error);return true})
+ipcMain.handle('approvals:archiveStatus',()=>{const db=getDb(),basePath=archiveBasePath(app,db),rows=db.prepare("SELECT status,pdf_storage_path,local_pdf_path FROM approvals").all(),available=rows.filter(row=>row.status==='APPROVED'&&row.pdf_storage_path).length,missing=rows.filter(row=>row.status==='APPROVED'&&row.pdf_storage_path&&(!row.local_pdf_path||!fs.existsSync(row.local_pdf_path))).length;return{basePath,total:rows.length,available,missing}})
+ipcMain.handle('approvals:syncArchive',()=>cloudSync.syncApprovalArchive())
+ipcMain.handle('settings:getApprovalArchive',()=>({path:archiveBasePath(app,getDb()),custom:!!getDb().prepare("SELECT value FROM sync_meta WHERE key='approval_archive_path'").get()?.value}))
+ipcMain.handle('settings:chooseApprovalArchive',async()=>{const db=getDb(),current=archiveBasePath(app,db),result=await dialog.showOpenDialog({title:'Wybierz folder archiwum akceptacji',defaultPath:current,properties:['openDirectory','createDirectory']});if(result.canceled||!result.filePaths[0])return{canceled:true,path:current};const selected=path.resolve(result.filePaths[0]);db.prepare(`INSERT INTO sync_meta(key,value) VALUES ('approval_archive_path',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(selected);return{canceled:false,path:selected}})
 
 ipcMain.handle('timeline:list',(_,orderId)=>{
   const db=getDb()

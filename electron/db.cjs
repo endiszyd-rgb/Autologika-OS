@@ -6,7 +6,7 @@ const { seedTechnicalReference } = require('./technical-seed.cjs')
 const { migrateLegacyServiceReminders } = require('./service-reminders.cjs')
 
 let db
-const SCHEMA_VERSION = 11
+const SCHEMA_VERSION = 12
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -124,7 +124,35 @@ function migrate(db,currentVersion=0) {
   }
   if(currentVersion<11){
     db.transaction(()=>{migrateSchemaV11(db);db.pragma('user_version = 11')})()
+    currentVersion=11
   }
+  if(currentVersion<12){
+    db.transaction(()=>{migrateSchemaV12(db);db.pragma('user_version = 12')})()
+  }
+}
+
+function migrateSchemaV12(db){
+  const columns=db.prepare('PRAGMA table_info(approvals)').all().map(row=>row.name)
+  const additions=[
+    ['remote_id','TEXT'],['snapshot_json','TEXT'],['snapshot_hash','TEXT'],['hash_algorithm',"TEXT NOT NULL DEFAULT 'SHA-256'"],
+    ['terms_version','TEXT'],['terms_text','TEXT'],['signature_storage_path','TEXT'],['signature_hash','TEXT'],
+    ['pdf_storage_path','TEXT'],['pdf_hash','TEXT'],['local_pdf_path','TEXT'],['archive_vehicle_key','TEXT'],
+    ['remote_expires_at','TEXT'],['remote_synced_at','TEXT'],['client_user_agent','TEXT'],['document_no','TEXT'],
+    ['approval_sequence','INTEGER'],['previously_approved_total','REAL NOT NULL DEFAULT 0']
+  ]
+  for(const [name,type] of additions)if(!columns.includes(name))db.exec(`ALTER TABLE approvals ADD COLUMN ${name} ${type}`)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS approval_archive_vehicles (
+      vehicle_id INTEGER PRIMARY KEY,
+      vin TEXT,
+      folder_name TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_approvals_remote_id ON approvals(remote_id);
+    CREATE INDEX IF NOT EXISTS idx_approvals_snapshot_hash ON approvals(snapshot_hash);
+  `)
 }
 
 function migrateSchemaV11(db){
@@ -740,4 +768,4 @@ function seed(db) {
     .run(o.lastInsertRowid,v.lastInsertRowid,'Diagnostyka braku mocy',start.toISOString(),end.toISOString(),'Stanowisko 1','PLAN')
 }
 
-module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10 }
+module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10, migrateSchemaV12 }
