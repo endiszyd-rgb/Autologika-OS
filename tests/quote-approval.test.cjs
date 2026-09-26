@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const { DatabaseSync } = require('node:sqlite')
 const fs = require('node:fs')
 const vm = require('node:vm')
-const { findQuoteApproval, assertQuoteEditable } = require('../electron/quote-approval.cjs')
+const { findQuoteApproval, assertQuoteEditable, materializeApprovedQuote } = require('../electron/quote-approval.cjs')
 const { requireEditableOrder } = require('../electron/inventory-usage.cjs')
 
 function setup(t) {
@@ -11,7 +11,7 @@ function setup(t) {
   t.after(() => db.close())
   // Use the application's schema and IPC callbacks, without launching Electron.
   const schema = fs.readFileSync(require.resolve('../electron/db.cjs'), 'utf8')
-  for (const table of ['orders', 'quotes', 'quote_items', 'approvals', 'order_events', 'order_items']) {
+  for (const table of ['orders', 'quotes', 'quote_items', 'approvals', 'order_events', 'order_items', 'job_part_orders']) {
     db.exec(schema.match(new RegExp(`CREATE TABLE IF NOT EXISTS ${table} \\([\\s\\S]*?\\);`))[0])
   }
   db.exec("ALTER TABLE orders ADD COLUMN wait_state TEXT DEFAULT 'BRAK'")
@@ -21,7 +21,7 @@ function setup(t) {
   const source = fs.readFileSync(require.resolve('../electron/main.cjs'), 'utf8')
   vm.runInNewContext(source.slice(source.indexOf("ipcMain.handle('quotes:get'"), source.indexOf("ipcMain.handle('attachments:list'")), {
     ipcMain: { handle: (name, callback) => { handlers[name] = callback } },
-    getDb: () => db, findQuoteApproval, assertQuoteEditable, requireEditableOrder, partMarkup: () => 0.2, syncOrderItemTotals: () => {},
+    getDb: () => db, findQuoteApproval, assertQuoteEditable, materializeApprovedQuote, requireEditableOrder, partMarkup: () => 0.2, syncOrderItemTotals: () => {},
   })
   return { db, call: (name, arg) => handlers[`quotes:${name}`](null, arg) }
 }
@@ -73,6 +73,28 @@ test('accepted catalog labor keeps its snapshot in the order', t => {
   assert.equal(item.customer_description,'Opis zapisany w kosztorysie.')
   assert.equal(item.hours_snapshot,1.2)
   assert.equal(item.price_snapshot,360)
+})
+
+test('cloud approval uses the same complete and idempotent quote materialization', t => {
+  const { db, call } = setup(t)
+  call('addItem', { orderId: 1, data: { kind:'ROBOCIZNA', name:'Diagnostyka czujnika', labor_hours:1.5, labor_rate:240, catalog_work_id:'sensors', catalog_variant_id:'pressure_diff', work_name:'Diagnostyka czujnika różnicy ciśnień', variant_name:'DPF', customer_description:'Pomiary instalacji i sygnału.', technical_description:'Sprawdź napięcie odniesienia.', hours_snapshot:1.5, price_snapshot:360 } })
+  call('addItem', { orderId: 1, data: { kind:'CZESC', name:'Czujnik różnicy ciśnień', qty:1, unit_cost:180, unit_price:280 } })
+  call('addItem', { orderId: 1, data: { kind:'MATERIAL', name:'Przewód podciśnienia', qty:2, unit_cost:8, unit_price:15 } })
+
+  const first = materializeApprovedQuote(db, { scope:'Wycena #10 · diagnostyka DPF' })
+  const second = materializeApprovedQuote(db, { scope:'Wycena #10 · diagnostyka DPF' })
+  assert.equal(first.prepared, true)
+  assert.equal(first.partsPrepared, 1)
+  assert.equal(second.already, true)
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM order_items').get().n, 2)
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM job_part_orders').get().n, 1)
+  const labor = db.prepare("SELECT * FROM order_items WHERE kind='ROBOCIZNA'").get()
+  assert.equal(labor.catalog_variant_id, 'pressure_diff')
+  assert.equal(labor.customer_description, 'Pomiary instalacji i sygnału.')
+  assert.equal(labor.technical_description, 'Sprawdź napięcie odniesienia.')
+  assert.equal(labor.qty, 1.5)
+  assert.equal(labor.unit_price, 240)
+  assert.equal(db.prepare("SELECT unit_price FROM order_items WHERE kind='MATERIAL'").get().unit_price, 15)
 })
 
 test('closed order rejects quote changes until it is reopened', t => {

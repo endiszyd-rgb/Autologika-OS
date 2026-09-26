@@ -6,6 +6,7 @@ const { app, net } = require('electron')
 const { EventEmitter } = require('events')
 const { getDb } = require('./db.cjs')
 const { buildApprovalSnapshot, sha256 } = require('./remote-approval.cjs')
+const { materializeApprovedQuote } = require('./quote-approval.cjs')
 const { archiveBasePath, vehicleArchiveFolder, approvalFileName, fileHash, approvalArchiveState, approvalEvidencePaths, writeApprovalManifest, approvalEvidenceState, chooseDestination } = require('./approval-archive.cjs')
 const { latestRemoteApprovals, effectiveRemoteApproval, remoteApprovalOutcome } = require('./remote-approval-status.cjs')
 
@@ -103,22 +104,6 @@ async function fetchSyncPages(workshopId,since,fetchPage,pageSize=1000){
 }
 function pullCursor(c,pending,now=Date.now()){const fullAt=Date.parse(c.lastFullSyncAt||'');const recover=!pending&&(Number(c.syncCursorVersion||0)<2||!Number.isFinite(fullAt)||now-fullAt>=24*60*60*1000);return {recover,since:recover?'1970-01-01T00:00:00.000Z':c.lastSync||'1970-01-01T00:00:00.000Z'}}
 async function pullChanges(c,db,forceFull=false){const workshopId=c.workshopId||c.user?.id;if(!workshopId)throw new Error('Brak ID warsztatu.');const {recover,since}=forceFull?{recover:true,since:'1970-01-01T00:00:00.000Z'}:pullCursor(c,db.prepare('SELECT COUNT(*) c FROM sync_queue').get()?.c||0);const rows=await fetchSyncPages(workshopId,since,route=>request(c,route,{method:'GET'}));db.prepare("INSERT INTO sync_meta(key,value) VALUES ('applying_remote','1') ON CONFLICT(key) DO UPDATE SET value='1'").run();let pulled=0;try{const order=['app_settings','customers','suppliers','inventory_parts','vehicles','orders','diagnostics','order_notes','job_part_orders','order_items','work_logs','communications','approvals','order_events','payments','sales_refs','service_reminders_v2','appointments','attachments','signatures','work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps'];for(const table of order)for(const r of rows.filter(x=>x.entity_type===table)){if(r.deleted_at)applyRemoteDeletion(db,table,r);else{let payload=r.payload||{};if(table==='attachments')payload=await materializeAttachment(c,db,r.cloud_id,payload);applyPayload(db,table,r.cloud_id,payload,r.updated_at)}pulled++}reconcileOrderTotals(db)}finally{db.prepare("INSERT INTO sync_meta(key,value) VALUES ('applying_remote','0') ON CONFLICT(key) DO UPDATE SET value='0'").run()}saveConfig({lastSync:rows.length?rows[rows.length-1].updated_at:c.lastSync||'',syncCursorVersion:recover?2:Number(c.syncCursorVersion||0),lastFullSyncAt:recover?new Date().toISOString():c.lastFullSyncAt||''});return pulled}
-function materializeApprovedQuote(db,approval){
-  const m=String(approval.scope||'').match(/Wycena #(\d+)/);if(!m)return {prepared:false,parts:0};
-  const quoteId=Number(m[1]),q=db.prepare('SELECT * FROM quotes WHERE id=?').get(quoteId);if(!q||q.status==='ZAAKCEPTOWANA')return {prepared:false,parts:0};
-  const items=db.prepare('SELECT * FROM quote_items WHERE quote_id=? ORDER BY id').all(quoteId);let parts=0;
-  for(const x of items){
-    if(x.kind==='ROBOCIZNA')db.prepare('UPDATE orders SET labor_hours=labor_hours+?,labor_rate=? WHERE id=?').run(Number(x.labor_hours||0),Number(x.labor_rate||220),q.order_id);
-    else if(x.kind==='CZESC'){db.prepare(`INSERT INTO job_part_orders(order_id,part_no,name,qty,unit_cost,unit_price,status,notes) VALUES (?,?,?,?,?,?,'DO_ZAMOWIENIA',?)`).run(q.order_id,'',x.name,Number(x.qty||1),Number(x.unit_cost||0),Number(x.unit_price||0),`Automatycznie z zaakceptowanego kosztorysu #${quoteId}`);parts++}
-    else db.prepare('INSERT INTO order_items(order_id,kind,name,qty,unit_cost,unit_price,notes) VALUES (?,?,?,?,?,?,?)').run(q.order_id,x.kind,x.name,Number(x.qty||1),Number(x.unit_cost||0),Number(x.unit_price||0),x.notes||'');
-  }
-  const sums=db.prepare(`SELECT COALESCE(SUM(CASE WHEN kind='CZESC' THEN qty*unit_cost ELSE 0 END),0) pc,COALESCE(SUM(CASE WHEN kind='CZESC' THEN qty*unit_price ELSE 0 END),0) ps,COALESCE(SUM(CASE WHEN kind!='CZESC' THEN qty*unit_cost ELSE 0 END),0) oc,COALESCE(SUM(CASE WHEN kind!='CZESC' THEN qty*unit_price ELSE 0 END),0) os FROM order_items WHERE order_id=?`).get(q.order_id);
-  db.prepare('UPDATE orders SET parts_cost=?,parts_sale=?,other_cost=?,other_sale=?,status=?,wait_state=? WHERE id=?').run(sums.pc,sums.ps,sums.oc,sums.os,parts?'AKCEPTACJA':'NAPRAWA',parts?'CZESCI':'BRAK',q.order_id);
-  db.prepare("UPDATE quotes SET status='ZAAKCEPTOWANA',accepted_at=CURRENT_TIMESTAMP WHERE id=?").run(quoteId);
-  db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(q.order_id,'QUOTE_PREPARED',parts?'Zakres zaakceptowany — części do zamówienia':'Zakres zaakceptowany — gotowe do naprawy',parts?`${parts} pozycji części utworzono jako DO_ZAMOWIENIA`:'Brak części blokujących rozpoczęcie naprawy');
-  return {prepared:true,parts,quoteId};
-}
-
 function remoteApprovalFields(){return 'id,approval_local_id,status,customer_note,decided_at,created_at,expires_at,snapshot,snapshot_hash,hash_algorithm,terms_version,terms_text,signature_storage_path,signature_hash,pdf_storage_path,pdf_hash,client_user_agent,document_no,approval_sequence,previously_approved_total,security_event'}
 function updateLocalEvidence(db,approvalId,row){
   db.prepare(`UPDATE approvals SET remote_id=?,snapshot_json=?,snapshot_hash=?,hash_algorithm=?,terms_version=?,terms_text=?,signature_storage_path=?,signature_hash=?,pdf_storage_path=?,pdf_hash=?,remote_expires_at=?,remote_synced_at=CURRENT_TIMESTAMP,client_user_agent=?,document_no=?,approval_sequence=?,previously_approved_total=? WHERE id=?`).run(
