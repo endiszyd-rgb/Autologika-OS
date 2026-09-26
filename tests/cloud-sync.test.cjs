@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute}}=require('../electron/cloud-sync.cjs')
+const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute,sqliteBindValue}}=require('../electron/cloud-sync.cjs')
 
 test('PC compares SQLite UTC timestamps with Cloud ISO timestamps without a local timezone shift',()=>{
  assert.equal(timestampMs('2026-09-20 10:15:30'),Date.parse('2026-09-20T10:15:30.000Z'))
@@ -16,6 +16,19 @@ test('PC batches conflict checks for exact entity and cloud identifiers',()=>{
  assert.equal(query.get('entity_type'),'eq.orders')
  assert.equal(query.get('cloud_id'),'in.(order-1,order-2)')
  assert.equal(query.get('limit'),'2')
+})
+
+test('PC converts Cloud booleans and structured JSON into SQLite bind values',()=>{
+ assert.equal(sqliteBindValue(true),1)
+ assert.equal(sqliteBindValue(false),0)
+ assert.equal(sqliteBindValue('tekst'),'tekst')
+ assert.equal(sqliteBindValue(12),12)
+ assert.equal(sqliteBindValue([{key:'value'}]),'[{"key":"value"}]')
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE orders(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE order_qc(id INTEGER PRIMARY KEY,order_id INTEGER,check_key TEXT,checked INTEGER,cloud_id TEXT,updated_at TEXT); INSERT INTO orders VALUES(3,'order-cloud');`)
+ applyPayload(db,'order_qc','qc-cloud',{order_cloud_id:'order-cloud',check_key:'road',checked:true},'2026-09-26T12:00:00.000Z')
+ assert.deepEqual({...db.prepare("SELECT order_id,check_key,checked FROM order_qc WHERE cloud_id='qc-cloud'").get()},{order_id:3,check_key:'road',checked:1})
+ db.close()
 })
 
 test('PC binds the workshop to its Cloud account and protects a previously synchronized database',()=>{
