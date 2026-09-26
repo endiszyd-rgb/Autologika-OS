@@ -7,7 +7,7 @@ const { EventEmitter } = require('events')
 const { getDb } = require('./db.cjs')
 const { buildApprovalSnapshot, sha256 } = require('./remote-approval.cjs')
 const { archiveBasePath, vehicleArchiveFolder, approvalFileName, fileHash, approvalArchiveState, approvalEvidencePaths, writeApprovalManifest, approvalEvidenceState, chooseDestination } = require('./approval-archive.cjs')
-const { latestRemoteApprovals, remoteApprovalOutcome } = require('./remote-approval-status.cjs')
+const { latestRemoteApprovals, effectiveRemoteApproval, remoteApprovalOutcome } = require('./remote-approval-status.cjs')
 
 const SYNC_TABLES = ['app_settings','customers','suppliers','inventory_parts','vehicles','orders','diagnostics','order_notes','job_part_orders','payments','appointments','order_items','work_logs','communications','approvals','order_events','sales_refs','service_reminders_v2','attachments','signatures','work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps']
 const events = new EventEmitter()
@@ -156,7 +156,8 @@ async function scanRemoteApprovals(c=loadConfig(),db=getDb()){
   const workshopId=c.workshopId||c.user?.id;if(!workshopId)return [];
   const rows=await request(c,`/rest/v1/customer_approval_links?select=${remoteApprovalFields()}&workshop_id=eq.${encodeURIComponent(workshopId)}&order=created_at.desc&limit=500`,{method:'GET'})||[];
   const changed=[];
-  for(const r of latestRemoteApprovals(rows)){
+  for(const source of latestRemoteApprovals(rows)){
+    const r=effectiveRemoteApproval(source)
     const approval=db.prepare('SELECT * FROM approvals WHERE id=?').get(Number(r.approval_local_id));
     if(!approval)continue;
     updateLocalEvidence(db,approval.id,r)
@@ -224,7 +225,7 @@ async function createRemoteApproval(input){
 async function pullRemoteApproval(approvalId){
   let c=loadConfig(); const workshopId=c.workshopId||c.user?.id; if(!workshopId)throw new Error('Brak ID warsztatu.');
   const rows=await request(c,`/rest/v1/customer_approval_links?select=${remoteApprovalFields()}&approval_local_id=eq.${Number(approvalId)}&workshop_id=eq.${encodeURIComponent(workshopId)}&order=created_at.desc&limit=1`,{method:'GET'})||[];
-  const r=rows[0]; if(!r)return {ok:false,reason:'NOT_FOUND'};
+  if(!rows[0])return {ok:false,reason:'NOT_FOUND'}; const r=effectiveRemoteApproval(rows[0]);
   if(r.status!=='PENDING')await scanRemoteApprovals(c,getDb());
   const local=getDb().prepare('SELECT status,note,decided_at FROM approvals WHERE id=?').get(Number(approvalId));
   return {ok:true,...r,status:local?.status||r.status,customer_note:local?.note||r.customer_note||'',decided_at:local?.decided_at||r.decided_at};

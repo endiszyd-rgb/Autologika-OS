@@ -18,6 +18,13 @@ function latestRemoteApprovals(rows = []) {
   })
 }
 
+function effectiveRemoteApproval(row, now = Date.now()) {
+  const status = String(row?.status || '').toUpperCase()
+  const expiresAt = timestamp(row?.expires_at)
+  if (status === 'PENDING' && expiresAt > 0 && expiresAt <= now) return { ...row, status: 'EXPIRED' }
+  return { ...row, status: status || 'PENDING' }
+}
+
 function remoteApprovalOutcome(status) {
   const value = String(status || '').toUpperCase()
   if (value === 'APPROVED') return { status: value, terminal: true, eventTitle: 'Klient zaakceptował kosztorys online', toastTitle: 'Klient zaakceptował kosztorys', tone: 'approved', icon: '✓' }
@@ -27,4 +34,4 @@ function remoteApprovalOutcome(status) {
   return { status: 'PENDING', terminal: false, eventTitle: 'Oczekiwanie na decyzję online', toastTitle: 'Oczekiwanie na decyzję klienta', tone: 'pending', icon: '…' }
 }
 
-module.exports = { TERMINAL_REMOTE_STATUSES, latestRemoteApprovals, remoteApprovalOutcome }
+module.exports = { TERMINAL_REMOTE_STATUSES, latestRemoteApprovals, effectiveRemoteApproval, remoteApprovalOutcome }
