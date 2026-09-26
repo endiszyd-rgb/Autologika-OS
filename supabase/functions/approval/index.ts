@@ -18,8 +18,8 @@ Deno.serve(async req=>{
  if(!record){const legacy=await sb.from('customer_approval_links').select('*').eq('token',rawToken).maybeSingle();record=legacy.data}
  if(!record)return message('Link jest nieprawidłowy','Poproś warsztat o nowy link.','error')
  if(approvalRecordState(record)==='EXPIRED'){
-   await sb.from('customer_approval_links').update({status:'EXPIRED',decided_at:new Date().toISOString()}).eq('id',record.id).eq('status','PENDING')
-   await sb.from('customer_approval_events').insert({workshop_id:record.workshop_id,approval_id:record.id,event_type:'APPROVAL_EXPIRED'});record.status='EXPIRED'
+   const expired=await sb.from('customer_approval_links').update({status:'EXPIRED',decided_at:new Date().toISOString()}).eq('id',record.id).eq('status','PENDING').select('id')
+   if(expired.data?.length)await sb.from('customer_approval_events').insert({workshop_id:record.workshop_id,approval_id:record.id,event_type:'APPROVAL_EXPIRED'});record.status='EXPIRED'
  }
  if(record.status==='PENDING'&&!record.opened_at){const opened=new Date().toISOString();const result=await sb.from('customer_approval_links').update({opened_at:opened}).eq('id',record.id).is('opened_at',null).select('id');if(result.data?.length)await sb.from('customer_approval_events').insert({workshop_id:record.workshop_id,approval_id:record.id,event_type:'APPROVAL_OPENED'});record.opened_at=opened}
  if(req.method==='POST'){

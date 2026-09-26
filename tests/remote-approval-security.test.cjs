@@ -23,6 +23,7 @@ test('only the service role can execute the atomic decision function',()=>{
 
 test('client endpoint checks origin, expiry, consent, signature and snapshot integrity',()=>{
  for(const expected of ["origin!==url.origin","record.expires_at","termsAccepted","signaturePoints","snapshotHashMatches(record.snapshot,record.snapshot_hash)","SNAPSHOT_HASH_MISMATCH"])assert.ok(edge.includes(expected),expected)
+ assert.match(edge,/eq\('status','PENDING'\)\.select\('id'\)[\s\S]*expired\.data\?\.length[\s\S]*APPROVAL_EXPIRED/)
 })
 
 test('approved evidence uploads a signature and printable PDF and removes orphaned uploads',()=>{
