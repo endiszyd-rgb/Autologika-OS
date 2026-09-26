@@ -45,6 +45,7 @@ test('sending freezes additions and deletions and repeated requests are idempote
   assert.equal(db.prepare('SELECT COUNT(*) n FROM approvals').get().n, 1)
   for (const status of ['PENDING', 'APPROVED', 'DECLINED']) {
     db.prepare('UPDATE approvals SET status=?').run(status)
+    assert.throws(() => call('updateItem', { id:item.id, data:{ name:'Zmieniony',qty:1,unit_price:10 } }))
     assert.throws(() => call('addItem', { orderId: 1, data: { name: 'Extra' } }), /zamrożony/)
     assert.throws(() => call('removeItem', item.id), /zamrożony/)
   }
@@ -63,6 +64,15 @@ test('accepting quote 1 cannot use approval for quote 10', t => {
   const { db, call } = setup(t)
   db.exec("INSERT INTO approvals(order_id,scope,status) VALUES (1,'Wycena #10 · Filtr','APPROVED')")
   assert.equal(call('accept', 1).reason, 'APPROVAL_REQUIRED')
+})
+
+test('draft item can be edited and its totals and part identity are recalculated', t => {
+  const { db, call } = setup(t)
+  const item=call('addItem',{orderId:1,data:{kind:'CZESC',name:'Filtr',qty:1,unit_cost:20,unit_price:40,part_no:'OLD'}})
+  const result=call('updateItem',{id:item.id,data:{name:'Filtr oleju',qty:2,unit_cost:25,unit_price:55,part_no:'W 712/95',oe_number:'11428507683',brand:'MANN-FILTER',barcode:'4006381333931'}})
+  assert.equal(result.total,110)
+  assert.deepEqual({...db.prepare('SELECT name,qty,unit_cost,unit_price,part_no,oe_number,brand,barcode,price_snapshot FROM quote_items WHERE id=?').get(item.id)},{name:'Filtr oleju',qty:2,unit_cost:25,unit_price:55,part_no:'W 712/95',oe_number:'11428507683',brand:'MANN-FILTER',barcode:'4006381333931',price_snapshot:110})
+  assert.throws(()=>call('updateItem',{id:item.id,data:{name:'Filtr',qty:1,unit_cost:20,unit_price:-1}}))
 })
 
 test('accepted catalog labor keeps its snapshot in the order', t => {

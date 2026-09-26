@@ -570,6 +570,26 @@ ipcMain.handle('quotes:addItem',(_,{orderId,data})=>{
   )
   return{id:created.lastInsertRowid,recommendedPrice:price}
 })
+ipcMain.handle('quotes:updateItem',(_,{id,data})=>{
+  const db=getDb(),item=db.prepare('SELECT * FROM quote_items WHERE id=?').get(Number(id))
+  if(!item)throw new Error('Pozycja wyceny nie istnieje.')
+  const quote=db.prepare('SELECT * FROM quotes WHERE id=?').get(item.quote_id)
+  if(!quote)throw new Error('Wycena nie istnieje.')
+  requireEditableOrder(db,quote.order_id);assertQuoteEditable(db,quote)
+  const kind=item.kind,name=String(data.name||'').trim()
+  if(!name)throw new Error('Nazwa pozycji jest wymagana.')
+  const qty=kind==='ROBOCIZNA'?Number(data.qty||item.qty||1):Number(data.qty)
+  const hours=kind==='ROBOCIZNA'?Number(data.labor_hours):Number(data.labor_hours||0)
+  const rate=Number(data.labor_rate||0),cost=Number(data.unit_cost||0),price=Number(data.unit_price||0)
+  if(![qty,hours,rate,cost,price].every(Number.isFinite)||rate<0||cost<0||price<0)throw new Error('Ilość, czas i ceny muszą być poprawnymi wartościami.')
+  if((kind==='ROBOCIZNA'&&hours<=0)||(kind!=='ROBOCIZNA'&&qty<=0))throw new Error('Ilość lub czas pracy musi być większy od zera.')
+  const total=kind==='ROBOCIZNA'?hours*rate:qty*price
+  db.prepare(`UPDATE quote_items SET name=?,qty=?,unit_cost=?,unit_price=?,labor_hours=?,labor_rate=?,notes=?,customer_description=?,technical_description=?,hours_snapshot=?,price_snapshot=?,part_no=?,oe_number=?,inventory_part_id=?,supplier_name=?,barcode=?,brand=?,vehicle_fitment=?,cross_numbers=?,lookup_source=?,lookup_url=? WHERE id=?`).run(
+    name,qty,cost,price,hours,rate,data.notes||data.customer_description||'',data.customer_description||data.notes||'',data.technical_description||item.technical_description||'',hours,total,
+    data.part_no||'',data.oe_number||'',data.inventory_part_id||null,data.supplier_name||'',normalizeBarcode(data.barcode||''),data.brand||'',data.vehicle_fitment||'',data.cross_numbers||'',data.lookup_source||'',data.lookup_url||'',item.id
+  )
+  return{ok:true,id:item.id,total}
+})
 ipcMain.handle('quotes:removeItem',(_,id)=>{const db=getDb(),item=db.prepare('SELECT * FROM quote_items WHERE id=?').get(id);if(!item)return true;const quote=db.prepare('SELECT * FROM quotes WHERE id=?').get(item.quote_id);requireEditableOrder(db,quote.order_id);assertQuoteEditable(db,quote);db.prepare('DELETE FROM quote_items WHERE id=?').run(id);return true})
 ipcMain.handle('quotes:requestApproval',(_,id)=>{
   const db=getDb(); const q=db.prepare('SELECT * FROM quotes WHERE id=?').get(id); if(!q)return{ok:false}
