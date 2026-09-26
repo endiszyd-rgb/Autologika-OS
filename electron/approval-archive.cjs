@@ -37,17 +37,20 @@ function writeApprovalManifest(pdfFile,approval={},snapshot={},signatureFile='')
   const manifest={schema:'autologika.approval-evidence.v1',archivedAt:new Date().toISOString(),approval:{localId:Number(approval.id)||null,remoteId:approval.remote_id||null,orderId:Number(approval.order_id)||null,status:approval.status||'',documentNo:approval.document_no||snapshot.documentNo||'',decidedAt:approval.decided_at||null,approvalSequence:Number(approval.approval_sequence||snapshot.approvalSequence||1),termsVersion:approval.terms_version||snapshot.terms?.version||''},integrity:{algorithm:approval.hash_algorithm||'SHA-256',snapshotSha256:approval.snapshot_hash||'',signatureSha256:approval.signature_hash||signatureSha256,pdfSha256:approval.pdf_hash||pdfSha256},files:{pdf:{name:path.basename(pdfFile),bytes:fs.statSync(pdfFile).size,sha256:pdfSha256},signature:signatureExists?{name:path.basename(signatureFile),bytes:fs.statSync(signatureFile).size,sha256:signatureSha256}:null},snapshot}
   const temp=`${files.manifest}.part-${process.pid}-${Date.now()}`;fs.writeFileSync(temp,JSON.stringify(manifest,null,2),'utf8');fs.renameSync(temp,files.manifest);return {...files,data:manifest}
 }
-function approvalEvidenceState(row={}){
-  const pdfState=approvalArchiveState(row);if(pdfState!=='VALID')return pdfState
-  const files=approvalEvidencePaths(row.local_pdf_path);if(!fs.existsSync(files.manifest))return 'INCOMPLETE'
-  if(row.signature_storage_path){if(!fs.existsSync(files.signature))return 'INCOMPLETE';if(row.signature_hash&&fileHash(files.signature)!==String(row.signature_hash).toLowerCase())return 'CORRUPT'}
-  try{const manifest=JSON.parse(fs.readFileSync(files.manifest,'utf8'));if(manifest.schema!=='autologika.approval-evidence.v1'||manifest.files?.pdf?.sha256!==fileHash(row.local_pdf_path)||row.pdf_hash&&manifest.integrity?.pdfSha256!==String(row.pdf_hash).toLowerCase()||row.snapshot_hash&&manifest.integrity?.snapshotSha256!==String(row.snapshot_hash).toLowerCase()||row.signature_hash&&manifest.integrity?.signatureSha256!==String(row.signature_hash).toLowerCase())return 'CORRUPT'}catch{return 'CORRUPT'}
-  return 'COMPLETE'
+function approvalEvidenceInspection(row={}){
+  const files=row.local_pdf_path?approvalEvidencePaths(row.local_pdf_path):{pdf:'',signature:'',manifest:''}
+  const inspectFile=(file,expected='')=>{const exists=!!file&&fs.existsSync(file);let actualHash='',bytes=0;try{if(exists){actualHash=fileHash(file);bytes=fs.statSync(file).size}}catch{}const normalized=String(expected||'').toLowerCase();return{path:file,exists,bytes,expectedHash:normalized,actualHash,valid:exists&&!!actualHash&&(!normalized||actualHash===normalized)}}
+  const pdf=inspectFile(files.pdf,row.pdf_hash),signature=inspectFile(files.signature,row.signature_hash),signatureRequired=!!row.signature_storage_path
+  let manifestData=null,manifestError='';if(files.manifest&&fs.existsSync(files.manifest))try{manifestData=JSON.parse(fs.readFileSync(files.manifest,'utf8'))}catch(error){manifestError=String(error.message||error)}
+  const manifestExists=!!files.manifest&&fs.existsSync(files.manifest),manifestValid=!!manifestData&&manifestData.schema==='autologika.approval-evidence.v1'&&manifestData.files?.pdf?.sha256===pdf.actualHash&&(!row.pdf_hash||manifestData.integrity?.pdfSha256===String(row.pdf_hash).toLowerCase())&&(!row.snapshot_hash||manifestData.integrity?.snapshotSha256===String(row.snapshot_hash).toLowerCase())&&(!row.signature_hash||manifestData.integrity?.signatureSha256===String(row.signature_hash).toLowerCase())
+  let state='COMPLETE';if(!pdf.exists)state='MISSING';else if(!pdf.valid||signatureRequired&&signature.exists&&!signature.valid||manifestExists&&!manifestValid)state='CORRUPT';else if(signatureRequired&&!signature.exists||!manifestExists)state='INCOMPLETE'
+  return{state,checkedAt:new Date().toISOString(),pdf,signature:{...signature,required:signatureRequired},manifest:{path:files.manifest,exists:manifestExists,bytes:manifestExists?fs.statSync(files.manifest).size:0,valid:manifestValid,error:manifestError,schema:manifestData?.schema||''}}
 }
+function approvalEvidenceState(row={}){return approvalEvidenceInspection(row).state}
 function chooseDestination(folder,name,expectedHash=''){
   const preferred=ensureInside(folder,path.join(folder,name));if(!fs.existsSync(preferred)||expectedHash&&fileHash(preferred)===expectedHash)return preferred
   const ext=path.extname(name),stem=path.basename(name,ext);for(let index=2;index<1000;index++){const candidate=ensureInside(folder,path.join(folder,`${stem}_Kopia-${String(index).padStart(2,'0')}${ext}`));if(!fs.existsSync(candidate))return candidate}
   throw new Error('Nie można wybrać bezpiecznej nazwy pliku archiwum.')
 }
 
-module.exports={safeSegment,safeFileSegment,ensureInside,archiveBasePath,vehicleArchiveFolder,approvalFileName,fileHash,approvalArchiveState,approvalEvidencePaths,writeApprovalManifest,approvalEvidenceState,chooseDestination}
+module.exports={safeSegment,safeFileSegment,ensureInside,archiveBasePath,vehicleArchiveFolder,approvalFileName,fileHash,approvalArchiveState,approvalEvidencePaths,writeApprovalManifest,approvalEvidenceInspection,approvalEvidenceState,chooseDestination}

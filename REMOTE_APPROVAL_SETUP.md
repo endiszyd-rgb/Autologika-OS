@@ -36,7 +36,7 @@ Token w URL nie jest zapisywany w bazie. Baza przechowuje wyłącznie jego SHA-2
 2. Wybierz **Generuj link zdalny**. Snapshot powstaje w procesie głównym, a link jest kopiowany do schowka.
 3. Klient zaznacza zgodę, podpisuje się palcem, rysikiem lub myszą i zatwierdza. Odrzucenie może zawierać powód i nie wymaga podpisu.
 4. Automatyczna synchronizacja albo **Sprawdź decyzję** pobiera wynik. Dla akceptacji aplikacja pobiera finalny PDF, podpis PNG oraz manifest integralności JSON.
-5. W panelu **Akceptacje klienta** można otworzyć PDF, podpis, folder oraz uzupełnić brakujący pakiet ponownie.
+5. W panelu **Akceptacje klienta** można otworzyć PDF, podpis, folder, uzupełnić brakujący pakiet oraz uruchomić ręczną kontrolę integralności wszystkich trzech plików.
 6. Po zakończonej decyzji przycisk **Dodatkowy zakres naprawy** tworzy nową wersję kosztorysu. Poprzedni snapshot i PDF pozostają niezmienne.
 
 ## Lokalne archiwum

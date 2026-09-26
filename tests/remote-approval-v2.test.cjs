@@ -5,7 +5,7 @@ const fs=require('fs')
 const os=require('os')
 const {DatabaseSync}=require('node:sqlite')
 const {canonicalJson,sha256,quoteIdFromScope,buildApprovalSnapshot,TERMS_VERSION}=require('../electron/remote-approval.cjs')
-const {safeSegment,ensureInside,approvalFileName,vehicleArchiveFolder,approvalArchiveState,approvalEvidencePaths,writeApprovalManifest,approvalEvidenceState,fileHash}=require('../electron/approval-archive.cjs')
+const {safeSegment,ensureInside,approvalFileName,vehicleArchiveFolder,approvalArchiveState,approvalEvidencePaths,writeApprovalManifest,approvalEvidenceInspection,approvalEvidenceState,fileHash}=require('../electron/approval-archive.cjs')
 
 test('canonical JSON and SHA-256 are deterministic',()=>{
  const first=canonicalJson({z:1,a:{y:2,x:[3,{b:2,a:1}]}}),second=canonicalJson({a:{x:[3,{a:1,b:2}],y:2},z:1})
@@ -69,6 +69,7 @@ test('local evidence package contains a verifiable PDF, signature and JSON manif
  const result=writeApprovalManifest(pdf,approval,{documentNo:'AL-7'},signature),manifest=JSON.parse(fs.readFileSync(result.manifest,'utf8'))
  assert.deepEqual(approvalEvidencePaths(pdf),{pdf,signature,manifest:path.join(dir,'Akceptacja_Dowod.json')})
  assert.equal(manifest.schema,'autologika.approval-evidence.v1');assert.equal(manifest.files.pdf.sha256,pdfHash);assert.equal(manifest.files.signature.sha256,signatureHash);assert.equal(approvalEvidenceState({...approval,local_pdf_path:pdf}),'COMPLETE')
+ const inspection=approvalEvidenceInspection({...approval,local_pdf_path:pdf});assert.equal(inspection.state,'COMPLETE');assert.equal(inspection.pdf.actualHash,pdfHash);assert.equal(inspection.signature.valid,true);assert.equal(inspection.manifest.valid,true)
  manifest.integrity.snapshotSha256='b'.repeat(64);fs.writeFileSync(result.manifest,JSON.stringify(manifest));assert.equal(approvalEvidenceState({...approval,local_pdf_path:pdf}),'CORRUPT');writeApprovalManifest(pdf,approval,{documentNo:'AL-7'},signature)
  fs.writeFileSync(signature,'modified');assert.equal(approvalEvidenceState({...approval,local_pdf_path:pdf}),'CORRUPT')
  fs.rmSync(dir,{recursive:true,force:true})
