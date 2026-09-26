@@ -807,7 +807,7 @@ ipcMain.handle('debtors:list',()=>{
 
 ipcMain.handle('templates:list',()=>getDb().prepare(`SELECT * FROM message_templates WHERE active=1 ORDER BY id`).all())
 
-ipcMain.handle('approvals:list',(_,orderId)=>getDb().prepare(`SELECT * FROM approvals WHERE order_id=? ORDER BY created_at DESC,id DESC`).all(orderId))
+ipcMain.handle('approvals:list',(_,orderId)=>getDb().prepare(`SELECT * FROM approvals WHERE order_id=? ORDER BY created_at DESC,id DESC`).all(orderId).map(row=>({...row,local_pdf_exists:!!row.local_pdf_path&&fs.existsSync(row.local_pdf_path)})))
 ipcMain.handle('approvals:add',(_,{orderId,data})=>{
   const db=getDb()
   requireEditableOrder(db,orderId)

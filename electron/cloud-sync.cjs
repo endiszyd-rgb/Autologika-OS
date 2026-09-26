@@ -7,6 +7,7 @@ const { EventEmitter } = require('events')
 const { getDb } = require('./db.cjs')
 const { buildApprovalSnapshot, sha256 } = require('./remote-approval.cjs')
 const { archiveBasePath, vehicleArchiveFolder, approvalFileName, fileHash, chooseDestination } = require('./approval-archive.cjs')
+const { latestRemoteApprovals, remoteApprovalOutcome } = require('./remote-approval-status.cjs')
 
 const SYNC_TABLES = ['app_settings','customers','suppliers','inventory_parts','vehicles','orders','diagnostics','order_notes','job_part_orders','payments','appointments','order_items','work_logs','communications','approvals','order_events','sales_refs','service_reminders_v2','attachments','signatures','work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps']
 const events = new EventEmitter()
@@ -142,22 +143,24 @@ async function downloadApprovalSignature(approvalId){const db=getDb(),row=db.pre
 
 async function scanRemoteApprovals(c=loadConfig(),db=getDb()){
   const workshopId=c.workshopId||c.user?.id;if(!workshopId)return [];
-  const rows=await request(c,`/rest/v1/customer_approval_links?select=${remoteApprovalFields()}&workshop_id=eq.${encodeURIComponent(workshopId)}&status=neq.PENDING&order=decided_at.desc&limit=100`,{method:'GET'})||[];
+  const rows=await request(c,`/rest/v1/customer_approval_links?select=${remoteApprovalFields()}&workshop_id=eq.${encodeURIComponent(workshopId)}&order=created_at.desc&limit=500`,{method:'GET'})||[];
   const changed=[];
-  for(const r of rows){
+  for(const r of latestRemoteApprovals(rows)){
     const approval=db.prepare('SELECT * FROM approvals WHERE id=?').get(Number(r.approval_local_id));
     if(!approval)continue;
     updateLocalEvidence(db,approval.id,r)
-    if(approval.status!=='PENDING'){if(r.status==='APPROVED'&&r.pdf_storage_path&&!approval.local_pdf_path)try{await archiveApprovalPdf(approval.id,{c,db})}catch{};continue}
+    const outcome=remoteApprovalOutcome(r.status)
+    if(!outcome.terminal)continue
+    if(approval.status!=='PENDING'){if(r.status==='APPROVED'&&r.pdf_storage_path&&(!approval.local_pdf_path||!fs.existsSync(approval.local_pdf_path)))try{await archiveApprovalPdf(approval.id,{c,db})}catch{};continue}
     const order=db.prepare(`SELECT o.id,o.title,v.plate,v.make,v.model,c.name customer FROM orders o JOIN vehicles v ON v.id=o.vehicle_id LEFT JOIN customers c ON c.id=v.customer_id WHERE o.id=?`).get(approval.order_id)||{};
     const decidedAt=r.decided_at||new Date().toISOString();
     let prepared={prepared:false,parts:0};
     db.transaction(()=>{
       db.prepare(`UPDATE approvals SET status=?,note=CASE WHEN ?!='' THEN ? ELSE note END,decided_at=? WHERE id=?`).run(r.status,r.customer_note||'',r.customer_note||'',decidedAt,approval.id);
       if(r.status==='APPROVED')prepared=materializeApprovedQuote(db,approval);else db.prepare(`UPDATE orders SET wait_state='DECYZJA' WHERE id=?`).run(approval.order_id);
-      db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(approval.order_id,'REMOTE_APPROVAL',r.status==='APPROVED'?'Klient zaakceptował kosztorys online':'Klient odrzucił kosztorys online',`${Number(approval.amount||0).toFixed(2)} zł${r.customer_note?` · ${r.customer_note}`:''}`);
+      db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(approval.order_id,'REMOTE_APPROVAL',outcome.eventTitle,`${Number(approval.amount||0).toFixed(2)} zł${r.customer_note?` · ${r.customer_note}`:''}`);
     })();
-    const item={approvalId:approval.id,orderId:approval.order_id,status:r.status,amount:Number(approval.amount||0),note:r.customer_note||'',decidedAt,customer:order.customer||'',plate:order.plate||'',vehicle:`${order.make||''} ${order.model||''}`.trim(),title:order.title||'',prepared:prepared.prepared,partsPrepared:prepared.parts||0};
+    const item={approvalId:approval.id,orderId:approval.order_id,status:r.status,amount:Number(approval.amount||0),note:r.customer_note||'',decidedAt,customer:order.customer||'',plate:order.plate||'',vehicle:`${order.make||''} ${order.model||''}`.trim(),title:order.title||'',prepared:prepared.prepared,partsPrepared:prepared.parts||0,toastTitle:outcome.toastTitle,tone:outcome.tone,icon:outcome.icon};
     changed.push(item);events.emit('remote-approval',item);
     if(r.status==='APPROVED'&&r.pdf_storage_path)try{await archiveApprovalPdf(approval.id,{c,db})}catch(error){item.archiveError=String(error.message||error)}
   }
@@ -203,6 +206,7 @@ async function createRemoteApproval(input){
   const built=buildApprovalSnapshot(getDb(),Number(input?.approvalId)),tokenValue=crypto.randomBytes(32).toString('hex'),tokenHash=sha256(tokenValue)
   const row={workshop_id:workshopId,token:tokenHash,token_hash:tokenHash,approval_local_id:built.approval.id,approval_cloud_id:built.approval.cloud_id||null,order_local_id:built.approval.order_id,order_cloud_id:built.order.cloud_id||null,snapshot:built.snapshot,snapshot_hash:built.snapshotHash,hash_algorithm:built.hashAlgorithm,terms_version:built.snapshot.terms.version,terms_text:built.snapshot.terms.text,document_no:built.snapshot.approvalDocumentNo,approval_sequence:built.sequence,previously_approved_total:built.previouslyApprovedTotal,expires_at:new Date(Date.now()+7*24*60*60*1000).toISOString()}
   const inserted=await request(c,'/rest/v1/customer_approval_links',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)}),remote=Array.isArray(inserted)?inserted[0]:inserted
+  if(['EXPIRED','SUPERSEDED'].includes(built.approval.status))getDb().prepare("UPDATE approvals SET status='PENDING',decided_at=NULL WHERE id=?").run(built.approval.id)
   updateLocalEvidence(getDb(),built.approval.id,{...row,id:remote?.id||null})
   return {ok:true,url:`${c.url}/functions/v1/approval?t=${tokenValue}`,expiresAt:row.expires_at,snapshotHash:built.snapshotHash};
 }
