@@ -5,7 +5,7 @@ const fs=require('fs')
 const os=require('os')
 const {DatabaseSync}=require('node:sqlite')
 const {canonicalJson,sha256,quoteIdFromScope,buildApprovalSnapshot,TERMS_VERSION}=require('../electron/remote-approval.cjs')
-const {safeSegment,ensureInside,approvalFileName,vehicleArchiveFolder}=require('../electron/approval-archive.cjs')
+const {safeSegment,ensureInside,approvalFileName,vehicleArchiveFolder,approvalArchiveState,fileHash}=require('../electron/approval-archive.cjs')
 
 test('canonical JSON and SHA-256 are deterministic',()=>{
  const first=canonicalJson({z:1,a:{y:2,x:[3,{b:2,a:1}]}}),second=canonicalJson({a:{x:[3,{a:1,b:2}],y:2},z:1})
@@ -50,4 +50,14 @@ test('vehicle archive keeps one folder after registration number changes',()=>{
  const first=vehicleArchiveFolder(db,base,{id:7,plate:'ZPL 12345',vin:'VIN7'}),second=vehicleArchiveFolder(db,base,{id:7,plate:'ZS 99999',vin:'VIN7'})
  assert.equal(first.folderName,'ZPL 12345');assert.equal(second.folderName,first.folderName);assert.equal(second.folder,first.folder)
  db.close();fs.rmSync(base,{recursive:true,force:true})
+})
+
+test('local approval archive distinguishes missing, valid and modified PDFs',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'autologika-pdf-state-')),file=path.join(dir,'approval.pdf')
+ assert.equal(approvalArchiveState({local_pdf_path:'',pdf_hash:''}),'MISSING')
+ fs.writeFileSync(file,'signed evidence');const hash=fileHash(file)
+ assert.equal(approvalArchiveState({local_pdf_path:file,pdf_hash:hash}),'VALID')
+ fs.writeFileSync(file,'modified evidence')
+ assert.equal(approvalArchiveState({local_pdf_path:file,pdf_hash:hash}),'CORRUPT')
+ fs.rmSync(dir,{recursive:true,force:true})
 })

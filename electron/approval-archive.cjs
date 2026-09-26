@@ -24,10 +24,15 @@ function approvalFileName(snapshot,decidedAt){
   return `${date}_${orderNo}_Akceptacja-${String(snapshot.approvalSequence||1).padStart(2,'0')}${snapshot.additionalScope?'_Dodatkowy-zakres':''}.pdf`
 }
 function fileHash(file){return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')}
+function approvalArchiveState(row={}){
+  if(!row.local_pdf_path||!fs.existsSync(row.local_pdf_path))return 'MISSING'
+  if(!row.pdf_hash)return 'VALID'
+  try{return fileHash(row.local_pdf_path)===String(row.pdf_hash).toLowerCase()?'VALID':'CORRUPT'}catch{return 'CORRUPT'}
+}
 function chooseDestination(folder,name,expectedHash=''){
   const preferred=ensureInside(folder,path.join(folder,name));if(!fs.existsSync(preferred)||expectedHash&&fileHash(preferred)===expectedHash)return preferred
   const ext=path.extname(name),stem=path.basename(name,ext);for(let index=2;index<1000;index++){const candidate=ensureInside(folder,path.join(folder,`${stem}_Kopia-${String(index).padStart(2,'0')}${ext}`));if(!fs.existsSync(candidate))return candidate}
   throw new Error('Nie można wybrać bezpiecznej nazwy pliku archiwum.')
 }
 
-module.exports={safeSegment,safeFileSegment,ensureInside,archiveBasePath,vehicleArchiveFolder,approvalFileName,fileHash,chooseDestination}
+module.exports={safeSegment,safeFileSegment,ensureInside,archiveBasePath,vehicleArchiveFolder,approvalFileName,fileHash,approvalArchiveState,chooseDestination}

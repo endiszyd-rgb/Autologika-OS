@@ -6,7 +6,7 @@ const { app, net } = require('electron')
 const { EventEmitter } = require('events')
 const { getDb } = require('./db.cjs')
 const { buildApprovalSnapshot, sha256 } = require('./remote-approval.cjs')
-const { archiveBasePath, vehicleArchiveFolder, approvalFileName, fileHash, chooseDestination } = require('./approval-archive.cjs')
+const { archiveBasePath, vehicleArchiveFolder, approvalFileName, fileHash, approvalArchiveState, chooseDestination } = require('./approval-archive.cjs')
 const { latestRemoteApprovals, remoteApprovalOutcome } = require('./remote-approval-status.cjs')
 
 const SYNC_TABLES = ['app_settings','customers','suppliers','inventory_parts','vehicles','orders','diagnostics','order_notes','job_part_orders','payments','appointments','order_items','work_logs','communications','approvals','order_events','sales_refs','service_reminders_v2','attachments','signatures','work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps']
@@ -138,7 +138,7 @@ async function archiveApprovalPdf(approvalId,{force=false,c=loadConfig(),db=getD
   if(approval.remote_id)try{const workshopId=c.workshopId||c.user?.id;await request(c,'/rest/v1/customer_approval_events',{method:'POST',body:JSON.stringify({workshop_id:workshopId,approval_id:approval.remote_id,event_type:'APPROVAL_SYNCED',details:{device_id:c.deviceId||'',local_hash:approval.pdf_hash||''}})})}catch{}
   return {ok:true,path:dest,folder:archive.folder,downloaded:true}
 }
-async function syncApprovalArchive(){const db=getDb(),rows=db.prepare("SELECT id,local_pdf_path FROM approvals WHERE status='APPROVED' AND pdf_storage_path!='' ORDER BY id").all().filter(row=>!row.local_pdf_path||!fs.existsSync(row.local_pdf_path));let downloaded=0;const errors=[];for(const row of rows){try{await archiveApprovalPdf(row.id);downloaded++}catch(error){errors.push({id:row.id,error:String(error.message||error)})}}return {ok:errors.length===0,downloaded,errors,pending:rows.length-downloaded}}
+async function syncApprovalArchive(){const db=getDb(),rows=db.prepare("SELECT id,local_pdf_path,pdf_hash FROM approvals WHERE status='APPROVED' AND pdf_storage_path!='' ORDER BY id").all().filter(row=>approvalArchiveState(row)!=='VALID');let downloaded=0;const errors=[];for(const row of rows){try{await archiveApprovalPdf(row.id);downloaded++}catch(error){errors.push({id:row.id,error:String(error.message||error)})}}return {ok:errors.length===0,downloaded,errors,pending:rows.length-downloaded}}
 async function downloadApprovalSignature(approvalId){const db=getDb(),row=db.prepare('SELECT signature_storage_path,signature_hash FROM approvals WHERE id=?').get(Number(approvalId));if(!row?.signature_storage_path)throw new Error('Podpis nie jest jeszcze dostępny.');const dest=path.join(app.getPath('userData'),'approval-evidence-cache',`signature-${Number(approvalId)}.png`);if(!fs.existsSync(dest)||row.signature_hash&&fileHash(dest)!==row.signature_hash)await storageDownloadFrom(loadConfig(),'approval-evidence',row.signature_storage_path,dest);if(row.signature_hash&&fileHash(dest)!==row.signature_hash)throw new Error('Suma kontrolna podpisu jest niezgodna.');return {ok:true,path:dest}}
 
 async function scanRemoteApprovals(c=loadConfig(),db=getDb()){
