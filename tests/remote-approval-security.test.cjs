@@ -31,7 +31,20 @@ test('approved evidence uploads a signature and printable PDF and removes orphan
  assert.match(edge,/upload\(pdfPath,pdfBytes/)
  assert.match(edge,/remove\(uploadedPaths\)/)
  for(const expected of ['snapshot.items','snapshot.customer','snapshot.vehicle','evidence.approvalId','evidence.snapshotHash','evidence.signatureHash','embedPng'])assert.ok(pdf.includes(expected),expected)
- for(const expected of ['drawRectangle','POTWIERDZENIE AKCEPTACJI NAPRAWY','DANE DOKUMENTU','INTEGRALNOSC DOKUMENTU','Strona ${index+1} z ${pages.length}'])assert.ok(pdf.includes(expected),expected)
+ for(const expected of ['drawRectangle','POTWIERDZENIE AKCEPTACJI NAPRAWY','DANE DOKUMENTU','INTEGRALNOŚĆ DOKUMENTU','Strona ${index+1} z ${pages.length}'])assert.ok(pdf.includes(expected),expected)
+ assert.match(pdf,/registerFontkit\(fontkit\)/)
+ assert.match(pdf,/NotoSans-Regular\.ttf/)
+ assert.match(pdf,/NotoSans-Bold\.ttf/)
+})
+
+test('approval function bundles Unicode fonts and remains public only through its signed token',()=>{
+ const config=fs.readFileSync('supabase/config.toml','utf8')
+ assert.match(config,/\[functions\.approval\]/)
+ assert.match(config,/verify_jwt\s*=\s*false/)
+ assert.match(config,/static_files\s*=\s*\[\s*"\.\/functions\/approval\/assets\/\*"\s*\]/)
+ assert.ok(fs.statSync('supabase/functions/approval/assets/NotoSans-Regular.ttf').size>100000)
+ assert.ok(fs.statSync('supabase/functions/approval/assets/NotoSans-Bold.ttf').size>100000)
+ assert.match(fs.readFileSync('supabase/functions/approval/assets/OFL.txt','utf8'),/SIL OPEN FONT LICENSE/i)
 })
 
 test('desktop synchronization downloads and verifies missing approval PDFs',()=>{
