@@ -31,6 +31,7 @@ test('approved evidence uploads a signature and printable PDF and removes orphan
  assert.match(edge,/upload\(pdfPath,pdfBytes/)
  assert.match(edge,/remove\(uploadedPaths\)/)
  for(const expected of ['snapshot.items','snapshot.customer','snapshot.vehicle','evidence.approvalId','evidence.snapshotHash','evidence.signatureHash','embedPng'])assert.ok(pdf.includes(expected),expected)
+ for(const expected of ['drawRectangle','POTWIERDZENIE AKCEPTACJI NAPRAWY','DANE DOKUMENTU','INTEGRALNOSC DOKUMENTU','Strona ${index+1} z ${pages.length}'])assert.ok(pdf.includes(expected),expected)
 })
 
 test('desktop synchronization downloads and verifies missing approval PDFs',()=>{
