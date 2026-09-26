@@ -24,7 +24,7 @@ const { customerProfile } = require('./customer-profile.cjs')
 const { listDebtors } = require('./debtors.cjs')
 const { listServiceReminders, createServiceReminder, setServiceReminderStatus } = require('./service-reminders.cjs')
 const { buildVehicleHealth } = require('./vehicle-health.cjs')
-const { archiveBasePath, vehicleArchiveFolder, approvalArchiveState } = require('./approval-archive.cjs')
+const { archiveBasePath, vehicleArchiveFolder, approvalArchiveState, approvalEvidenceState } = require('./approval-archive.cjs')
 const { ORDER_BASE_SQL, ORDER_TOTAL_SQL, ORDER_COST_SQL, finalPriceChange } = require('./order-financials.cjs')
 const { deriveOrderReadiness } = require('./order-readiness.cjs')
 const { searchTechnicalManuals } = require('./manual-source-scraper.cjs')
@@ -807,7 +807,7 @@ ipcMain.handle('debtors:list',()=>{
 
 ipcMain.handle('templates:list',()=>getDb().prepare(`SELECT * FROM message_templates WHERE active=1 ORDER BY id`).all())
 
-ipcMain.handle('approvals:list',(_,orderId)=>getDb().prepare(`SELECT * FROM approvals WHERE order_id=? ORDER BY created_at DESC,id DESC`).all(orderId).map(row=>{const localPdfState=approvalArchiveState(row);return{...row,local_pdf_state:localPdfState,local_pdf_exists:localPdfState==='VALID'}}))
+ipcMain.handle('approvals:list',(_,orderId)=>getDb().prepare(`SELECT * FROM approvals WHERE order_id=? ORDER BY created_at DESC,id DESC`).all(orderId).map(row=>{const localPdfState=approvalArchiveState(row),localEvidenceState=approvalEvidenceState(row);return{...row,local_pdf_state:localPdfState,local_pdf_exists:localPdfState==='VALID',local_evidence_state:localEvidenceState,local_evidence_complete:localEvidenceState==='COMPLETE'}}))
 ipcMain.handle('approvals:add',(_,{orderId,data})=>{
   const db=getDb()
   requireEditableOrder(db,orderId)
@@ -833,7 +833,7 @@ ipcMain.handle('approvals:openPdf',async(_,id)=>{const row=getDb().prepare('SELE
 ipcMain.handle('approvals:openFolder',async(_,id)=>{const db=getDb(),row=db.prepare('SELECT order_id,local_pdf_path FROM approvals WHERE id=?').get(Number(id));if(!row)throw new Error('Akceptacja nie istnieje.');let target=row.local_pdf_path&&fs.existsSync(row.local_pdf_path)?path.dirname(row.local_pdf_path):'';if(!target){const vehicle=db.prepare('SELECT v.* FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE o.id=?').get(row.order_id);target=vehicle?vehicleArchiveFolder(db,archiveBasePath(app,db),vehicle).folder:archiveBasePath(app,db)}fs.mkdirSync(target,{recursive:true});const error=await shell.openPath(target);if(error)throw new Error(error);return true})
 ipcMain.handle('approvals:redownload',(_,id)=>cloudSync.archiveApprovalPdf(Number(id),{force:true}))
 ipcMain.handle('approvals:openSignature',async(_,id)=>{const result=await cloudSync.downloadApprovalSignature(Number(id)),error=await shell.openPath(result.path);if(error)throw new Error(error);return true})
-ipcMain.handle('approvals:archiveStatus',()=>{const db=getDb(),basePath=archiveBasePath(app,db),rows=db.prepare("SELECT status,pdf_storage_path,local_pdf_path,pdf_hash FROM approvals").all(),availableRows=rows.filter(row=>row.status==='APPROVED'&&row.pdf_storage_path),states=availableRows.map(approvalArchiveState),missing=states.filter(state=>state==='MISSING').length,corrupt=states.filter(state=>state==='CORRUPT').length;return{basePath,total:rows.length,available:availableRows.length,missing,corrupt,healthy:states.filter(state=>state==='VALID').length}})
+ipcMain.handle('approvals:archiveStatus',()=>{const db=getDb(),basePath=archiveBasePath(app,db),rows=db.prepare("SELECT * FROM approvals").all(),availableRows=rows.filter(row=>row.status==='APPROVED'&&row.pdf_storage_path),states=availableRows.map(approvalEvidenceState),missing=states.filter(state=>state==='MISSING').length,incomplete=states.filter(state=>state==='INCOMPLETE').length,corrupt=states.filter(state=>state==='CORRUPT').length;return{basePath,total:rows.length,available:availableRows.length,missing,incomplete,corrupt,healthy:states.filter(state=>state==='COMPLETE').length}})
 ipcMain.handle('approvals:syncArchive',()=>cloudSync.syncApprovalArchive())
 ipcMain.handle('settings:getApprovalArchive',()=>({path:archiveBasePath(app,getDb()),custom:!!getDb().prepare("SELECT value FROM sync_meta WHERE key='approval_archive_path'").get()?.value}))
 ipcMain.handle('settings:openApprovalArchive',async()=>{const target=archiveBasePath(app,getDb());fs.mkdirSync(target,{recursive:true});const error=await shell.openPath(target);if(error)throw new Error(error);return{ok:true,path:target}})

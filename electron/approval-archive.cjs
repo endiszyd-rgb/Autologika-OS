@@ -29,10 +29,25 @@ function approvalArchiveState(row={}){
   if(!row.pdf_hash)return 'VALID'
   try{return fileHash(row.local_pdf_path)===String(row.pdf_hash).toLowerCase()?'VALID':'CORRUPT'}catch{return 'CORRUPT'}
 }
+function approvalEvidencePaths(pdfFile){
+  const folder=path.dirname(pdfFile),stem=path.basename(pdfFile,path.extname(pdfFile));return {pdf:pdfFile,signature:path.join(folder,`${stem}_Podpis.png`),manifest:path.join(folder,`${stem}_Dowod.json`)}
+}
+function writeApprovalManifest(pdfFile,approval={},snapshot={},signatureFile=''){
+  const files=approvalEvidencePaths(pdfFile),pdfSha256=fileHash(pdfFile),signatureExists=!!signatureFile&&fs.existsSync(signatureFile),signatureSha256=signatureExists?fileHash(signatureFile):''
+  const manifest={schema:'autologika.approval-evidence.v1',archivedAt:new Date().toISOString(),approval:{localId:Number(approval.id)||null,remoteId:approval.remote_id||null,orderId:Number(approval.order_id)||null,status:approval.status||'',documentNo:approval.document_no||snapshot.documentNo||'',decidedAt:approval.decided_at||null,approvalSequence:Number(approval.approval_sequence||snapshot.approvalSequence||1),termsVersion:approval.terms_version||snapshot.terms?.version||''},integrity:{algorithm:approval.hash_algorithm||'SHA-256',snapshotSha256:approval.snapshot_hash||'',signatureSha256:approval.signature_hash||signatureSha256,pdfSha256:approval.pdf_hash||pdfSha256},files:{pdf:{name:path.basename(pdfFile),bytes:fs.statSync(pdfFile).size,sha256:pdfSha256},signature:signatureExists?{name:path.basename(signatureFile),bytes:fs.statSync(signatureFile).size,sha256:signatureSha256}:null},snapshot}
+  const temp=`${files.manifest}.part-${process.pid}-${Date.now()}`;fs.writeFileSync(temp,JSON.stringify(manifest,null,2),'utf8');fs.renameSync(temp,files.manifest);return {...files,data:manifest}
+}
+function approvalEvidenceState(row={}){
+  const pdfState=approvalArchiveState(row);if(pdfState!=='VALID')return pdfState
+  const files=approvalEvidencePaths(row.local_pdf_path);if(!fs.existsSync(files.manifest))return 'INCOMPLETE'
+  if(row.signature_storage_path){if(!fs.existsSync(files.signature))return 'INCOMPLETE';if(row.signature_hash&&fileHash(files.signature)!==String(row.signature_hash).toLowerCase())return 'CORRUPT'}
+  try{const manifest=JSON.parse(fs.readFileSync(files.manifest,'utf8'));if(manifest.schema!=='autologika.approval-evidence.v1'||manifest.files?.pdf?.sha256!==fileHash(row.local_pdf_path)||row.pdf_hash&&manifest.integrity?.pdfSha256!==String(row.pdf_hash).toLowerCase()||row.snapshot_hash&&manifest.integrity?.snapshotSha256!==String(row.snapshot_hash).toLowerCase()||row.signature_hash&&manifest.integrity?.signatureSha256!==String(row.signature_hash).toLowerCase())return 'CORRUPT'}catch{return 'CORRUPT'}
+  return 'COMPLETE'
+}
 function chooseDestination(folder,name,expectedHash=''){
   const preferred=ensureInside(folder,path.join(folder,name));if(!fs.existsSync(preferred)||expectedHash&&fileHash(preferred)===expectedHash)return preferred
   const ext=path.extname(name),stem=path.basename(name,ext);for(let index=2;index<1000;index++){const candidate=ensureInside(folder,path.join(folder,`${stem}_Kopia-${String(index).padStart(2,'0')}${ext}`));if(!fs.existsSync(candidate))return candidate}
   throw new Error('Nie można wybrać bezpiecznej nazwy pliku archiwum.')
 }
 
-module.exports={safeSegment,safeFileSegment,ensureInside,archiveBasePath,vehicleArchiveFolder,approvalFileName,fileHash,approvalArchiveState,chooseDestination}
+module.exports={safeSegment,safeFileSegment,ensureInside,archiveBasePath,vehicleArchiveFolder,approvalFileName,fileHash,approvalArchiveState,approvalEvidencePaths,writeApprovalManifest,approvalEvidenceState,chooseDestination}

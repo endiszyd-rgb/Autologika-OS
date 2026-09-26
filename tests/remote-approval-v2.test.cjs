@@ -5,7 +5,7 @@ const fs=require('fs')
 const os=require('os')
 const {DatabaseSync}=require('node:sqlite')
 const {canonicalJson,sha256,quoteIdFromScope,buildApprovalSnapshot,TERMS_VERSION}=require('../electron/remote-approval.cjs')
-const {safeSegment,ensureInside,approvalFileName,vehicleArchiveFolder,approvalArchiveState,fileHash}=require('../electron/approval-archive.cjs')
+const {safeSegment,ensureInside,approvalFileName,vehicleArchiveFolder,approvalArchiveState,approvalEvidencePaths,writeApprovalManifest,approvalEvidenceState,fileHash}=require('../electron/approval-archive.cjs')
 
 test('canonical JSON and SHA-256 are deterministic',()=>{
  const first=canonicalJson({z:1,a:{y:2,x:[3,{b:2,a:1}]}}),second=canonicalJson({a:{x:[3,{a:1,b:2}],y:2},z:1})
@@ -59,5 +59,17 @@ test('local approval archive distinguishes missing, valid and modified PDFs',()=
  assert.equal(approvalArchiveState({local_pdf_path:file,pdf_hash:hash}),'VALID')
  fs.writeFileSync(file,'modified evidence')
  assert.equal(approvalArchiveState({local_pdf_path:file,pdf_hash:hash}),'CORRUPT')
+ fs.rmSync(dir,{recursive:true,force:true})
+})
+
+test('local evidence package contains a verifiable PDF, signature and JSON manifest',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'autologika-evidence-')),pdf=path.join(dir,'Akceptacja.pdf'),signature=path.join(dir,'Akceptacja_Podpis.png')
+ fs.writeFileSync(pdf,'signed PDF');fs.writeFileSync(signature,'customer signature')
+ const pdfHash=fileHash(pdf),signatureHash=fileHash(signature),approval={id:7,remote_id:'remote-7',order_id:3,status:'APPROVED',document_no:'AL-7',decided_at:'2026-09-26T12:00:00Z',snapshot_hash:'a'.repeat(64),signature_hash:signatureHash,pdf_hash:pdfHash,signature_storage_path:'private/signature.png'}
+ const result=writeApprovalManifest(pdf,approval,{documentNo:'AL-7'},signature),manifest=JSON.parse(fs.readFileSync(result.manifest,'utf8'))
+ assert.deepEqual(approvalEvidencePaths(pdf),{pdf,signature,manifest:path.join(dir,'Akceptacja_Dowod.json')})
+ assert.equal(manifest.schema,'autologika.approval-evidence.v1');assert.equal(manifest.files.pdf.sha256,pdfHash);assert.equal(manifest.files.signature.sha256,signatureHash);assert.equal(approvalEvidenceState({...approval,local_pdf_path:pdf}),'COMPLETE')
+ manifest.integrity.snapshotSha256='b'.repeat(64);fs.writeFileSync(result.manifest,JSON.stringify(manifest));assert.equal(approvalEvidenceState({...approval,local_pdf_path:pdf}),'CORRUPT');writeApprovalManifest(pdf,approval,{documentNo:'AL-7'},signature)
+ fs.writeFileSync(signature,'modified');assert.equal(approvalEvidenceState({...approval,local_pdf_path:pdf}),'CORRUPT')
  fs.rmSync(dir,{recursive:true,force:true})
 })

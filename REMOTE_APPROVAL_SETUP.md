@@ -35,17 +35,19 @@ Token w URL nie jest zapisywany w bazie. Baza przechowuje wyłącznie jego SHA-2
 1. W zleceniu otwórz wycenę, dodaj pozycje i wybierz **Wyślij do akceptacji**.
 2. Wybierz **Generuj link zdalny**. Snapshot powstaje w procesie głównym, a link jest kopiowany do schowka.
 3. Klient zaznacza zgodę, podpisuje się palcem, rysikiem lub myszą i zatwierdza. Odrzucenie może zawierać powód i nie wymaga podpisu.
-4. Automatyczna synchronizacja albo **Sprawdź decyzję** pobiera wynik. Dla akceptacji aplikacja pobiera również finalny PDF.
-5. W panelu **Akceptacje klienta** można otworzyć PDF, podpis, folder oraz pobrać brakującą kopię ponownie.
+4. Automatyczna synchronizacja albo **Sprawdź decyzję** pobiera wynik. Dla akceptacji aplikacja pobiera finalny PDF, podpis PNG oraz manifest integralności JSON.
+5. W panelu **Akceptacje klienta** można otworzyć PDF, podpis, folder oraz uzupełnić brakujący pakiet ponownie.
 6. Po zakończonej decyzji przycisk **Dodatkowy zakres naprawy** tworzy nową wersję kosztorysu. Poprzedni snapshot i PDF pozostają niezmienne.
 
 ## Lokalne archiwum
 
 Domyślna lokalizacja to:
 
-`Pulpit\AutoLogika - Akceptacje\<REJESTRACJA>\YYYY-MM-DD_AL-00481_Akceptacja-02_Dodatkowy-zakres.pdf`
+`Pulpit\AutoLogika - Akceptacje\<REJESTRACJA>\`
 
-Powiązanie folderu opiera się na `vehicle_id`, więc późniejsza zmiana rejestracji nie rozdziela historii pojazdu. W **Ustawienia -> Dokumenty i archiwum akceptacji** można wybrać inną lokalizację i zsynchronizować brakujące dokumenty. Aplikacja nie usuwa ani nie przenosi wcześniejszych folderów automatycznie. Supabase pozostaje źródłem prawdy; usunięty lokalny PDF można pobrać ponownie.
+Każda decyzja tworzy w tym folderze trzy powiązane pliki: `...Akceptacja-02.pdf`, `...Akceptacja-02_Podpis.png` i `...Akceptacja-02_Dowod.json`. Manifest przechowuje zamrożony snapshot, identyfikatory decyzji, nazwy plików oraz rzeczywiste i oczekiwane sumy SHA-256.
+
+Powiązanie folderu opiera się na `vehicle_id`, więc późniejsza zmiana rejestracji nie rozdziela historii pojazdu. W **Ustawienia -> Dokumenty i archiwum akceptacji** można wybrać inną lokalizację i uzupełnić brakujące pakiety. Starsze archiwa zawierające tylko PDF są wykrywane jako niepełne i uzupełniane bez zmiany nazwy dokumentu. Aplikacja nie usuwa ani nie przenosi wcześniejszych folderów automatycznie. Supabase pozostaje źródłem prawdy; usunięte lokalne pliki można pobrać ponownie.
 
 ## Integralność i prywatność
 
