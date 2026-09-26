@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {migrateSchemaV9,migrateSchemaV10,migrateSchemaV12}=require('../electron/db.cjs')
+const {migrateSchemaV9,migrateSchemaV10,migrateSchemaV12,migrateSchemaV13}=require('../electron/db.cjs')
 
 test('schema v9 preserves ordered parts and adds scanned catalog fields',()=>{
  const db=new DatabaseSync(':memory:')
@@ -49,5 +49,17 @@ test('schema v12 adds immutable remote approval evidence and stable vehicle arch
  for(const column of ['remote_id','snapshot_json','snapshot_hash','signature_storage_path','signature_hash','pdf_storage_path','pdf_hash','local_pdf_path','approval_sequence','previously_approved_total'])assert.ok(columns.includes(column),column)
  assert.ok(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='approval_archive_vehicles'").get())
  assert.equal(db.prepare('SELECT status,amount FROM approvals WHERE id=4').get().amount,1200)
+ db.close()
+})
+
+test('schema v13 preserves complete part identity in quote items',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE quote_items(id INTEGER PRIMARY KEY,quote_id INTEGER,kind TEXT,name TEXT,qty REAL,unit_price REAL);INSERT INTO quote_items VALUES(2,7,'CZESC','Czujnik',1,280);`)
+ migrateSchemaV13(db);migrateSchemaV13(db)
+ const columns=db.prepare('PRAGMA table_info(quote_items)').all().map(row=>row.name)
+ for(const column of ['part_no','oe_number','inventory_part_id','supplier_name','barcode','brand','vehicle_fitment','cross_numbers','lookup_source','lookup_url'])assert.ok(columns.includes(column),column)
+ const row=db.prepare('SELECT * FROM quote_items WHERE id=2').get()
+ assert.equal(row.name,'Czujnik')
+ assert.equal(row.part_no,null)
  db.close()
 })

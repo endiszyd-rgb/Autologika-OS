@@ -6,7 +6,7 @@ const { seedTechnicalReference } = require('./technical-seed.cjs')
 const { migrateLegacyServiceReminders } = require('./service-reminders.cjs')
 
 let db
-const SCHEMA_VERSION = 12
+const SCHEMA_VERSION = 13
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -128,7 +128,21 @@ function migrate(db,currentVersion=0) {
   }
   if(currentVersion<12){
     db.transaction(()=>{migrateSchemaV12(db);db.pragma('user_version = 12')})()
+    currentVersion=12
   }
+  if(currentVersion<13){
+    db.transaction(()=>{migrateSchemaV13(db);db.pragma('user_version = 13')})()
+  }
+}
+
+function migrateSchemaV13(db){
+  const columns=db.prepare('PRAGMA table_info(quote_items)').all().map(row=>row.name)
+  const additions=[
+    ['part_no','TEXT'],['oe_number','TEXT'],['inventory_part_id','INTEGER'],['supplier_name','TEXT'],
+    ['barcode','TEXT'],['brand','TEXT'],['vehicle_fitment','TEXT'],['cross_numbers','TEXT'],
+    ['lookup_source','TEXT'],['lookup_url','TEXT']
+  ]
+  for(const [name,type] of additions)if(!columns.includes(name))db.exec(`ALTER TABLE quote_items ADD COLUMN ${name} ${type}`)
 }
 
 function migrateSchemaV12(db){
@@ -394,6 +408,8 @@ function migrateSchemaV1(db) {
       labor_hours REAL NOT NULL DEFAULT 0, labor_rate REAL NOT NULL DEFAULT 0, notes TEXT,
       catalog_work_id TEXT, catalog_variant_id TEXT, work_name TEXT, variant_name TEXT,
       customer_description TEXT, technical_description TEXT, hours_snapshot REAL, price_snapshot REAL,
+      part_no TEXT, oe_number TEXT, inventory_part_id INTEGER, supplier_name TEXT,
+      barcode TEXT, brand TEXT, vehicle_fitment TEXT, cross_numbers TEXT, lookup_source TEXT, lookup_url TEXT,
       FOREIGN KEY(quote_id) REFERENCES quotes(id) ON DELETE CASCADE
     );
     CREATE TABLE IF NOT EXISTS attachments (
@@ -768,4 +784,4 @@ function seed(db) {
     .run(o.lastInsertRowid,v.lastInsertRowid,'Diagnostyka braku mocy',start.toISOString(),end.toISOString(),'Stanowisko 1','PLAN')
 }
 
-module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10, migrateSchemaV12 }
+module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10, migrateSchemaV12, migrateSchemaV13 }

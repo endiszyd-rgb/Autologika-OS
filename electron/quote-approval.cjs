@@ -31,12 +31,21 @@ function materializeApprovedQuote(db, approvalOrQuoteId) {
     order_id,kind,name,qty,unit_cost,unit_price,notes,catalog_work_id,catalog_variant_id,
     work_name,variant_name,customer_description,technical_description,hours_snapshot,price_snapshot
   ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-  const insertPart = db.prepare(`INSERT INTO job_part_orders(order_id,part_no,name,qty,unit_cost,unit_price,status,notes)
-    VALUES (?,?,?,?,?,?,'DO_ZAMOWIENIA',?)`)
+  const vehicle = db.prepare(`SELECT v.id vehicle_id,v.plate,v.vin,v.make,v.model,v.generation,v.year,v.engine,v.engine_code
+    FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE o.id=?`).get(quote.order_id) || {}
+  const vehicleSnapshot = JSON.stringify(vehicle)
+  const insertPart = db.prepare(`INSERT INTO job_part_orders(
+    order_id,supplier_name,part_no,oe_number,inventory_part_id,vehicle_snapshot,barcode,brand,vehicle_fitment,cross_numbers,
+    lookup_source,lookup_url,name,qty,unit_cost,unit_price,status,notes
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'DO_ZAMOWIENIA',?)`)
 
   for (const item of items) {
     if (item.kind === 'CZESC') {
-      insertPart.run(quote.order_id, '', item.name, Number(item.qty || 1), Number(item.unit_cost || 0), Number(item.unit_price || 0), `Z zaakceptowanego kosztorysu #${quoteId}`)
+      insertPart.run(
+        quote.order_id,item.supplier_name||'',item.part_no||'',item.oe_number||'',item.inventory_part_id||null,vehicleSnapshot,
+        item.barcode||'',item.brand||'',item.vehicle_fitment||'',item.cross_numbers||'',item.lookup_source||'',item.lookup_url||'',
+        item.name,Number(item.qty||1),Number(item.unit_cost||0),Number(item.unit_price||0),`Z zaakceptowanego kosztorysu #${quoteId}`
+      )
       parts++
       continue
     }

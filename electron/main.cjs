@@ -551,7 +551,25 @@ ipcMain.handle('quotes:get',(_,orderId)=>{
   const approval=findQuoteApproval(db,orderId,q.id)
   return{...q,items,total,cost,margin:total-cost,approval:approval||null}
 })
-ipcMain.handle('quotes:addItem',(_,{orderId,data})=>{const db=getDb();requireEditableOrder(db,orderId);let q=db.prepare("SELECT * FROM quotes WHERE order_id=? AND status='ROBOCZA' ORDER BY id DESC LIMIT 1").get(orderId);if(!q){const r=db.prepare("INSERT INTO quotes(order_id,status) VALUES (?,'ROBOCZA')").run(orderId);q=db.prepare('SELECT * FROM quotes WHERE id=?').get(r.lastInsertRowid)}assertQuoteEditable(db,q);let price=+data.unit_price||0;if((data.kind||'CZESC')==='CZESC'&&!price)price=Math.round((+data.unit_cost||0)*(1+partMarkup(+data.unit_cost||0))*100)/100;const hours=+data.labor_hours||0,total=(data.kind||'CZESC')==='ROBOCIZNA'?hours*(+data.labor_rate||0):(+data.qty||1)*price;const r=db.prepare(`INSERT INTO quote_items(quote_id,kind,name,qty,unit_cost,unit_price,labor_hours,labor_rate,notes,catalog_work_id,catalog_variant_id,work_name,variant_name,customer_description,technical_description,hours_snapshot,price_snapshot) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(q.id,data.kind||'CZESC',data.name,+data.qty||1,+data.unit_cost||0,price,hours,+data.labor_rate||0,data.notes||data.customer_description||'',data.catalog_work_id||null,data.catalog_variant_id||null,data.work_name||null,data.variant_name||null,data.customer_description||data.notes||'',data.technical_description||'',hours,total);return{id:r.lastInsertRowid,recommendedPrice:price}})
+ipcMain.handle('quotes:addItem',(_,{orderId,data})=>{
+  const db=getDb();requireEditableOrder(db,orderId)
+  let quote=db.prepare("SELECT * FROM quotes WHERE order_id=? AND status='ROBOCZA' ORDER BY id DESC LIMIT 1").get(orderId)
+  if(!quote){const created=db.prepare("INSERT INTO quotes(order_id,status) VALUES (?,'ROBOCZA')").run(orderId);quote=db.prepare('SELECT * FROM quotes WHERE id=?').get(created.lastInsertRowid)}
+  assertQuoteEditable(db,quote)
+  let price=Number(data.unit_price||0)
+  if((data.kind||'CZESC')==='CZESC'&&!price)price=Math.round(Number(data.unit_cost||0)*(1+partMarkup(Number(data.unit_cost||0)))*100)/100
+  const hours=Number(data.labor_hours||0),total=(data.kind||'CZESC')==='ROBOCIZNA'?hours*Number(data.labor_rate||0):Number(data.qty||1)*price
+  const created=db.prepare(`INSERT INTO quote_items(
+    quote_id,kind,name,qty,unit_cost,unit_price,labor_hours,labor_rate,notes,
+    catalog_work_id,catalog_variant_id,work_name,variant_name,customer_description,technical_description,hours_snapshot,price_snapshot,
+    part_no,oe_number,inventory_part_id,supplier_name,barcode,brand,vehicle_fitment,cross_numbers,lookup_source,lookup_url
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    quote.id,data.kind||'CZESC',data.name,Number(data.qty||1),Number(data.unit_cost||0),price,hours,Number(data.labor_rate||0),data.notes||data.customer_description||'',
+    data.catalog_work_id||null,data.catalog_variant_id||null,data.work_name||null,data.variant_name||null,data.customer_description||data.notes||'',data.technical_description||'',hours,total,
+    data.part_no||'',data.oe_number||'',data.inventory_part_id||null,data.supplier_name||'',normalizeBarcode(data.barcode||''),data.brand||'',data.vehicle_fitment||'',data.cross_numbers||'',data.lookup_source||'',data.lookup_url||''
+  )
+  return{id:created.lastInsertRowid,recommendedPrice:price}
+})
 ipcMain.handle('quotes:removeItem',(_,id)=>{const db=getDb(),item=db.prepare('SELECT * FROM quote_items WHERE id=?').get(id);if(!item)return true;const quote=db.prepare('SELECT * FROM quotes WHERE id=?').get(item.quote_id);requireEditableOrder(db,quote.order_id);assertQuoteEditable(db,quote);db.prepare('DELETE FROM quote_items WHERE id=?').run(id);return true})
 ipcMain.handle('quotes:requestApproval',(_,id)=>{
   const db=getDb(); const q=db.prepare('SELECT * FROM quotes WHERE id=?').get(id); if(!q)return{ok:false}

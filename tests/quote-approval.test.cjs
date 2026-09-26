@@ -11,17 +11,19 @@ function setup(t) {
   t.after(() => db.close())
   // Use the application's schema and IPC callbacks, without launching Electron.
   const schema = fs.readFileSync(require.resolve('../electron/db.cjs'), 'utf8')
-  for (const table of ['orders', 'quotes', 'quote_items', 'approvals', 'order_events', 'order_items', 'job_part_orders']) {
+  for (const table of ['vehicles', 'orders', 'quotes', 'quote_items', 'approvals', 'order_events', 'order_items', 'job_part_orders']) {
     db.exec(schema.match(new RegExp(`CREATE TABLE IF NOT EXISTS ${table} \\([\\s\\S]*?\\);`))[0])
   }
+  for(const [name,type] of [['oe_number','TEXT'],['inventory_part_id','INTEGER'],['vehicle_snapshot','TEXT'],['supplier_name','TEXT'],['barcode','TEXT'],['brand','TEXT'],['vehicle_fitment','TEXT'],['cross_numbers','TEXT'],['lookup_source','TEXT'],['lookup_url','TEXT']])db.exec(`ALTER TABLE job_part_orders ADD COLUMN ${name} ${type}`)
+  db.exec('ALTER TABLE vehicles ADD COLUMN generation TEXT; ALTER TABLE vehicles ADD COLUMN engine_code TEXT')
   db.exec("ALTER TABLE orders ADD COLUMN wait_state TEXT DEFAULT 'BRAK'")
-  db.exec('PRAGMA foreign_keys=OFF; INSERT INTO orders(id,vehicle_id,title) VALUES (1,1,\'Test\'); INSERT INTO quotes(id,order_id) VALUES (1,1),(10,1)')
+  db.exec("PRAGMA foreign_keys=OFF; INSERT INTO vehicles(id,customer_id,plate,make,model) VALUES (1,1,'PO 12345','Audi','A4'); INSERT INTO orders(id,vehicle_id,title) VALUES (1,1,'Test'); INSERT INTO quotes(id,order_id) VALUES (1,1),(10,1)")
   db.transaction = fn => (...args) => { db.exec('BEGIN'); try { const value=fn(...args); db.exec('COMMIT'); return value } catch(error) { db.exec('ROLLBACK'); throw error } }
   const handlers = {}
   const source = fs.readFileSync(require.resolve('../electron/main.cjs'), 'utf8')
   vm.runInNewContext(source.slice(source.indexOf("ipcMain.handle('quotes:get'"), source.indexOf("ipcMain.handle('attachments:list'")), {
     ipcMain: { handle: (name, callback) => { handlers[name] = callback } },
-    getDb: () => db, findQuoteApproval, assertQuoteEditable, materializeApprovedQuote, requireEditableOrder, partMarkup: () => 0.2, syncOrderItemTotals: () => {},
+    getDb: () => db, findQuoteApproval, assertQuoteEditable, materializeApprovedQuote, requireEditableOrder, partMarkup: () => 0.2, normalizeBarcode:value=>String(value||''), syncOrderItemTotals: () => {},
   })
   return { db, call: (name, arg) => handlers[`quotes:${name}`](null, arg) }
 }
@@ -78,7 +80,7 @@ test('accepted catalog labor keeps its snapshot in the order', t => {
 test('cloud approval uses the same complete and idempotent quote materialization', t => {
   const { db, call } = setup(t)
   call('addItem', { orderId: 1, data: { kind:'ROBOCIZNA', name:'Diagnostyka czujnika', labor_hours:1.5, labor_rate:240, catalog_work_id:'sensors', catalog_variant_id:'pressure_diff', work_name:'Diagnostyka czujnika różnicy ciśnień', variant_name:'DPF', customer_description:'Pomiary instalacji i sygnału.', technical_description:'Sprawdź napięcie odniesienia.', hours_snapshot:1.5, price_snapshot:360 } })
-  call('addItem', { orderId: 1, data: { kind:'CZESC', name:'Czujnik różnicy ciśnień', qty:1, unit_cost:180, unit_price:280 } })
+  call('addItem', { orderId: 1, data: { kind:'CZESC', name:'Czujnik różnicy ciśnień', qty:1, unit_cost:180, unit_price:280, part_no:'6PP 009 409-021', oe_number:'03L 906 051B', brand:'HELLA', barcode:'4082300401123', vehicle_fitment:'Audi A4 B8 2.0 TDI', cross_numbers:'0281006005', lookup_source:'catalog', lookup_url:'https://example.test/part' } })
   call('addItem', { orderId: 1, data: { kind:'MATERIAL', name:'Przewód podciśnienia', qty:2, unit_cost:8, unit_price:15 } })
 
   const first = materializeApprovedQuote(db, { scope:'Wycena #10 · diagnostyka DPF' })
@@ -88,6 +90,11 @@ test('cloud approval uses the same complete and idempotent quote materialization
   assert.equal(second.already, true)
   assert.equal(db.prepare('SELECT COUNT(*) n FROM order_items').get().n, 2)
   assert.equal(db.prepare('SELECT COUNT(*) n FROM job_part_orders').get().n, 1)
+  const part = db.prepare('SELECT * FROM job_part_orders').get()
+  assert.equal(part.part_no,'6PP 009 409-021')
+  assert.equal(part.oe_number,'03L 906 051B')
+  assert.equal(part.brand,'HELLA')
+  assert.equal(JSON.parse(part.vehicle_snapshot).plate,'PO 12345')
   const labor = db.prepare("SELECT * FROM order_items WHERE kind='ROBOCIZNA'").get()
   assert.equal(labor.catalog_variant_id, 'pressure_diff')
   assert.equal(labor.customer_description, 'Pomiary instalacji i sygnału.')

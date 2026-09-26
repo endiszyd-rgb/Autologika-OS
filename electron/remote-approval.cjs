@@ -31,7 +31,7 @@ function buildApprovalSnapshot(db,approvalId){
   const items=rows.map((item,index)=>{
     const quantity=item.kind==='ROBOCIZNA'?number(item.labor_hours||1):number(item.qty||1)
     const unitPrice=item.kind==='ROBOCIZNA'?number(item.labor_rate):number(item.unit_price)
-    return {position:index+1,kind:item.kind,name:item.work_name||item.name,variant:item.variant_name||'',description:item.customer_description||item.notes||'',quantity,unit:item.kind==='ROBOCIZNA'?'h':'szt.',unitPrice,value:number(quantity*unitPrice),vatRate:null}
+    return {position:index+1,kind:item.kind,name:item.work_name||item.name,variant:item.variant_name||'',description:item.customer_description||item.notes||'',quantity,unit:item.kind==='ROBOCIZNA'?'h':'szt.',unitPrice,value:number(quantity*unitPrice),vatRate:null,partNumber:item.part_no||'',oeNumber:item.oe_number||'',brand:item.brand||'',vehicleFitment:item.vehicle_fitment||''}
   })
   const total=number(items.reduce((sum,item)=>sum+item.value,0))
   const snapshot={
