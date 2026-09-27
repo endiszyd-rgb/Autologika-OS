@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute,sqliteBindValue}}=require('../electron/cloud-sync.cjs')
+const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute,sqliteBindValue,isMissingApprovalTable}}=require('../electron/cloud-sync.cjs')
 
 test('PC compares SQLite UTC timestamps with Cloud ISO timestamps without a local timezone shift',()=>{
  assert.equal(timestampMs('2026-09-20 10:15:30'),Date.parse('2026-09-20T10:15:30.000Z'))
@@ -29,6 +29,20 @@ test('PC converts Cloud booleans and structured JSON into SQLite bind values',()
  applyPayload(db,'order_qc','qc-cloud',{order_cloud_id:'order-cloud',check_key:'road',checked:true},'2026-09-26T12:00:00.000Z')
  assert.deepEqual({...db.prepare("SELECT order_id,check_key,checked FROM order_qc WHERE cloud_id='qc-cloud'").get()},{order_id:3,check_key:'road',checked:1})
  db.close()
+})
+
+test('PC accepts the Android QC key field used by older mobile records',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE orders(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE order_qc(id INTEGER PRIMARY KEY,order_id INTEGER NOT NULL,check_key TEXT NOT NULL,label TEXT NOT NULL,checked INTEGER NOT NULL DEFAULT 0,cloud_id TEXT,updated_at TEXT); INSERT INTO orders VALUES(3,'order-cloud');`)
+ applyPayload(db,'order_qc','android-qc',{order_cloud_id:'order-cloud',key:'documents',label:'Dokumentacja kompletna',checked:true},'2026-09-27T12:00:00.000Z')
+ assert.deepEqual({...db.prepare("SELECT order_id,check_key,label,checked FROM order_qc WHERE cloud_id='android-qc'").get()},{order_id:3,check_key:'documents',label:'Dokumentacja kompletna',checked:1})
+ db.close()
+})
+
+test('missing optional approval table is distinguished from other Cloud failures',()=>{
+ assert.equal(isMissingApprovalTable(new Error(`Cloud 404: {"code":"PGRST205","message":"Could not find the table 'public.customer_approval_links' in the schema cache"}`)),true)
+ assert.equal(isMissingApprovalTable(new Error('Cloud 500: połączenie przerwane')),false)
+ assert.equal(isMissingApprovalTable(new Error(`Cloud 404: {"code":"PGRST205","message":"Could not find public.sync_records in schema cache"}`)),false)
 })
 
 test('PC binds the workshop to its Cloud account and protects a previously synchronized database',()=>{
