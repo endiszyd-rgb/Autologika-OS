@@ -4,7 +4,7 @@ Zdalna akceptacja jest rozszerzeniem istniejącej wyceny i tabeli `approvals`. N
 
 ## Wdrożenie Supabase
 
-1. W SQL Editor uruchom cały `cloud_schema_supabase.sql` albo migrację `supabase/migrations/20260925_remote_approval_2.sql` po wcześniejszym schemacie Cloud.
+1. W SQL Editor uruchom cały `cloud_schema_supabase.sql`. Plik zawiera schemat synchronizacji i kompletny moduł akceptacji. Sama migracja `supabase/migrations/20260925_remote_approval_2.sql` jest idempotentna i potrafi dobudować moduł akceptacji także w starszym projekcie, który ma już tylko podstawową synchronizację.
 2. Połącz CLI z projektem: `supabase link --project-ref <PROJECT_REF>`.
 3. Ustaw sekret `SUPABASE_SERVICE_ROLE_KEY` tylko dla Edge Function. Nie wolno umieszczać go w aplikacji PC ani Android.
 4. Wdróż stronę klienta: `supabase functions deploy approval`. Plik `supabase/config.toml` wyłącza weryfikację JWT dla jednorazowego linku i dołącza fonty używane w PDF.

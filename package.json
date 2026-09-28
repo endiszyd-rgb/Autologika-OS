@@ -53,6 +53,8 @@
       "dist/**/*",
       "electron/**/*",
       "package.json",
+      "cloud_schema_supabase.sql",
+      "REMOTE_APPROVAL_SETUP.md",
       "documents/**/*"
     ],
     "asarUnpack": [

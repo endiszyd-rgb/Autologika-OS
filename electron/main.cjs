@@ -753,6 +753,7 @@ ipcMain.handle('purchases:setStatus',(_,{id,status})=>{const db=getDb();const tx
 
 
 ipcMain.handle('system:copyText',(_,text)=>{clipboard.writeText(String(text||''));return true})
+ipcMain.handle('system:copyCloudSchema',()=>{const file=path.join(app.getAppPath(),'cloud_schema_supabase.sql');if(!fs.existsSync(file))throw new Error('Nie znaleziono pliku migracji Cloud w instalacji aplikacji.');const sql=fs.readFileSync(file,'utf8');clipboard.writeText(sql);return{ok:true,characters:sql.length}})
 ipcMain.handle('system:openExternal',async(_,value)=>{const url=new URL(String(value||''));if(!['https:','http:'].includes(url.protocol))throw new Error('Nieobsługiwany adres źródła.');await shell.openExternal(url.href);return true})
 ipcMain.handle('system:openPhone',(_,phone)=>{const p=String(phone||'').replace(/[^\d+]/g,''); if(!p)return false; shell.openExternal(`tel:${p}`); return true})
 ipcMain.handle('system:openSms',(_,{phone,body})=>{

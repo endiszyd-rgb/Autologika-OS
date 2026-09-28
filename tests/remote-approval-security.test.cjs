@@ -6,6 +6,16 @@ const edge=fs.readFileSync('supabase/functions/approval/index.ts','utf8')
 const pdf=fs.readFileSync('supabase/functions/approval/pdf.ts','utf8')
 const desktop=fs.readFileSync('electron/cloud-sync.cjs','utf8')
 
+test('remote approval migration bootstraps an older Cloud schema and ships with the installer',()=>{
+ const createAt=sql.indexOf('create table if not exists public.customer_approval_links')
+ const alterAt=sql.indexOf('alter table public.customer_approval_links add column')
+ assert.ok(createAt>=0&&createAt<alterAt)
+ assert.match(sql,/alter table public\.customer_approval_links enable row level security/i)
+ const packaged=JSON.parse(fs.readFileSync('package.json','utf8')).build.files
+ assert.ok(packaged.includes('cloud_schema_supabase.sql'))
+ assert.ok(packaged.includes('REMOTE_APPROVAL_SETUP.md'))
+})
+
 test('approval evidence stays private and scoped to its workshop owner',()=>{
  assert.match(sql,/approval-evidence','approval-evidence',false/)
  assert.match(sql,/bucket_id='approval-evidence'.*auth\.uid\(\)::text/s)

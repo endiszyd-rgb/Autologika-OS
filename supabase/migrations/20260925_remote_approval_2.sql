@@ -1,6 +1,25 @@
 -- Remote Approval 2.0: podpis, dowód, prywatny PDF i atomowa decyzja.
 create extension if not exists pgcrypto;
 
+-- Starsze instalacje Cloud mogą mieć sync_records bez tabeli akceptacji.
+-- Dzięki temu migracja jest samodzielna i działa również bez wcześniejszego
+-- uruchomienia pełnego cloud_schema_supabase.sql.
+create table if not exists public.customer_approval_links (
+  id uuid primary key default gen_random_uuid(),
+  workshop_id uuid not null,
+  token text not null unique,
+  approval_local_id bigint not null,
+  order_local_id bigint not null,
+  snapshot jsonb not null,
+  status text not null default 'PENDING' check (status in ('PENDING','APPROVED','DECLINED')),
+  customer_note text not null default '',
+  created_at timestamptz not null default now(),
+  decided_at timestamptz,
+  expires_at timestamptz not null default (now() + interval '7 days')
+);
+alter table public.customer_approval_links enable row level security;
+create index if not exists customer_approval_links_owner_idx on public.customer_approval_links(workshop_id,status,created_at desc);
+
 alter table public.customer_approval_links add column if not exists token_hash text;
 alter table public.customer_approval_links add column if not exists approval_cloud_id uuid;
 alter table public.customer_approval_links add column if not exists order_cloud_id uuid;
