@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const { DatabaseSync } = require('node:sqlite')
 const fs = require('node:fs')
 const vm = require('node:vm')
-const { findQuoteApproval, assertQuoteEditable, materializeApprovedQuote } = require('../electron/quote-approval.cjs')
+const { findQuoteApproval, assertQuoteEditable, replaceQuoteWithOrderSnapshot, materializeApprovedQuote } = require('../electron/quote-approval.cjs')
 const { requireEditableOrder } = require('../electron/inventory-usage.cjs')
 
 function setup(t) {
@@ -23,7 +23,7 @@ function setup(t) {
   const source = fs.readFileSync(require.resolve('../electron/main.cjs'), 'utf8')
   vm.runInNewContext(source.slice(source.indexOf("ipcMain.handle('quotes:get'"), source.indexOf("ipcMain.handle('attachments:list'")), {
     ipcMain: { handle: (name, callback) => { handlers[name] = callback } },
-    getDb: () => db, findQuoteApproval, assertQuoteEditable, materializeApprovedQuote, requireEditableOrder, partMarkup: () => 0.2, normalizeBarcode:value=>String(value||''), syncOrderItemTotals: () => {},
+    getDb: () => db, findQuoteApproval, assertQuoteEditable, replaceQuoteWithOrderSnapshot, materializeApprovedQuote, requireEditableOrder, partMarkup: () => 0.2, normalizeBarcode:value=>String(value||''), syncOrderItemTotals: () => {},
   })
   return { db, call: (name, arg) => handlers[`quotes:${name}`](null, arg) }
 }
@@ -122,4 +122,37 @@ test('closed order rejects quote changes until it is reopened', t => {
   assert.throws(() => call('accept', 10), /zamknięte/)
   assert.equal(db.prepare('SELECT COUNT(*) n FROM quote_items').get().n, 0)
   assert.equal(db.prepare('SELECT COUNT(*) n FROM approvals').get().n, 0)
+})
+
+test('quote imports the current order scope and cannot be edited independently', t => {
+  const { db, call } = setup(t)
+  db.exec(`
+    INSERT INTO order_items(order_id,kind,name,qty,unit_cost,unit_price,hours_snapshot,price_snapshot)
+      VALUES (1,'ROBOCIZNA','Wymiana filtra',1.5,0,220,1.5,330),(1,'MATERIAL','Środek czyszczący',2,10,25,NULL,50);
+    INSERT INTO job_part_orders(order_id,part_no,name,qty,unit_cost,unit_price,status)
+      VALUES (1,'W 712/95','Filtr oleju',1,28,55,'DO_ZAMOWIENIA');
+  `)
+  const imported=call('importOrder',1)
+  assert.equal(imported.itemCount,3)
+  assert.equal(imported.total,435)
+  const quote=db.prepare("SELECT * FROM quotes WHERE order_id=1 AND status='ROBOCZA' ORDER BY id DESC LIMIT 1").get()
+  assert.equal(quote.source_type,'ORDER_SNAPSHOT')
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM quote_items WHERE quote_id=?').get(quote.id).n,3)
+  assert.throws(()=>call('addItem',{orderId:1,data:{name:'Pozycja dodana bokiem'}}),/pochodzą ze zlecenia/)
+})
+
+test('accepting an imported scope does not duplicate order work or planned parts', t => {
+  const { db, call } = setup(t)
+  db.exec(`
+    INSERT INTO order_items(order_id,kind,name,qty,unit_cost,unit_price) VALUES (1,'MATERIAL','Płyn',1,20,45);
+    INSERT INTO job_part_orders(order_id,name,qty,unit_cost,unit_price,status) VALUES (1,'Filtr',1,25,60,'DO_ZAMOWIENIA');
+  `)
+  call('importOrder',1)
+  const quote=db.prepare("SELECT * FROM quotes WHERE order_id=1 AND status='ROBOCZA' ORDER BY id DESC LIMIT 1").get()
+  const sent=call('requestApproval',quote.id)
+  db.prepare("UPDATE approvals SET status='APPROVED' WHERE id=?").run(sent.approvalId)
+  assert.equal(call('accept',quote.id).sourceSnapshot,true)
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM order_items WHERE order_id=1').get().n,1)
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM job_part_orders WHERE order_id=1').get().n,1)
+  assert.equal(db.prepare('SELECT status FROM quotes WHERE id=?').get(quote.id).status,'ZAAKCEPTOWANA')
 })

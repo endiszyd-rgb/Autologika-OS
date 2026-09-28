@@ -8,7 +8,7 @@ const { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSIO
 const { databaseHealth } = require('./database-health.cjs')
 const cloudSync = require('./cloud-sync.cjs')
 const updater = require('./updater.cjs')
-const { findQuoteApproval, assertQuoteEditable, materializeApprovedQuote } = require('./quote-approval.cjs')
+const { findQuoteApproval, assertQuoteEditable, replaceQuoteWithOrderSnapshot, materializeApprovedQuote } = require('./quote-approval.cjs')
 const { listAppointments, createAppointment, updateAppointment, removeAppointment } = require('./appointments.cjs')
 const { deletionPreview, removeEntity } = require('./entity-deletion.cjs')
 const { createCustomer, updateCustomer, createVehicle, updateVehicle } = require('./record-editing.cjs')
@@ -552,11 +552,31 @@ ipcMain.handle('quotes:get',(_,orderId)=>{
   const approval=findQuoteApproval(db,orderId,q.id)
   return{...q,items,total,cost,margin:total-cost,approval:approval||null}
 })
+ipcMain.handle('quotes:importOrder',(_,orderId)=>{
+  const db=getDb();requireEditableOrder(db,orderId)
+  return db.transaction(()=>{
+    let quote=db.prepare("SELECT * FROM quotes WHERE order_id=? AND status='ROBOCZA' ORDER BY id DESC LIMIT 1").get(orderId)
+    if(quote){
+      const approval=findQuoteApproval(db,orderId,quote.id)
+      if(approval?.status==='PENDING')throw new Error('Bieżąca wycena czeka na decyzję klienta i jest zamrożona.')
+      if(approval?.status==='APPROVED')materializeApprovedQuote(db,quote.id)
+      else if(approval)db.prepare("UPDATE quotes SET status='ZAMKNIETA' WHERE id=?").run(quote.id)
+      if(approval)quote=null
+    }
+    if(!quote){
+      const created=db.prepare("INSERT INTO quotes(order_id,status,source_type) VALUES (?,'ROBOCZA','ORDER_SNAPSHOT')").run(orderId)
+      quote=db.prepare('SELECT * FROM quotes WHERE id=?').get(created.lastInsertRowid)
+    }
+    db.prepare('DELETE FROM quote_items WHERE quote_id=?').run(quote.id)
+    return replaceQuoteWithOrderSnapshot(db,quote)
+  })()
+})
 ipcMain.handle('quotes:addItem',(_,{orderId,data})=>{
   const db=getDb();requireEditableOrder(db,orderId)
   let quote=db.prepare("SELECT * FROM quotes WHERE order_id=? AND status='ROBOCZA' ORDER BY id DESC LIMIT 1").get(orderId)
   if(!quote){const created=db.prepare("INSERT INTO quotes(order_id,status) VALUES (?,'ROBOCZA')").run(orderId);quote=db.prepare('SELECT * FROM quotes WHERE id=?').get(created.lastInsertRowid)}
   assertQuoteEditable(db,quote)
+  if(quote.source_type==='ORDER_SNAPSHOT')throw new Error('Pozycje tej wyceny pochodzą ze zlecenia. Edytuj je w sekcji prac lub części i ponownie zaimportuj zakres.')
   let price=Number(data.unit_price||0)
   if((data.kind||'CZESC')==='CZESC'&&!price)price=Math.round(Number(data.unit_cost||0)*(1+partMarkup(Number(data.unit_cost||0)))*100)/100
   const hours=Number(data.labor_hours||0),total=(data.kind||'CZESC')==='ROBOCIZNA'?hours*Number(data.labor_rate||0):Number(data.qty||1)*price
@@ -577,6 +597,7 @@ ipcMain.handle('quotes:updateItem',(_,{id,data})=>{
   const quote=db.prepare('SELECT * FROM quotes WHERE id=?').get(item.quote_id)
   if(!quote)throw new Error('Wycena nie istnieje.')
   requireEditableOrder(db,quote.order_id);assertQuoteEditable(db,quote)
+  if(quote.source_type==='ORDER_SNAPSHOT')throw new Error('Pozycje tej wyceny pochodzą ze zlecenia. Edytuj je w sekcji prac lub części i ponownie zaimportuj zakres.')
   const kind=item.kind,name=String(data.name||'').trim()
   if(!name)throw new Error('Nazwa pozycji jest wymagana.')
   const qty=kind==='ROBOCIZNA'?Number(data.qty||item.qty||1):Number(data.qty)
@@ -591,7 +612,7 @@ ipcMain.handle('quotes:updateItem',(_,{id,data})=>{
   )
   return{ok:true,id:item.id,total}
 })
-ipcMain.handle('quotes:removeItem',(_,id)=>{const db=getDb(),item=db.prepare('SELECT * FROM quote_items WHERE id=?').get(id);if(!item)return true;const quote=db.prepare('SELECT * FROM quotes WHERE id=?').get(item.quote_id);requireEditableOrder(db,quote.order_id);assertQuoteEditable(db,quote);db.prepare('DELETE FROM quote_items WHERE id=?').run(id);return true})
+ipcMain.handle('quotes:removeItem',(_,id)=>{const db=getDb(),item=db.prepare('SELECT * FROM quote_items WHERE id=?').get(id);if(!item)return true;const quote=db.prepare('SELECT * FROM quotes WHERE id=?').get(item.quote_id);requireEditableOrder(db,quote.order_id);assertQuoteEditable(db,quote);if(quote.source_type==='ORDER_SNAPSHOT')throw new Error('Pozycje tej wyceny pochodzą ze zlecenia. Usuń je w sekcji prac lub części i ponownie zaimportuj zakres.');db.prepare('DELETE FROM quote_items WHERE id=?').run(id);return true})
 ipcMain.handle('quotes:requestApproval',(_,id)=>{
   const db=getDb(); const q=db.prepare('SELECT * FROM quotes WHERE id=?').get(id); if(!q)return{ok:false}
   const existing=findQuoteApproval(db,q.order_id,id);if(existing)return{ok:true,approvalId:existing.id,total:Number(existing.amount||0),already:true}

@@ -34,11 +34,13 @@ function buildApprovalSnapshot(db,approvalId){
     return {position:index+1,kind:item.kind,name:item.work_name||item.name,variant:item.variant_name||'',description:item.customer_description||item.notes||'',quantity,unit:item.kind==='ROBOCIZNA'?'h':'szt.',unitPrice,value:number(quantity*unitPrice),vatRate:null,partNumber:item.part_no||'',oeNumber:item.oe_number||'',brand:item.brand||'',vehicleFitment:item.vehicle_fitment||''}
   })
   const total=number(items.reduce((sum,item)=>sum+item.value,0))
+  const currentOrderSnapshot=quote.source_type==='ORDER_SNAPSHOT'
+  const displayedPreviousTotal=currentOrderSnapshot?0:previouslyApprovedTotal
   const snapshot={
     schemaVersion:2,approvalId:approval.id,approvalSequence:sequence,quoteId,orderId:order.id,orderCloudId:order.cloud_id||'',
     documentNo:`AL-${String(order.id).padStart(5,'0')}`,approvalDocumentNo:`AL-${String(order.id).padStart(5,'0')}-A${String(sequence).padStart(2,'0')}`,
-    createdAt:new Date().toISOString(),scope:approval.scope||'',additionalScope:sequence>1||previouslyApprovedTotal>0,
-    previouslyApprovedTotal,additionalTotal:total,newCombinedTotal:number(previouslyApprovedTotal+total),
+    createdAt:new Date().toISOString(),scope:approval.scope||'',additionalScope:currentOrderSnapshot?false:(sequence>1||previouslyApprovedTotal>0),
+    previouslyApprovedTotal:displayedPreviousTotal,additionalTotal:total,newCombinedTotal:number(displayedPreviousTotal+total),
     vehicle:{id:order.vehicle_id,cloudId:order.vehicle_cloud_id||'',make:order.make||'',model:order.model||'',year:order.year||null,engine:order.engine||'',plate:order.plate||'',vin:order.vin||''},
     customer:{name:order.customer_name||'',company:order.customer_company||'',email:order.customer_email||''},
     order:{title:order.title||'',complaint:order.complaint||'',openedAt:order.opened_at||''},items,

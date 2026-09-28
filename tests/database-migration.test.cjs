@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {migrateSchemaV9,migrateSchemaV10,migrateSchemaV12,migrateSchemaV13}=require('../electron/db.cjs')
+const {migrateSchemaV9,migrateSchemaV10,migrateSchemaV12,migrateSchemaV13,migrateSchemaV14}=require('../electron/db.cjs')
 
 test('schema v9 preserves ordered parts and adds scanned catalog fields',()=>{
  const db=new DatabaseSync(':memory:')
@@ -61,5 +61,18 @@ test('schema v13 preserves complete part identity in quote items',()=>{
  const row=db.prepare('SELECT * FROM quote_items WHERE id=2').get()
  assert.equal(row.name,'Czujnik')
  assert.equal(row.part_no,null)
+ db.close()
+})
+
+test('schema v14 links an imported quote snapshot to its order sources',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE quotes(id INTEGER PRIMARY KEY,order_id INTEGER,status TEXT);CREATE TABLE quote_items(id INTEGER PRIMARY KEY,quote_id INTEGER,name TEXT);INSERT INTO quotes VALUES(3,7,'ROBOCZA');INSERT INTO quote_items VALUES(4,3,'Filtr');`)
+ migrateSchemaV14(db);migrateSchemaV14(db)
+ const quoteColumns=db.prepare('PRAGMA table_info(quotes)').all().map(row=>row.name)
+ const itemColumns=db.prepare('PRAGMA table_info(quote_items)').all().map(row=>row.name)
+ for(const column of ['source_type','source_imported_at'])assert.ok(quoteColumns.includes(column),column)
+ for(const column of ['source_order_item_id','source_job_part_id'])assert.ok(itemColumns.includes(column),column)
+ assert.equal(db.prepare('SELECT source_type FROM quotes WHERE id=3').get().source_type,'LEGACY')
+ assert.equal(db.prepare('SELECT name FROM quote_items WHERE id=4').get().name,'Filtr')
  db.close()
 })

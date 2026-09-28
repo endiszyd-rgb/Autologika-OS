@@ -6,7 +6,7 @@ const { seedTechnicalReference } = require('./technical-seed.cjs')
 const { migrateLegacyServiceReminders } = require('./service-reminders.cjs')
 
 let db
-const SCHEMA_VERSION = 13
+const SCHEMA_VERSION = 14
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -132,7 +132,26 @@ function migrate(db,currentVersion=0) {
   }
   if(currentVersion<13){
     db.transaction(()=>{migrateSchemaV13(db);db.pragma('user_version = 13')})()
+    currentVersion=13
   }
+  if(currentVersion<14){
+    db.transaction(()=>{migrateSchemaV14(db);db.pragma('user_version = 14')})()
+  }
+}
+
+function migrateSchemaV14(db){
+  const quoteColumns=db.prepare('PRAGMA table_info(quotes)').all().map(row=>row.name)
+  const itemColumns=db.prepare('PRAGMA table_info(quote_items)').all().map(row=>row.name)
+  for(const [name,type] of [
+    ['source_type',"TEXT NOT NULL DEFAULT 'LEGACY'"],
+    ['source_imported_at','TEXT']
+  ])if(!quoteColumns.includes(name))db.exec(`ALTER TABLE quotes ADD COLUMN ${name} ${type}`)
+  for(const [name,type] of [
+    ['source_order_item_id','INTEGER'],
+    ['source_job_part_id','INTEGER']
+  ])if(!itemColumns.includes(name))db.exec(`ALTER TABLE quote_items ADD COLUMN ${name} ${type}`)
+  db.exec('CREATE INDEX IF NOT EXISTS idx_quote_items_order_source ON quote_items(source_order_item_id)')
+  db.exec('CREATE INDEX IF NOT EXISTS idx_quote_items_part_source ON quote_items(source_job_part_id)')
 }
 
 function migrateSchemaV13(db){
@@ -399,6 +418,7 @@ function migrateSchemaV1(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       order_id INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'ROBOCZA', notes TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, accepted_at TEXT,
+      source_type TEXT NOT NULL DEFAULT 'LEGACY', source_imported_at TEXT,
       FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
     );
     CREATE TABLE IF NOT EXISTS quote_items (
@@ -410,6 +430,7 @@ function migrateSchemaV1(db) {
       customer_description TEXT, technical_description TEXT, hours_snapshot REAL, price_snapshot REAL,
       part_no TEXT, oe_number TEXT, inventory_part_id INTEGER, supplier_name TEXT,
       barcode TEXT, brand TEXT, vehicle_fitment TEXT, cross_numbers TEXT, lookup_source TEXT, lookup_url TEXT,
+      source_order_item_id INTEGER, source_job_part_id INTEGER,
       FOREIGN KEY(quote_id) REFERENCES quotes(id) ON DELETE CASCADE
     );
     CREATE TABLE IF NOT EXISTS attachments (
@@ -784,4 +805,4 @@ function seed(db) {
     .run(o.lastInsertRowid,v.lastInsertRowid,'Diagnostyka braku mocy',start.toISOString(),end.toISOString(),'Stanowisko 1','PLAN')
 }
 
-module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10, migrateSchemaV12, migrateSchemaV13 }
+module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10, migrateSchemaV12, migrateSchemaV13, migrateSchemaV14 }
