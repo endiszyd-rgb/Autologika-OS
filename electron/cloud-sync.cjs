@@ -170,7 +170,8 @@ function queueState(db){
  const totals=db.prepare(`SELECT COUNT(*) pending,SUM(CASE WHEN last_error IS NOT NULL AND last_error!='' THEN 1 ELSE 0 END) failed,MIN(queued_at) oldest FROM sync_queue`).get()
  return {pending:Number(totals?.pending||0),failed:Number(totals?.failed||0),oldestPending:totals?.oldest||'',queue,groups:groups.map(row=>({...row,total:Number(row.total||0),failed:Number(row.failed||0)}))}
 }
-function rememberResult(result){try{saveConfig({lastResult:{ok:!!result.ok,error:result.error||'',pushed:Number(result.pushed||0),pulled:Number(result.pulled||0),conflicts:Number(result.conflicts||0),pending:Number(result.pending||0),at:result.at||new Date().toISOString()}})}catch{}return result}
+function syncResultSnapshot(result){return {ok:!!result.ok,error:result.error||'',pushed:Number(result.pushed||0),pulled:Number(result.pulled||0),conflicts:Number(result.conflicts||0),pending:Number(result.pending||0),approvalModuleUnavailable:!!result.approvalModuleUnavailable,at:result.at||new Date().toISOString()}}
+function rememberResult(result){try{saveConfig({lastResult:syncResultSnapshot(result)})}catch{}return result}
 function isMissingApprovalTable(error){const message=String(error?.message||error||'');return /(?:PGRST205|schema cache)/i.test(message)&&/customer_approval_links/i.test(message)}
 async function syncNow(){
  if(running)return {ok:false,busy:true}
@@ -219,4 +220,4 @@ async function pullRemoteApproval(approvalId){
   return {ok:true,...r,status:local?.status||r.status,customer_note:local?.note||r.customer_note||'',decided_at:local?.decided_at||r.decided_at};
 }
 
-module.exports={loadConfig,saveConfig,publicConfig,status,syncNow,retryPending,startAuto,stopAuto,login,signup,logout,account,testConnection,createRemoteApproval,pullRemoteApproval,scanRemoteApprovals,archiveApprovalPdf,syncApprovalArchive,downloadApprovalSignature,on:(name,fn)=>events.on(name,fn),_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute,sqliteBindValue,isMissingApprovalTable}}
+module.exports={loadConfig,saveConfig,publicConfig,status,syncNow,retryPending,startAuto,stopAuto,login,signup,logout,account,testConnection,createRemoteApproval,pullRemoteApproval,scanRemoteApprovals,archiveApprovalPdf,syncApprovalArchive,downloadApprovalSignature,on:(name,fn)=>events.on(name,fn),_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute,sqliteBindValue,isMissingApprovalTable,syncResultSnapshot}}

@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute,sqliteBindValue,isMissingApprovalTable}}=require('../electron/cloud-sync.cjs')
+const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute,sqliteBindValue,isMissingApprovalTable,syncResultSnapshot}}=require('../electron/cloud-sync.cjs')
 
 test('PC compares SQLite UTC timestamps with Cloud ISO timestamps without a local timezone shift',()=>{
  assert.equal(timestampMs('2026-09-20 10:15:30'),Date.parse('2026-09-20T10:15:30.000Z'))
@@ -43,6 +43,11 @@ test('missing optional approval table is distinguished from other Cloud failures
  assert.equal(isMissingApprovalTable(new Error(`Cloud 404: {"code":"PGRST205","message":"Could not find the table 'public.customer_approval_links' in the schema cache"}`)),true)
  assert.equal(isMissingApprovalTable(new Error('Cloud 500: połączenie przerwane')),false)
  assert.equal(isMissingApprovalTable(new Error(`Cloud 404: {"code":"PGRST205","message":"Could not find public.sync_records in schema cache"}`)),false)
+})
+
+test('saved sync result retains the optional approval module warning',()=>{
+ const snapshot=syncResultSnapshot({ok:true,pushed:2,pulled:3,pending:0,approvalModuleUnavailable:true,at:'2026-09-28T08:00:00.000Z'})
+ assert.deepEqual(snapshot,{ok:true,error:'',pushed:2,pulled:3,conflicts:0,pending:0,approvalModuleUnavailable:true,at:'2026-09-28T08:00:00.000Z'})
 })
 
 test('PC binds the workshop to its Cloud account and protects a previously synchronized database',()=>{
