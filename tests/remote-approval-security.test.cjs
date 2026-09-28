@@ -7,6 +7,7 @@ const edge=fs.readFileSync('supabase/functions/approval/index.ts','utf8')
 const pdf=fs.readFileSync('supabase/functions/approval/pdf.ts','utf8')
 const fonts=fs.readFileSync('supabase/functions/approval/fonts.generated.ts','utf8')
 const desktop=fs.readFileSync('electron/cloud-sync.cjs','utf8')
+const client=fs.readFileSync('docs/approval/index.html','utf8')
 function embeddedFont(name){
  const body=fonts.match(new RegExp(`const ${name} = \\[([\\s\\S]*?)\\]\\.join`))?.[1]||''
  const base64=[...body.matchAll(/'([^']+)'/g)].map(match=>match[1]).join('')
@@ -38,9 +39,19 @@ test('only the service role can execute the atomic decision function',()=>{
  assert.match(sql,/supersede_previous_approval_links_trigger/)
 })
 
-test('client endpoint checks origin, expiry, consent, signature and snapshot integrity',()=>{
- for(const expected of ["origin!==url.origin","record.expires_at","termsAccepted","signaturePoints","snapshotHashMatches(record.snapshot,record.snapshot_hash)","SNAPSHOT_HASH_MISMATCH"])assert.ok(edge.includes(expected),expected)
+test('client API checks its fixed origin, expiry, consent, signature and snapshot integrity',()=>{
+ for(const expected of ["origin===clientOrigin","record.expires_at","termsAccepted","signaturePoints","snapshotHashMatches(record.snapshot,record.snapshot_hash)","SNAPSHOT_HASH_MISMATCH"])assert.ok(edge.includes(expected),expected)
  assert.match(edge,/eq\('status','PENDING'\)\.select\('id'\)[\s\S]*expired\.data\?\.length[\s\S]*APPROVAL_EXPIRED/)
+})
+
+test('public approval page keeps the token in the URL fragment and talks only to the approval API',()=>{
+ assert.match(desktop,/github\.io\/Autologika-OS\/approval\/#t=\$\{tokenValue\}/)
+ assert.match(edge,/Response\.redirect\(`\$\{clientUrl\}#t=\$\{encodeURIComponent\(legacyToken\)\}`/)
+ assert.match(client,/new URLSearchParams\(location\.hash\.slice\(1\)\)/)
+ assert.match(client,/connect-src https:\/\/aeikhyntzrynpypleqqe\.supabase\.co/)
+ assert.doesNotMatch(client,/location\.search/)
+ const script=client.match(/<script>([\s\S]*)<\/script>/)?.[1]||''
+ assert.doesNotThrow(()=>new Function(script))
 })
 
 test('approved evidence uploads a signature and printable PDF and removes orphaned uploads',()=>{

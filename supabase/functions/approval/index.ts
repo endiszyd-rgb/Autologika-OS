@@ -2,54 +2,74 @@ import {createClient} from 'https://esm.sh/@supabase/supabase-js@2'
 import {approvalRecordState,parseSignatureDataUrl,publicApproval,sha256Hex,snapshotHashMatches,validApprovalToken,validateDecision} from './model.mjs'
 import {approvalPdf} from './pdf.ts'
 
-const esc=(value:any)=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]||char))
-const money=(value:any)=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(Number(value)||0)
-const headers={'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer','content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"}
-const page=(body:string,status=200)=>new Response(`<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="dark light"><title>AutoLogika — akceptacja naprawy</title><style>
-:root{color-scheme:dark;--bg:#090d0b;--line:#344138;--text:#f2f5ef;--muted:#9ba79e;--red:#e21f2f;--green:#b9ef79}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0,#3a1115 0,transparent 32%),var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,sans-serif}main{max-width:760px;margin:auto;padding:24px 16px 60px}.brand{font-weight:950;letter-spacing:.18em;color:#fff}.brand i{color:var(--red);font-style:normal}.eyebrow{font-size:11px;letter-spacing:.14em;color:#aebaaf}.card{background:linear-gradient(145deg,#151e17,#0f1511);border:1px solid var(--line);border-radius:18px;padding:20px;margin:15px 0;box-shadow:0 16px 40px #0004}h1{font-size:27px;line-height:1.15;margin:7px 0}.muted{color:var(--muted)}.vehicle{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap}.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:15px;padding:14px 0;border-bottom:1px solid var(--line)}.row:last-child{border:0}.row span,.row small{display:block;color:var(--muted)}.total{padding-top:17px;text-align:right;font-size:29px;font-weight:950;color:var(--green)}.previous{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.previous div{padding:12px;border:1px solid var(--line);border-radius:12px}.previous b,.previous span{display:block}.previous span{font-size:10px;color:var(--muted)}label{display:block;font-weight:750;margin:12px 0 6px}textarea{width:100%;min-height:82px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#080c09;color:var(--text);font:inherit}.consent{display:flex;gap:11px;align-items:flex-start;padding:13px;border:1px solid #60734d;border-radius:12px}.consent input{width:22px;height:22px;flex:0 0 22px;accent-color:var(--green)}.pad{border:1px solid #657269;border-radius:13px;background:#fff;overflow:hidden}.pad canvas{display:block;width:100%;height:190px;touch-action:none}.padActions{display:flex;justify-content:flex-end;margin-top:7px}.padActions button{padding:8px 12px}.buttons{display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-top:17px}button{border:1px solid var(--line);border-radius:13px;padding:15px;font:inherit;font-weight:900;cursor:pointer}.decline{background:#331b1d;color:#ffd9dc}.approve{background:var(--green);color:#10150e}.status{text-align:center;font-size:20px}.ok{color:var(--green)}.error{color:#ff9d99}@media(max-width:560px){main{padding:18px 12px 40px}.card{padding:16px}.buttons,.previous{grid-template-columns:1fr}.approve{order:-1}}@media(prefers-color-scheme:light){:root{color-scheme:light;--bg:#f3f5f1;--line:#cad2ca;--text:#172019;--muted:#5e6a61}body{background:#f3f5f1}.card{background:#fff;box-shadow:0 12px 35px #1c2b2030}.brand{color:#151b16}textarea{background:#fff;color:#172019}}</style></head><body><main><div class="brand">AUTO<i>LOGIKA</i></div>${body}</main></body></html>`,{status,headers})
-const message=(title:string,text:string,tone='')=>page(`<div class="card status ${tone}"><h1>${esc(title)}</h1><p>${esc(text)}</p></div>`,tone==='error'?400:200)
+const clientOrigin='https://endiszyd-rgb.github.io'
+const clientUrl=`${clientOrigin}/Autologika-OS/approval/`
+const baseHeaders={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}
+const corsHeaders={'access-control-allow-origin':clientOrigin,'access-control-allow-methods':'POST, OPTIONS','access-control-allow-headers':'content-type','access-control-max-age':'86400','vary':'Origin'}
+const json=(body:unknown,status=200,cors=false)=>new Response(JSON.stringify(body),{status,headers:{...baseHeaders,...(cors?corsHeaders:{})}})
 const storagePath=(row:any,name:string)=>`${row.workshop_id}/${row.order_local_id}/${row.id}/${name}`
+const errorMessage=(code:string)=>code.includes('TERMS_REQUIRED')?'Zaznacz zgodę na przedstawiony zakres i koszty.':code.includes('SIGNATURE')?'Podpisz się w polu podpisu.':code.includes('EVIDENCE_BUSY')?'Decyzja jest już przetwarzana. Odśwież stronę za chwilę.':code.includes('SNAPSHOT_HASH_MISMATCH')?'Kontrola integralności dokumentu nie powiodła się. Warsztat został poinformowany.':'Spróbuj ponownie lub poproś warsztat o nowy link.'
 
 Deno.serve(async req=>{
- const url=new URL(req.url),rawToken=url.searchParams.get('t')||''
- if(!validApprovalToken(rawToken))return message('Link jest nieprawidłowy','Poproś warsztat o nowy link.','error')
+ const url=new URL(req.url),origin=req.headers.get('origin')||'',cors=origin===clientOrigin
+ if(req.method==='OPTIONS')return cors?new Response(null,{status:204,headers:corsHeaders}):json({ok:false,error:'Niedozwolone źródło żądania.'},403)
+ if(req.method==='GET'){
+  const legacyToken=url.searchParams.get('t')||''
+  if(validApprovalToken(legacyToken))return Response.redirect(`${clientUrl}#t=${encodeURIComponent(legacyToken)}`,302)
+  return json({ok:false,error:'Link jest nieprawidłowy.'},400)
+ }
+ if(req.method!=='POST')return json({ok:false,error:'Metoda nie jest obsługiwana.'},405,cors)
+ if(!cors)return json({ok:false,error:'Niedozwolone źródło żądania.'},403)
+
+ let input:any
+ try{input=await req.json()}catch{return json({ok:false,error:'Nieprawidłowe dane żądania.'},400,true)}
+ const rawToken=String(input?.token||'')
+ if(!validApprovalToken(rawToken))return json({ok:false,error:'Link jest nieprawidłowy. Poproś warsztat o nowy link.'},400,true)
+
  const sb=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!),tokenHash=await sha256Hex(rawToken)
  let {data:record}=await sb.from('customer_approval_links').select('*').eq('token_hash',tokenHash).maybeSingle()
  if(!record){const legacy=await sb.from('customer_approval_links').select('*').eq('token',rawToken).maybeSingle();record=legacy.data}
- if(!record)return message('Link jest nieprawidłowy','Poproś warsztat o nowy link.','error')
+ if(!record)return json({ok:false,error:'Link jest nieprawidłowy. Poproś warsztat o nowy link.'},404,true)
  if(approvalRecordState(record)==='EXPIRED'){
-   const expired=await sb.from('customer_approval_links').update({status:'EXPIRED',decided_at:new Date().toISOString()}).eq('id',record.id).eq('status','PENDING').select('id')
-   if(expired.data?.length)await sb.from('customer_approval_events').insert({workshop_id:record.workshop_id,approval_id:record.id,event_type:'APPROVAL_EXPIRED'});record.status='EXPIRED'
+  const expired=await sb.from('customer_approval_links').update({status:'EXPIRED',decided_at:new Date().toISOString()}).eq('id',record.id).eq('status','PENDING').select('id')
+  if(expired.data?.length)await sb.from('customer_approval_events').insert({workshop_id:record.workshop_id,approval_id:record.id,event_type:'APPROVAL_EXPIRED'})
+  record.status='EXPIRED';record.decided_at=record.decided_at||new Date().toISOString()
  }
- if(record.status==='PENDING'&&!record.opened_at){const opened=new Date().toISOString();const result=await sb.from('customer_approval_links').update({opened_at:opened}).eq('id',record.id).is('opened_at',null).select('id');if(result.data?.length)await sb.from('customer_approval_events').insert({workshop_id:record.workshop_id,approval_id:record.id,event_type:'APPROVAL_OPENED'});record.opened_at=opened}
- if(req.method==='POST'){
-   const origin=req.headers.get('origin');if(origin&&origin!==url.origin)return message('Żądanie zostało odrzucone','Otwórz ponownie bezpieczny link z wiadomości.','error')
-   if(record.status!=='PENDING')return Response.redirect(`${url.origin}${url.pathname}?t=${encodeURIComponent(rawToken)}`,303)
-   const uploadedPaths:string[]=[]
-   try{
-    const form=await req.formData(),decision=String(form.get('decision')||''),note=String(form.get('note')||''),signature=String(form.get('signature')||''),signaturePoints=Number(form.get('signature_points')||0),termsAccepted=form.get('terms')==='yes'
-    validateDecision({decision,note,signature,signaturePoints,termsAccepted})
-    if(!await snapshotHashMatches(record.snapshot,record.snapshot_hash)){await sb.from('customer_approval_links').update({status:'SUPERSEDED',decided_at:new Date().toISOString(),security_event:'SNAPSHOT_HASH_MISMATCH'}).eq('id',record.id).eq('status','PENDING');await sb.from('customer_approval_events').insert({workshop_id:record.workshop_id,approval_id:record.id,event_type:'APPROVAL_SECURITY_REJECTED',details:{reason:'SNAPSHOT_HASH_MISMATCH'}});return message('Nie można zapisać decyzji','Kontrola integralności dokumentu nie powiodła się. Warsztat został poinformowany.','error')}
-    let signaturePath=null,signatureHash=null,pdfPath=null,pdfHash=null
-    if(decision==='APPROVED'){
-      const signatureBytes=parseSignatureDataUrl(signature);signatureHash=await sha256Hex(signatureBytes);signaturePath=storagePath(record,'signature.png');pdfPath=storagePath(record,'approval-confirmation.pdf')
-      const pdfBytes=await approvalPdf(record.snapshot,{approvalId:record.id,signedAt:new Date().toISOString(),snapshotHash:record.snapshot_hash,signatureHash,signatureBytes});pdfHash=await sha256Hex(pdfBytes)
-      const signatureUpload=await sb.storage.from('approval-evidence').upload(signaturePath,signatureBytes,{contentType:'image/png',upsert:false,cacheControl:'0'});if(signatureUpload.error)throw new Error('EVIDENCE_BUSY');uploadedPaths.push(signaturePath)
-      const pdfUpload=await sb.storage.from('approval-evidence').upload(pdfPath,pdfBytes,{contentType:'application/pdf',upsert:false,cacheControl:'0'});if(pdfUpload.error)throw new Error('EVIDENCE_BUSY');uploadedPaths.push(pdfPath)
-    }
-    const {data,error}=await sb.rpc('decide_customer_approval',{p_token_hash:record.token_hash,p_decision:decision,p_note:note,p_snapshot_hash:record.snapshot_hash,p_signature_path:signaturePath,p_signature_hash:signatureHash,p_signature_points:decision==='APPROVED'?signaturePoints:null,p_pdf_path:pdfPath,p_pdf_hash:pdfHash,p_user_agent:req.headers.get('user-agent')||''})
-    if(error)throw error;const decided=Array.isArray(data)?data[0]:data;if(decided?.security_event)throw new Error('SNAPSHOT_HASH_MISMATCH');if(decided?.status!==decision)throw new Error('EVIDENCE_BUSY')
-    return Response.redirect(`${url.origin}${url.pathname}?t=${encodeURIComponent(rawToken)}`,303)
-   }catch(error){if(uploadedPaths.length)await sb.storage.from('approval-evidence').remove(uploadedPaths);const code=String((error as Error)?.message||error);return message('Nie udało się zapisać decyzji',code.includes('TERMS_REQUIRED')?'Zaznacz zgodę na przedstawiony zakres i koszty.':code.includes('SIGNATURE')?'Podpisz się w polu podpisu.':code.includes('EVIDENCE_BUSY')?'Decyzja jest już przetwarzana. Odśwież stronę za chwilę.':'Spróbuj ponownie lub poproś warsztat o nowy link.','error')}
+ if(record.status==='PENDING'&&!record.opened_at){
+  const opened=new Date().toISOString(),result=await sb.from('customer_approval_links').update({opened_at:opened}).eq('id',record.id).is('opened_at',null).select('id')
+  if(result.data?.length)await sb.from('customer_approval_events').insert({workshop_id:record.workshop_id,approval_id:record.id,event_type:'APPROVAL_OPENED'})
+  record.opened_at=opened
  }
- if(record.status!=='PENDING'){
-   const approved=record.status==='APPROVED',when=record.decided_at?new Date(record.decided_at).toLocaleString('pl-PL'):'—'
-   return message(approved?'✓ Akceptacja została zapisana':record.status==='DECLINED'?'Decyzja o odrzuceniu została zapisana':'Ten link nie jest już aktywny',approved?`Dziękujemy. Warsztat AutoLogika otrzymał Twoją decyzję dnia ${when}.`:`Ta decyzja została już zarejestrowana dnia ${when}.`,approved?'ok':'')
+
+ if(input.action==='load')return json({ok:true,approval:publicApproval(record.snapshot),status:record.status,expiresAt:record.expires_at,decidedAt:record.decided_at||null,customerNote:record.customer_note||''},200,true)
+ if(input.action!=='decide')return json({ok:false,error:'Nieprawidłowa operacja.'},400,true)
+ if(record.status!=='PENDING')return json({ok:true,status:record.status,decidedAt:record.decided_at||null},200,true)
+
+ const uploadedPaths:string[]=[]
+ try{
+  const decision=String(input.decision||''),note=String(input.note||''),signature=String(input.signature||''),signaturePoints=Number(input.signaturePoints||0),termsAccepted=input.termsAccepted===true
+  validateDecision({decision,note,signature,signaturePoints,termsAccepted})
+  if(!await snapshotHashMatches(record.snapshot,record.snapshot_hash)){
+   await sb.from('customer_approval_links').update({status:'SUPERSEDED',decided_at:new Date().toISOString(),security_event:'SNAPSHOT_HASH_MISMATCH'}).eq('id',record.id).eq('status','PENDING')
+   await sb.from('customer_approval_events').insert({workshop_id:record.workshop_id,approval_id:record.id,event_type:'APPROVAL_SECURITY_REJECTED',details:{reason:'SNAPSHOT_HASH_MISMATCH'}})
+   throw new Error('SNAPSHOT_HASH_MISMATCH')
+  }
+  let signaturePath=null,signatureHash=null,pdfPath=null,pdfHash=null
+  if(decision==='APPROVED'){
+   const signatureBytes=parseSignatureDataUrl(signature);signatureHash=await sha256Hex(signatureBytes);signaturePath=storagePath(record,'signature.png');pdfPath=storagePath(record,'approval-confirmation.pdf')
+   const pdfBytes=await approvalPdf(record.snapshot,{approvalId:record.id,signedAt:new Date().toISOString(),snapshotHash:record.snapshot_hash,signatureHash,signatureBytes});pdfHash=await sha256Hex(pdfBytes)
+   const signatureUpload=await sb.storage.from('approval-evidence').upload(signaturePath,signatureBytes,{contentType:'image/png',upsert:false,cacheControl:'0'});if(signatureUpload.error)throw new Error('EVIDENCE_BUSY');uploadedPaths.push(signaturePath)
+   const pdfUpload=await sb.storage.from('approval-evidence').upload(pdfPath,pdfBytes,{contentType:'application/pdf',upsert:false,cacheControl:'0'});if(pdfUpload.error)throw new Error('EVIDENCE_BUSY');uploadedPaths.push(pdfPath)
+  }
+  const {data,error}=await sb.rpc('decide_customer_approval',{p_token_hash:record.token_hash,p_decision:decision,p_note:note,p_snapshot_hash:record.snapshot_hash,p_signature_path:signaturePath,p_signature_hash:signatureHash,p_signature_points:decision==='APPROVED'?signaturePoints:null,p_pdf_path:pdfPath,p_pdf_hash:pdfHash,p_user_agent:req.headers.get('user-agent')||''})
+  if(error)throw error
+  const decided=Array.isArray(data)?data[0]:data
+  if(decided?.security_event)throw new Error('SNAPSHOT_HASH_MISMATCH')
+  if(decided?.status!==decision)throw new Error('EVIDENCE_BUSY')
+  return json({ok:true,status:decided.status,decidedAt:decided.decided_at||new Date().toISOString()},200,true)
+ }catch(error){
+  if(uploadedPaths.length)await sb.storage.from('approval-evidence').remove(uploadedPaths)
+  const code=String((error as Error)?.message||error)
+  return json({ok:false,error:errorMessage(code),code:code.includes('SNAPSHOT_HASH_MISMATCH')?'SNAPSHOT_HASH_MISMATCH':'DECISION_FAILED'},400,true)
  }
- const snapshot=publicApproval(record.snapshot),items=snapshot.items
- const itemRows=items.map((item:any)=>`<div class="row"><div><b>${esc(item.name)}</b>${item.variant?`<span>${esc(item.variant)}</span>`:''}<small>${esc(item.kind)} · ${esc(item.quantity)} ${esc(item.unit)}</small>${item.description?`<p>${esc(item.description)}</p>`:''}</div><strong>${money(item.value)}</strong></div>`).join('')
- const summary=snapshot.additionalScope?`<div class="card previous"><div><span>WCZEŚNIEJ ZAAKCEPTOWANO</span><b>${money(snapshot.previouslyApprovedTotal)}</b></div><div><span>DODATKOWY ZAKRES</span><b>${money(snapshot.additionalTotal)}</b></div><div><span>NOWA ŁĄCZNA WARTOŚĆ</span><b>${money(snapshot.newCombinedTotal)}</b></div></div>`:''
- const html=`<div class="card vehicle"><div><div class="eyebrow">AKCEPTACJA NAPRAWY</div><h1>${esc(`${snapshot.vehicle.make||''} ${snapshot.vehicle.model||''}`.trim()||'Pojazd')}</h1><div class="muted">${esc(snapshot.vehicle.plate||'bez numeru rejestracyjnego')}${snapshot.vehicle.vin?` · VIN ${esc(snapshot.vehicle.vin)}`:''}</div></div><div><b>${esc(snapshot.documentNo||`Zlecenie #${snapshot.orderId}`)}</b><div class="muted">Akceptacja ${snapshot.approvalSequence}</div></div></div>${summary}<div class="card"><div class="eyebrow">ZAKRES PRAC</div>${itemRows}<div class="total">${money(snapshot.additionalScope?snapshot.additionalTotal:snapshot.totals.gross)}</div></div><form method="post" class="card" id="decisionForm"><div class="eyebrow">ZGODA ${esc(snapshot.terms.version)}</div><p>${esc(snapshot.terms.text)}</p><label class="consent"><input type="checkbox" name="terms" value="yes" required><span>Zapoznałem/am się z zakresem i kosztami oraz akceptuję wykonanie przedstawionych prac.</span></label><label>Podpis klienta</label><div class="pad"><canvas id="signature" aria-label="Pole podpisu klienta"></canvas></div><div class="padActions"><button type="button" id="clear">Wyczyść podpis</button></div><input type="hidden" name="signature" id="signatureData"><input type="hidden" name="signature_points" id="signaturePoints" value="0"><label>Powód odrzucenia (opcjonalnie)</label><textarea name="note" maxlength="1000" placeholder="Możesz krótko wyjaśnić decyzję"></textarea><div class="buttons"><button class="decline" name="decision" value="DECLINED" formnovalidate>ODRZUĆ</button><button class="approve" name="decision" value="APPROVED">PODPISZ I AKCEPTUJ</button></div></form><p class="muted">Decyzja zostanie zapisana wraz z datą, wersją dokumentu i sumą kontrolną. Link wygasa ${new Date(record.expires_at).toLocaleString('pl-PL')}.</p><script>
-(()=>{const canvas=document.getElementById('signature'),ctx=canvas.getContext('2d'),data=document.getElementById('signatureData'),points=document.getElementById('signaturePoints');let drawing=false,count=0,last=null;function resize(){const rect=canvas.getBoundingClientRect(),ratio=Math.max(1,window.devicePixelRatio||1),saved=count?canvas.toDataURL():'';canvas.width=Math.round(rect.width*ratio);canvas.height=Math.round(rect.height*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111';if(saved){const image=new Image();image.onload=()=>ctx.drawImage(image,0,0,rect.width,rect.height);image.src=saved}}function point(event){const r=canvas.getBoundingClientRect();return{x:event.clientX-r.left,y:event.clientY-r.top}}canvas.addEventListener('pointerdown',event=>{event.preventDefault();drawing=true;last=point(event);canvas.setPointerCapture(event.pointerId)});canvas.addEventListener('pointermove',event=>{if(!drawing)return;event.preventDefault();const next=point(event);ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(next.x,next.y);ctx.stroke();last=next;count++;points.value=String(count)});function finish(){if(!drawing)return;drawing=false;data.value=count?canvas.toDataURL('image/png'):''}canvas.addEventListener('pointerup',finish);canvas.addEventListener('pointercancel',finish);document.getElementById('clear').onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);count=0;points.value='0';data.value=''};document.getElementById('decisionForm').addEventListener('submit',event=>{const decision=event.submitter?.value;if(decision==='APPROVED'){finish();if(count<3){event.preventDefault();alert('Złóż podpis w wyznaczonym polu.');return}if(!event.target.terms.checked){event.preventDefault();alert('Zaznacz zgodę na zakres i koszty.');return}if(!confirm('Czy na pewno podpisać i zaakceptować przedstawiony zakres oraz koszty?'))event.preventDefault()}else if(decision==='DECLINED'&&!confirm('Czy na pewno odrzucić przedstawiony zakres?'))event.preventDefault()});resize();window.addEventListener('resize',resize)})();</script>`
- return page(html)
 })

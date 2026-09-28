@@ -218,7 +218,7 @@ async function createRemoteApproval(input){
   const inserted=await request(c,'/rest/v1/customer_approval_links',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)}),remote=Array.isArray(inserted)?inserted[0]:inserted
   if(['EXPIRED','SUPERSEDED'].includes(built.approval.status))getDb().prepare("UPDATE approvals SET status='PENDING',decided_at=NULL WHERE id=?").run(built.approval.id)
   updateLocalEvidence(getDb(),built.approval.id,{...row,id:remote?.id||null})
-  return {ok:true,url:`${c.url}/functions/v1/approval?t=${tokenValue}`,expiresAt:row.expires_at,snapshotHash:built.snapshotHash};
+  return {ok:true,url:`https://endiszyd-rgb.github.io/Autologika-OS/approval/#t=${tokenValue}`,expiresAt:row.expires_at,snapshotHash:built.snapshotHash};
 }
 async function pullRemoteApproval(approvalId){
   let c=loadConfig(); const workshopId=c.workshopId||c.user?.id; if(!workshopId)throw new Error('Brak ID warsztatu.');

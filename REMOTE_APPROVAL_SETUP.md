@@ -7,8 +7,9 @@ Zdalna akceptacja jest rozszerzeniem istniejącej wyceny i tabeli `approvals`. N
 1. W SQL Editor uruchom cały `cloud_schema_supabase.sql`. Plik zawiera schemat synchronizacji i kompletny moduł akceptacji. Sama migracja `supabase/migrations/20260925_remote_approval_2.sql` jest idempotentna i potrafi dobudować moduł akceptacji także w starszym projekcie, który ma już tylko podstawową synchronizację.
 2. Połącz CLI z projektem: `supabase link --project-ref <PROJECT_REF>`, a migracje repozytorium zastosuj przez `supabase db push --linked --include-all`.
 3. Nie zapisuj `SUPABASE_SERVICE_ROLE_KEY` w repozytorium ani aplikacji. Supabase udostępnia funkcji zarezerwowane zmienne `SUPABASE_URL` i `SUPABASE_SERVICE_ROLE_KEY` automatycznie.
-4. Wdróż stronę klienta: `supabase functions deploy approval --use-api`. Plik `supabase/config.toml` wyłącza weryfikację JWT dla jednorazowego linku, a fonty PDF są osadzone w pakiecie funkcji, więc wdrożenie nie wymaga Dockera.
-5. Sprawdź, że bucket `approval-evidence` ma `public = false`.
+4. Wdróż API klienta: `supabase functions deploy approval --use-api`. Plik `supabase/config.toml` wyłącza weryfikację JWT dla jednorazowego tokenu, a fonty PDF są osadzone w pakiecie funkcji, więc wdrożenie nie wymaga Dockera.
+5. Opublikuj katalog `docs` jako GitHub Pages z gałęzi `main`. Formularz znajduje się pod `/Autologika-OS/approval/`; token jest przechowywany wyłącznie we fragmencie `#t=...` i nie trafia do serwera hostującego stronę. Edge Function przyjmuje dane tylko z ustalonego originu GitHub Pages. Starsze linki prowadzące bezpośrednio do funkcji są automatycznie przekierowywane.
+6. Sprawdź, że bucket `approval-evidence` ma `public = false`.
 
 Funkcja wymaga zmiennych `SUPABASE_URL` i `SUPABASE_SERVICE_ROLE_KEY`, które środowisko Supabase udostępnia funkcji. Aplikacja PC korzysta wyłącznie z Publishable key i sesji zalogowanego właściciela warsztatu.
 
@@ -20,7 +21,7 @@ PC: dokładny kosztorys -> snapshot JSON -> SHA-256 -> losowy token 256 bit
                                       v             v
                              customer_approval_links (prywatne)
                                                     |
-Klient: link -> Edge Function -> zgoda + podpis -> atomowa decyzja RPC
+Klient: GitHub Pages (#token) -> Edge API -> zgoda + podpis -> atomowa decyzja RPC
                                                     |
                                       podpis PNG + finalny PDF
                                       private Storage
