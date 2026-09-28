@@ -1,10 +1,17 @@
 ﻿const test=require('node:test')
 const assert=require('node:assert/strict')
 const fs=require('node:fs')
+const zlib=require('node:zlib')
 const sql=fs.readFileSync('supabase/migrations/20260925_remote_approval_2.sql','utf8')
 const edge=fs.readFileSync('supabase/functions/approval/index.ts','utf8')
 const pdf=fs.readFileSync('supabase/functions/approval/pdf.ts','utf8')
+const fonts=fs.readFileSync('supabase/functions/approval/fonts.generated.ts','utf8')
 const desktop=fs.readFileSync('electron/cloud-sync.cjs','utf8')
+function embeddedFont(name){
+ const body=fonts.match(new RegExp(`const ${name} = \\[([\\s\\S]*?)\\]\\.join`))?.[1]||''
+ const base64=[...body.matchAll(/'([^']+)'/g)].map(match=>match[1]).join('')
+ return zlib.gunzipSync(Buffer.from(base64,'base64'))
+}
 
 test('remote approval migration bootstraps an older Cloud schema and ships with the installer',()=>{
  const createAt=sql.indexOf('create table if not exists public.customer_approval_links')
@@ -43,17 +50,18 @@ test('approved evidence uploads a signature and printable PDF and removes orphan
  for(const expected of ['snapshot.items','snapshot.customer','snapshot.vehicle','evidence.approvalId','evidence.snapshotHash','evidence.signatureHash','embedPng'])assert.ok(pdf.includes(expected),expected)
  for(const expected of ['drawRectangle','POTWIERDZENIE AKCEPTACJI NAPRAWY','DANE DOKUMENTU','INTEGRALNOŚĆ DOKUMENTU','Strona ${index+1} z ${pages.length}'])assert.ok(pdf.includes(expected),expected)
  assert.match(pdf,/registerFontkit\(fontkit\)/)
- assert.match(pdf,/NotoSans-Regular\.ttf/)
- assert.match(pdf,/NotoSans-Bold\.ttf/)
+ assert.match(pdf,/loadApprovalFonts\(\)/)
+ assert.match(fonts,/DecompressionStream\('gzip'\)/)
 })
 
-test('approval function bundles Unicode fonts and remains public only through its signed token',()=>{
+test('approval function embeds Unicode fonts for API deployment and remains public only through its signed token',()=>{
  const config=fs.readFileSync('supabase/config.toml','utf8')
  assert.match(config,/\[functions\.approval\]/)
  assert.match(config,/verify_jwt\s*=\s*false/)
- assert.match(config,/static_files\s*=\s*\[\s*"\.\/functions\/approval\/assets\/\*"\s*\]/)
- assert.ok(fs.statSync('supabase/functions/approval/assets/NotoSans-Regular.ttf').size>100000)
- assert.ok(fs.statSync('supabase/functions/approval/assets/NotoSans-Bold.ttf').size>100000)
+ assert.doesNotMatch(config,/static_files/)
+ assert.ok(fs.statSync('supabase/functions/approval/fonts.generated.ts').size>500000)
+ assert.deepEqual(embeddedFont('regularGzip'),fs.readFileSync('supabase/functions/approval/assets/NotoSans-Regular.ttf'))
+ assert.deepEqual(embeddedFont('boldGzip'),fs.readFileSync('supabase/functions/approval/assets/NotoSans-Bold.ttf'))
  assert.match(fs.readFileSync('supabase/functions/approval/assets/OFL.txt','utf8'),/SIL OPEN FONT LICENSE/i)
 })
 

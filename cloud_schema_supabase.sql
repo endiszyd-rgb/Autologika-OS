@@ -81,8 +81,8 @@ alter table public.customer_approval_links add column if not exists pdf_hash tex
 alter table public.customer_approval_links add column if not exists client_user_agent text;
 alter table public.customer_approval_links add column if not exists opened_at timestamptz;
 alter table public.customer_approval_links add column if not exists security_event text;
-update public.customer_approval_links set token_hash=encode(digest(token,'sha256'),'hex') where token_hash is null;
-update public.customer_approval_links set snapshot_hash=encode(digest(convert_to(snapshot::text,'UTF8'),'sha256'),'hex') where snapshot_hash is null;
+update public.customer_approval_links set token_hash=encode(extensions.digest(token,'sha256'),'hex') where token_hash is null;
+update public.customer_approval_links set snapshot_hash=encode(extensions.digest(convert_to(snapshot::text,'UTF8'),'sha256'),'hex') where snapshot_hash is null;
 alter table public.customer_approval_links alter column token_hash set not null;
 alter table public.customer_approval_links alter column snapshot_hash set not null;
 create unique index if not exists customer_approval_links_token_hash_idx on public.customer_approval_links(token_hash);

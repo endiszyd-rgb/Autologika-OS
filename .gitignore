@@ -2,6 +2,7 @@ node_modules/
 dist/
 release/
 artifacts/
+supabase/.temp/
 ui-preview*.log
 *.db
 *.db-shm

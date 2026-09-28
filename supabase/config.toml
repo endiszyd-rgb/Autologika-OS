@@ -1,3 +1,2 @@
 [functions.approval]
 verify_jwt = false
-static_files = [ "./functions/approval/assets/*" ]

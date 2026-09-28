@@ -1,12 +1,9 @@
 import {PDFDocument,rgb} from 'https://esm.sh/pdf-lib@1.17.1'
 import fontkit from 'https://esm.sh/@pdf-lib/fontkit@1.1.1'
+import {loadApprovalFonts} from './fonts.generated.ts'
 
 const PAGE_W=595.28,PAGE_H=841.89,MARGIN=42,CONTENT_W=PAGE_W-MARGIN*2
 const ink=rgb(.10,.12,.11),muted=rgb(.39,.43,.40),lineColor=rgb(.78,.80,.78),soft=rgb(.955,.965,.955),red=rgb(.68,.055,.075),green=rgb(.28,.50,.30)
-const fontFiles=Promise.all([
- Deno.readFile(new URL('./assets/NotoSans-Regular.ttf',import.meta.url)),
- Deno.readFile(new URL('./assets/NotoSans-Bold.ttf',import.meta.url))
-])
 const safeText=(value:any)=>String(value??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,'').replace(/[–—]/g,'-')
 const money=(value:any)=>`${Number(value||0).toFixed(2).replace('.',',')} PLN`
 
@@ -27,7 +24,7 @@ function wrapped(value:any,font:any,size:number,maxWidth:number){
 }
 
 export async function approvalPdf(snapshot:any,evidence:{approvalId:string;signedAt:string;snapshotHash:string;signatureHash:string;signatureBytes:Uint8Array}){
- const pdf=await PDFDocument.create(),[regularBytes,boldBytes]=await fontFiles;pdf.registerFontkit(fontkit)
+ const pdf=await PDFDocument.create(),[regularBytes,boldBytes]=await loadApprovalFonts();pdf.registerFontkit(fontkit)
  const regular=await pdf.embedFont(regularBytes,{subset:true}),bold=await pdf.embedFont(boldBytes,{subset:true}),signature=await pdf.embedPng(evidence.signatureBytes)
  pdf.setTitle(`Potwierdzenie akceptacji ${safeText(snapshot.approvalDocumentNo||snapshot.documentNo||'')}`);pdf.setAuthor('AutoLogika');pdf.setSubject('Elektroniczna akceptacja zakresu i kosztów naprawy')
  const documentNo=safeText(snapshot.approvalDocumentNo||snapshot.documentNo||`AL-${snapshot.orderId}`),signedAt=new Date(evidence.signedAt).toLocaleString('pl-PL',{timeZone:'Europe/Warsaw'})
