@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {migrateSchemaV9,migrateSchemaV10,migrateSchemaV12,migrateSchemaV13,migrateSchemaV14}=require('../electron/db.cjs')
+const {migrateSchemaV9,migrateSchemaV10,migrateSchemaV12,migrateSchemaV13,migrateSchemaV14,migrateSchemaV15}=require('../electron/db.cjs')
 
 test('schema v9 preserves ordered parts and adds scanned catalog fields',()=>{
  const db=new DatabaseSync(':memory:')
@@ -74,5 +74,16 @@ test('schema v14 links an imported quote snapshot to its order sources',()=>{
  for(const column of ['source_order_item_id','source_job_part_id'])assert.ok(itemColumns.includes(column),column)
  assert.equal(db.prepare('SELECT source_type FROM quotes WHERE id=3').get().source_type,'LEGACY')
  assert.equal(db.prepare('SELECT name FROM quote_items WHERE id=4').get().name,'Filtr')
+ db.close()
+})
+
+test('schema v15 adds delivery document identity to purchase orders',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE purchase_orders(id INTEGER PRIMARY KEY,status TEXT);INSERT INTO purchase_orders VALUES(1,'ODEBRANE');`)
+ migrateSchemaV15(db);migrateSchemaV15(db)
+ const columns=db.prepare('PRAGMA table_info(purchase_orders)').all().map(row=>row.name)
+ for(const column of ['external_document_no','document_date','source_file','source_hash','gross_total'])assert.ok(columns.includes(column),column)
+ db.prepare("UPDATE purchase_orders SET source_hash='hash-1' WHERE id=1").run()
+ assert.throws(()=>db.exec("INSERT INTO purchase_orders(id,status,source_hash) VALUES(2,'ODEBRANE','hash-1')"),/UNIQUE/)
  db.close()
 })

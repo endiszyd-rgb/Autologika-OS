@@ -18,7 +18,7 @@ function Counter({value}){
  return shown
 }
 
-export function WorkshopDashboard({api,go,openOrder}){
+export function WorkshopDashboard({api,go,openOrder,scanDocument}){
  const [data,setData]=useState(null),[target,setTarget]=useState(50000),[error,setError]=useState(''),[filter,setFilter]=useState('ALL'),[retry,setRetry]=useState(0)
  useEffect(()=>{let alive=true;setError('');Promise.all([api.dashboard(),api.settings?.monthlyTarget?.()||Promise.resolve(50000)]).then(([d,t])=>{if(alive){setData(d);setTarget(Number(t)||50000)}}).catch(e=>alive&&setError(e.message||String(e)));return()=>{alive=false}},[api,retry])
  if(error)return <div className="empty"><p>Nie udało się wczytać pulpitu: {error}</p><button onClick={()=>setRetry(x=>x+1)}>Spróbuj ponownie</button></div>
@@ -29,7 +29,7 @@ export function WorkshopDashboard({api,go,openOrder}){
  const hasMeasuredHours=hours>=1/60
  const visible=filter==='ALL'?recent:recent.filter(o=>o.status===filter)
  return <section className="studioDashboard">
-  <div className="studioHeading"><div><div className="sectionEyebrow">TWÓJ WARSZTAT. JEDEN WIDOK.</div><h2>Dobry dzień na <span>dobrą robotę.</span></h2><p>Wszystko, czego potrzebujesz, żeby utrzymać tempo.</p></div><button className="primary studioIntake" onClick={()=>go('intake')}><Icon name="intake"/> Przyjmij pojazd</button></div>
+  <div className="studioHeading"><div><div className="sectionEyebrow">TWÓJ WARSZTAT. JEDEN WIDOK.</div><h2>Dobry dzień na <span>dobrą robotę.</span></h2><p>Wszystko, czego potrzebujesz, żeby utrzymać tempo.</p></div><div className="studioHeadingActions"><button className="studioDocumentScan" onClick={scanDocument}><Icon name="documents"/> Skanuj dokument</button><button className="primary studioIntake" onClick={()=>go('intake')}><Icon name="intake"/> Przyjmij pojazd</button></div></div>
   <div className="studioOverview">
    <div className="studioRadarPanel">
     <div className="radarIntro"><div className="sectionEyebrow"><span className="studioLiveDot"/> RADAR WARSZTATU</div><h3>Każde auto.<br/>Na Twoim radarze.</h3><p>Od pierwszej diagnozy<br/>do ostatniej kontroli.</p><button className="studioTextButton" onClick={()=>go('kanban')}>Otwórz przepływ <Icon name="arrow"/></button><div className="radarLegend"><span><i/>W warsztacie</span><span><i/>Wymaga reakcji</span></div></div>

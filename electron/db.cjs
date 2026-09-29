@@ -6,7 +6,7 @@ const { seedTechnicalReference } = require('./technical-seed.cjs')
 const { migrateLegacyServiceReminders } = require('./service-reminders.cjs')
 
 let db
-const SCHEMA_VERSION = 14
+const SCHEMA_VERSION = 15
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -136,7 +136,19 @@ function migrate(db,currentVersion=0) {
   }
   if(currentVersion<14){
     db.transaction(()=>{migrateSchemaV14(db);db.pragma('user_version = 14')})()
+    currentVersion=14
   }
+  if(currentVersion<15){
+    db.transaction(()=>{migrateSchemaV15(db);db.pragma('user_version = 15')})()
+  }
+}
+
+function migrateSchemaV15(db){
+  const columns=db.prepare('PRAGMA table_info(purchase_orders)').all().map(row=>row.name)
+  for(const [name,type] of [
+    ['external_document_no','TEXT'],['document_date','TEXT'],['source_file','TEXT'],['source_hash','TEXT'],['gross_total','REAL NOT NULL DEFAULT 0']
+  ])if(!columns.includes(name))db.exec(`ALTER TABLE purchase_orders ADD COLUMN ${name} ${type}`)
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_purchase_orders_source_hash ON purchase_orders(source_hash) WHERE source_hash IS NOT NULL AND source_hash!=''")
 }
 
 function migrateSchemaV14(db){
@@ -805,4 +817,4 @@ function seed(db) {
     .run(o.lastInsertRowid,v.lastInsertRowid,'Diagnostyka braku mocy',start.toISOString(),end.toISOString(),'Stanowisko 1','PLAN')
 }
 
-module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10, migrateSchemaV12, migrateSchemaV13, migrateSchemaV14 }
+module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10, migrateSchemaV12, migrateSchemaV13, migrateSchemaV14, migrateSchemaV15 }

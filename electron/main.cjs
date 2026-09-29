@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, clipboard, Notification, net } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, clipboard, Notification, net, nativeImage } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const http = require('http')
@@ -29,6 +29,7 @@ const { ORDER_BASE_SQL, ORDER_TOTAL_SQL, ORDER_COST_SQL, finalPriceChange } = re
 const { deriveOrderReadiness } = require('./order-readiness.cjs')
 const { searchTechnicalManuals } = require('./manual-source-scraper.cjs')
 const { getWorkshopLayout, setWorkshopLayout } = require('./workshop-settings.cjs')
+const { recognizeDeliveryDocument, importDeliveryDocument, documentHash } = require('./delivery-document.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -396,7 +397,17 @@ ipcMain.handle('finance:analytics',()=>{
   const paid=db.prepare(`SELECT COALESCE(SUM(amount),0) value FROM payments WHERE strftime('%Y-%m',paid_at)=strftime('%Y-%m','now','localtime')`).get().value
   const receivables=db.prepare(`SELECT COALESCE(SUM(MAX(0,total-paid)),0) value FROM (SELECT ${ORDER_TOTAL_SQL} total,COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.order_id=o.id),0) paid FROM orders o WHERE strftime('%Y-%m',opened_at)=strftime('%Y-%m','now','localtime'))`).get().value
   const previousRevenue=db.prepare(`SELECT COALESCE(SUM(${ORDER_TOTAL_SQL}),0) value FROM orders o WHERE strftime('%Y-%m',opened_at)=strftime('%Y-%m','now','localtime','-1 month')`).get().value
-  return {current:{...current,paid:Number(paid||0),receivables:Number(receivables||0),previous_revenue:Number(previousRevenue||0),labor_revenue:Number(current.legacy_labor||0)+Number(itemLabor||0),parts_margin:Number(current.parts_sale||0)-Number(current.parts_cost||0),actual_hours:Number(actualMinutes||0)/60},daily,mix}
+  const details=db.prepare(`SELECT o.id,o.title,o.opened_at,v.plate,v.make,v.model,c.name customer,
+    ROUND(${ORDER_TOTAL_SQL},2) total,ROUND(${ORDER_COST_SQL},2) cost,
+    ROUND(COALESCE(o.parts_sale,0),2) parts_sale,ROUND(COALESCE(o.parts_cost,0),2) parts_cost,
+    ROUND(COALESCE(o.labor_hours,0)*COALESCE(o.labor_rate,0),2) legacy_labor,
+    ROUND(COALESCE((SELECT SUM(i.qty*i.unit_price) FROM order_items i WHERE i.order_id=o.id AND i.kind='ROBOCIZNA'),0),2) item_labor,
+    ROUND(COALESCE(o.other_sale,0),2) service_sale,ROUND(COALESCE(o.other_cost,0),2) service_cost,
+    ROUND(COALESCE(o.diagnosis_fee,0),2) diagnosis_sale,ROUND(COALESCE(o.discount,0),2) discount
+    FROM orders o JOIN vehicles v ON v.id=o.vehicle_id LEFT JOIN customers c ON c.id=v.customer_id
+    WHERE strftime('%Y-%m',o.opened_at)=strftime('%Y-%m','now','localtime') ORDER BY total DESC,o.opened_at DESC`).all()
+  const laborRevenue=Number(current.legacy_labor||0)+Number(itemLabor||0),servicesRevenue=details.reduce((sum,row)=>sum+Number(row.service_sale||0)+Number(row.diagnosis_sale||0),0)
+  return {current:{...current,paid:Number(paid||0),receivables:Number(receivables||0),previous_revenue:Number(previousRevenue||0),labor_revenue:laborRevenue,services_revenue:servicesRevenue,labor_services_revenue:laborRevenue+servicesRevenue,parts_margin:Number(current.parts_sale||0)-Number(current.parts_cost||0),actual_hours:Number(actualMinutes||0)/60},daily,mix,details}
 })
 ipcMain.handle('settings:getWorkshopLayout',()=>getWorkshopLayout(getDb()))
 ipcMain.handle('settings:setWorkshopLayout',(_e,value)=>setWorkshopLayout(getDb(),value))
@@ -640,7 +651,7 @@ ipcMain.handle('quotes:accept',(_,id)=>{
 ipcMain.handle('attachments:list',(_,orderId)=>getDb().prepare("SELECT id,order_id,name,file_path,mime,storage_path,size_bytes,sha256,category,cloud_id,updated_at,created_at FROM attachments WHERE order_id=? AND deleted_at IS NULL ORDER BY created_at DESC").all(orderId))
 ipcMain.handle('attachments:pick',async(_,{orderId,category='PRZYJECIE'}={})=>{const r=await dialog.showOpenDialog({properties:['openFile','multiSelections'],filters:[{name:'Zdjęcia i PDF',extensions:['jpg','jpeg','png','webp','heic','pdf']}]});if(r.canceled)return[];const db=getDb();const dir=path.join(app.getPath('userData'),'attachments',String(orderId));fs.mkdirSync(dir,{recursive:true});const out=[];for(const src of r.filePaths){const ext=path.extname(src).toLowerCase();const name=path.basename(src);const dst=path.join(dir,`${Date.now()}-${crypto.randomBytes(3).toString('hex')}${ext}`);fs.copyFileSync(src,dst);const buf=fs.readFileSync(dst);const mime=ext==='.pdf'?'application/pdf':`image/${ext.replace('.','').replace('jpg','jpeg')}`;const rr=db.prepare('INSERT INTO attachments(order_id,name,file_path,mime,size_bytes,sha256,category) VALUES (?,?,?,?,?,?,?)').run(orderId,name,dst,mime,buf.length,crypto.createHash('sha256').update(buf).digest('hex'),category);out.push({id:rr.lastInsertRowid,name,file_path:dst,category})}return out})
 ipcMain.handle('attachments:remove',(_,id)=>{const db=getDb();const a=db.prepare('SELECT * FROM attachments WHERE id=?').get(id);if(a){try{if(a.file_path)fs.unlinkSync(a.file_path)}catch{}db.prepare("UPDATE attachments SET file_path='',deleted_at=CURRENT_TIMESTAMP WHERE id=?").run(id)}return true})
-ipcMain.handle('attachments:open',(_,id)=>{const a=getDb().prepare('SELECT * FROM attachments WHERE id=?').get(id);if(a)shell.openPath(a.file_path);return true})
+ipcMain.handle('attachments:open',async(_,id)=>{const filePath=await cloudSync.ensureAttachmentLocal(id);const result=await shell.openPath(filePath);if(result)throw new Error(result);return true})
 
 let protocolLogoCache
 function protocolLogoDataUri(){
@@ -765,6 +776,38 @@ ipcMain.handle('inventory:remove',(_,id)=>deleteInventoryPart(getDb(),id))
 ipcMain.handle('inventory:adjust',(_,{id,delta})=>{getDb().prepare('UPDATE inventory_parts SET stock=MAX(0,stock+?),updated_at=CURRENT_TIMESTAMP WHERE id=?').run(+delta||0,id);return true})
 ipcMain.handle('inventory:issue',(_,{inventoryPartId,orderId,qty,oeNumber})=>issueInventoryPart(getDb(),{inventoryPartId,orderId,qty,oeNumber}))
 ipcMain.handle('inventory:low',()=>getDb().prepare(`SELECT p.*,s.name supplier FROM inventory_parts p LEFT JOIN suppliers s ON s.id=p.supplier_id WHERE p.stock<=p.min_stock ORDER BY (p.min_stock-p.stock) DESC,p.name`).all())
+ipcMain.handle('inventory:scanDeliveryDocument',async event=>{
+  const result=await dialog.showOpenDialog({title:'Skanuj dokument dostawy',properties:['openFile'],filters:[{name:'Zdjęcia dokumentów',extensions:['jpg','jpeg','png','webp','bmp','tif','tiff']}]})
+  if(result.canceled||!result.filePaths[0])return{canceled:true}
+  const sourceFile=result.filePaths[0],sourceHash=documentHash(sourceFile)
+  let duplicate=getDb().prepare(`SELECT po.id,po.external_document_no,po.created_at,s.name supplier FROM purchase_orders po LEFT JOIN suppliers s ON s.id=po.supplier_id WHERE po.source_hash=?`).get(sourceHash)||null
+  event.sender.send('inventory:deliveryDocumentProgress',{status:'Rozpoznawanie dokumentu',progress:0,file_name:path.basename(sourceFile)})
+  try{
+    const size=nativeImage.createFromPath(sourceFile).getSize()
+    const tableRectangle=size.width>0&&size.height>0?{left:Math.round(size.width*.013),top:Math.round(size.height*.20),width:Math.round(size.width*.958),height:Math.round(size.height*.43)}:null
+    const document=await recognizeDeliveryDocument(sourceFile,{cachePath:path.join(app.getPath('userData'),'ocr-cache'),tableRectangle,onProgress:message=>{
+      if(!event.sender.isDestroyed())event.sender.send('inventory:deliveryDocumentProgress',{...message,file_name:path.basename(sourceFile)})
+    }})
+    if(!duplicate&&String(document.document_no||'').trim())duplicate=getDb().prepare(`SELECT po.id,po.external_document_no,po.created_at,s.name supplier FROM purchase_orders po LEFT JOIN suppliers s ON s.id=po.supplier_id WHERE trim(po.external_document_no)=? COLLATE NOCASE AND trim(COALESCE(s.name,''))=? COLLATE NOCASE`).get(String(document.document_no).trim(),String(document.supplier_name||'').trim())||null
+    return{canceled:false,source_file:sourceFile,source_hash:sourceHash,file_name:path.basename(sourceFile),duplicate,document}
+  }finally{
+    if(!event.sender.isDestroyed())event.sender.send('inventory:deliveryDocumentProgress',{status:'Gotowe',progress:1,file_name:path.basename(sourceFile)})
+  }
+})
+ipcMain.handle('inventory:importDeliveryDocument',(_event,payload)=>{
+  const source=String(payload?.source_file||''),hash=String(payload?.source_hash||'')
+  if(!source||!fs.existsSync(source))throw new Error('Nie znaleziono wybranego skanu dokumentu.')
+  const date=String(payload?.document?.document_date||new Date().toISOString().slice(0,10)),year=(date.match(/^\d{4}/)||[new Date().getFullYear()])[0]
+  const dir=path.join(app.getPath('userData'),'delivery-documents',String(year));fs.mkdirSync(dir,{recursive:true})
+  const number=String(payload?.document?.document_no||'dostawa').replace(/[^a-z0-9ąćęłńóśźż.-]+/gi,'-').replace(/^-+|-+$/g,'').slice(0,70)||'dostawa'
+  const ext=path.extname(source).toLowerCase()||'.jpg',archived=path.join(dir,`${date}-${number}-${hash.slice(0,10)}${ext}`)
+  let copied=false
+  try{
+    if(!fs.existsSync(archived)){fs.copyFileSync(source,archived);copied=true}
+    const result=importDeliveryDocument(getDb(),{...payload,source_file:archived},{markup:partMarkup})
+    return{...result,archive_file:archived}
+  }catch(error){if(copied)try{fs.unlinkSync(archived)}catch{};throw error}
+})
 
 ipcMain.handle('purchases:list',()=>getDb().prepare(`SELECT po.*,s.name supplier,COUNT(i.id) item_count,COALESCE(SUM(i.qty*i.unit_cost),0) total FROM purchase_orders po LEFT JOIN suppliers s ON s.id=po.supplier_id LEFT JOIN purchase_order_items i ON i.purchase_order_id=po.id GROUP BY po.id ORDER BY po.created_at DESC`).all())
 ipcMain.handle('purchases:create',(_,d)=>{const r=getDb().prepare('INSERT INTO purchase_orders(supplier_id,status,ordered_at,expected_at,notes) VALUES (?,?,?,?,?)').run(d.supplier_id||null,d.status||'ROBOCZE',d.ordered_at||null,d.expected_at||null,d.notes||'');return{id:r.lastInsertRowid}})
