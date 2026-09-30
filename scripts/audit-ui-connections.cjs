@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, '..')
 const sourceDir = path.join(root, 'src')
 const errors = []
 const buttonEvents = new Set(['onClick', 'onDoubleClick', 'onMouseDown', 'onPointerDown', 'onDragStart'])
+const nonNativeInteractive = new Set(['div', 'span', 'li', 'tr', 'article'])
 
 function parse(file, sourceType = 'module') {
   return parser.parse(fs.readFileSync(file, 'utf8'), { sourceType, plugins: ['jsx'] })
@@ -41,9 +42,17 @@ for (const file of rendererFiles()) {
   const ast = parse(file)
   traverse(ast, {
     JSXOpeningElement(p) {
-      if (p.node.name.type !== 'JSXIdentifier' || p.node.name.name !== 'button') return
-      buttonCount++
+      if (p.node.name.type !== 'JSXIdentifier') return
+      const tag = p.node.name.name
       const attrs = p.node.attributes.filter(x => x.type === 'JSXAttribute')
+      if (nonNativeInteractive.has(tag) && attrs.some(x => x.name.name === 'onClick') && !attrs.some(x => x.name.name === 'data-pointer-surface')) {
+        const hasRole = attrs.some(x => x.name.name === 'role')
+        const hasTabIndex = attrs.some(x => x.name.name === 'tabIndex')
+        const hasKeyboard = attrs.some(x => ['onKeyDown', 'onKeyUp', 'onKeyPress'].includes(x.name.name))
+        if (!hasRole || !hasTabIndex || !hasKeyboard) errors.push(`${path.relative(root, file)}:${p.node.loc.start.line} — klikalny <${tag}> nie ma pełnej obsługi klawiatury`)
+      }
+      if (tag !== 'button') return
+      buttonCount++
       const hasEvent = attrs.some(x => buttonEvents.has(x.name.name))
       const isSubmit = attrs.some(x => x.name.name === 'type' && x.value?.type === 'StringLiteral' && x.value.value === 'submit')
       if (!hasEvent && !isSubmit) errors.push(`${path.relative(root, file)}:${p.node.loc.start.line} — przycisk nie ma akcji`)
