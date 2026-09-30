@@ -45,7 +45,7 @@ test('ręczne dodanie pozycji waliduje dane, przelicza zlecenie i zapisuje histo
  assert.equal(db.prepare('SELECT other_cost FROM orders WHERE id=3').get().other_cost,100)
  assert.equal(db.prepare('SELECT other_sale FROM orders WHERE id=3').get().other_sale,180)
  assert.equal(db.prepare("SELECT COUNT(*) count FROM order_events WHERE event_type='ORDER_ITEM_ADDED'").get().count,1)
- assert.throws(()=>createOrderItem(db,3,{kind:'CZESC',name:'Błędna część',qty:-1,unit_cost:1,unit_price:1}),/większe od zera/)
+ assert.throws(()=>createOrderItem(db,3,{kind:'CZESC',name:'Błędna część',qty:-1,unit_cost:1,unit_price:1}),/liczbą całkowitą/)
 })
 
 test('zamknięte zlecenie chroni dodawanie, opisy i usuwanie pozycji oraz stan magazynu',()=>{
@@ -65,12 +65,20 @@ test('brak stanu cofa całą operację',()=>{
  assert.equal(db.prepare('SELECT COUNT(*) count FROM order_items').get().count,0)
 })
 
-test('usunięcie pozycji magazynowej zwraca ilość na stan i przelicza zlecenie',()=>{
+test('ilość części musi być wyrażona w pełnych sztukach',()=>{
  const db=database()
- const issued=issueInventoryPart(db,{inventoryPartId:7,orderId:3,qty:1.5})
+ assert.throws(()=>issueInventoryPart(db,{inventoryPartId:7,orderId:3,qty:1.97}),/liczbą całkowitą/)
+ assert.throws(()=>createOrderItem(db,3,{kind:'CZESC',name:'Część',qty:1.5,unit_cost:10,unit_price:20}),/liczbą całkowitą/)
+ const material=createOrderItem(db,3,{kind:'MATERIAL',name:'Olej',qty:1.5,unit_cost:10,unit_price:20})
+ assert.equal(db.prepare('SELECT qty FROM order_items WHERE id=?').get(material.id).qty,1.5)
+})
+
+test('usunięcie pozycji magazynowej zwraca pełną ilość na stan i przelicza zlecenie',()=>{
+ const db=database()
+ const issued=issueInventoryPart(db,{inventoryPartId:7,orderId:3,qty:2})
  const result=removeOrderItem(db,issued.id)
  assert.equal(result.removed,true)
- assert.equal(result.restored,1.5)
+ assert.equal(result.restored,2)
  assert.equal(db.prepare('SELECT stock FROM inventory_parts WHERE id=7').get().stock,4)
  assert.equal(db.prepare('SELECT COUNT(*) count FROM order_items').get().count,0)
  const order=db.prepare('SELECT parts_cost,parts_sale FROM orders WHERE id=3').get()

@@ -6,7 +6,7 @@ const { seedTechnicalReference } = require('./technical-seed.cjs')
 const { migrateLegacyServiceReminders } = require('./service-reminders.cjs')
 
 let db
-const SCHEMA_VERSION = 15
+const SCHEMA_VERSION = 16
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -140,7 +140,33 @@ function migrate(db,currentVersion=0) {
   }
   if(currentVersion<15){
     db.transaction(()=>{migrateSchemaV15(db);db.pragma('user_version = 15')})()
+    currentVersion=15
   }
+  if(currentVersion<16){
+    db.transaction(()=>{migrateSchemaV16(db);db.pragma('user_version = 16')})()
+  }
+}
+
+function migrateSchemaV16(db){
+  const exists=table=>Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table))
+  if(exists('inventory_parts'))db.exec(`UPDATE inventory_parts SET stock=MAX(0,ROUND(COALESCE(stock,0))),min_stock=MAX(0,ROUND(COALESCE(min_stock,0))) WHERE stock<0 OR min_stock<0 OR ABS(stock-ROUND(stock))>0.000001 OR ABS(min_stock-ROUND(min_stock))>0.000001`)
+  if(exists('job_part_orders'))db.exec(`UPDATE job_part_orders SET qty=MAX(1,ROUND(COALESCE(qty,1))) WHERE qty<=0 OR ABS(qty-ROUND(qty))>0.000001`)
+  if(exists('purchase_order_items'))db.exec(`UPDATE purchase_order_items SET qty=MAX(1,ROUND(COALESCE(qty,1))),received_qty=MAX(0,ROUND(COALESCE(received_qty,0))) WHERE qty<=0 OR received_qty<0 OR ABS(qty-ROUND(qty))>0.000001 OR ABS(received_qty-ROUND(received_qty))>0.000001`)
+  if(exists('order_items')){
+    const columns=new Set(db.prepare('PRAGMA table_info(order_items)').all().map(row=>row.name))
+    const price=columns.has('price_snapshot')?',price_snapshot=ROUND(MAX(1,ROUND(COALESCE(qty,1)))*COALESCE(unit_price,0),2)':''
+    db.exec(`UPDATE order_items SET qty=MAX(1,ROUND(COALESCE(qty,1)))${price} WHERE kind='CZESC' AND (qty<=0 OR ABS(qty-ROUND(qty))>0.000001)`)
+  }
+  if(exists('quote_items')){
+    const columns=new Set(db.prepare('PRAGMA table_info(quote_items)').all().map(row=>row.name))
+    const price=columns.has('price_snapshot')?',price_snapshot=ROUND(MAX(1,ROUND(COALESCE(qty,1)))*COALESCE(unit_price,0),2)':''
+    db.exec(`UPDATE quote_items SET qty=MAX(1,ROUND(COALESCE(qty,1)))${price} WHERE kind='CZESC' AND (qty<=0 OR ABS(qty-ROUND(qty))>0.000001)`)
+  }
+  if(exists('orders')&&exists('order_items'))db.exec(`UPDATE orders SET
+    parts_cost=COALESCE((SELECT SUM(qty*unit_cost) FROM order_items WHERE order_id=orders.id AND kind='CZESC'),0),
+    parts_sale=COALESCE((SELECT SUM(qty*unit_price) FROM order_items WHERE order_id=orders.id AND kind='CZESC'),0),
+    other_cost=COALESCE((SELECT SUM(qty*unit_cost) FROM order_items WHERE order_id=orders.id AND kind!='CZESC'),0),
+    other_sale=COALESCE((SELECT SUM(qty*unit_price) FROM order_items WHERE order_id=orders.id AND kind!='CZESC'),0)`)
 }
 
 function migrateSchemaV15(db){
@@ -817,4 +843,4 @@ function seed(db) {
     .run(o.lastInsertRowid,v.lastInsertRowid,'Diagnostyka braku mocy',start.toISOString(),end.toISOString(),'Stanowisko 1','PLAN')
 }
 
-module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10, migrateSchemaV12, migrateSchemaV13, migrateSchemaV14, migrateSchemaV15 }
+module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10, migrateSchemaV12, migrateSchemaV13, migrateSchemaV14, migrateSchemaV15, migrateSchemaV16 }

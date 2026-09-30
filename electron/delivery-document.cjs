@@ -1,5 +1,6 @@
 const fs=require('fs')
 const path=require('path')
+const {wholePartQuantity}=require('./part-quantity.cjs')
 const crypto=require('crypto')
 
 const textKey=value=>String(value||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ł/g,'l').replace(/[^a-z0-9]/gi,'').toUpperCase()
@@ -162,7 +163,7 @@ function importDeliveryDocument(db,payload,{markup=defaultMarkup}={}){
     const partNo=String(item.part_no||'').trim(),name=String(item.name||'').trim(),qty=Number(item.qty),unitCost=Number(item.unit_cost),grossTotal=Number(item.gross_total||0)
     if(!partNo)throw new Error(`Pozycja ${index+1}: uzupełnij numer katalogowy.`)
     if(!name)throw new Error(`Pozycja ${index+1}: uzupełnij nazwę części.`)
-    if(!Number.isFinite(qty)||qty<=0)throw new Error(`Pozycja ${index+1}: ilość musi być większa od zera.`)
+    wholePartQuantity(qty,{label:`Pozycja ${index+1}: ilość części`})
     if(!Number.isFinite(unitCost)||unitCost<0)throw new Error(`Pozycja ${index+1}: cena zakupu jest niepoprawna.`)
     return{...item,part_no:partNo,name,qty,unit_cost:roundMoney(unitCost),gross_total:roundMoney(grossTotal)}
   })

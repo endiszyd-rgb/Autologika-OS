@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {migrateSchemaV9,migrateSchemaV10,migrateSchemaV12,migrateSchemaV13,migrateSchemaV14,migrateSchemaV15}=require('../electron/db.cjs')
+const {migrateSchemaV9,migrateSchemaV10,migrateSchemaV12,migrateSchemaV13,migrateSchemaV14,migrateSchemaV15,migrateSchemaV16}=require('../electron/db.cjs')
 
 test('schema v9 preserves ordered parts and adds scanned catalog fields',()=>{
  const db=new DatabaseSync(':memory:')
@@ -85,5 +85,32 @@ test('schema v15 adds delivery document identity to purchase orders',()=>{
  for(const column of ['external_document_no','document_date','source_file','source_hash','gross_total'])assert.ok(columns.includes(column),column)
  db.prepare("UPDATE purchase_orders SET source_hash='hash-1' WHERE id=1").run()
  assert.throws(()=>db.exec("INSERT INTO purchase_orders(id,status,source_hash) VALUES(2,'ODEBRANE','hash-1')"),/UNIQUE/)
+ db.close()
+})
+
+test('schema v16 converts fractional part counts into whole pieces and recalculates totals',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`
+  CREATE TABLE inventory_parts(id INTEGER PRIMARY KEY,stock REAL,min_stock REAL);
+  CREATE TABLE orders(id INTEGER PRIMARY KEY,parts_cost REAL,parts_sale REAL,other_cost REAL,other_sale REAL);
+  CREATE TABLE order_items(id INTEGER PRIMARY KEY,order_id INTEGER,kind TEXT,qty REAL,unit_cost REAL,unit_price REAL,price_snapshot REAL);
+  CREATE TABLE job_part_orders(id INTEGER PRIMARY KEY,qty REAL);
+  CREATE TABLE purchase_order_items(id INTEGER PRIMARY KEY,qty REAL,received_qty REAL);
+  CREATE TABLE quote_items(id INTEGER PRIMARY KEY,kind TEXT,qty REAL,unit_price REAL,price_snapshot REAL);
+  INSERT INTO inventory_parts VALUES(1,1.97,0.6);
+  INSERT INTO orders VALUES(3,0,0,0,0);
+  INSERT INTO order_items VALUES(4,3,'CZESC',1.97,20,35,68.95),(5,3,'MATERIAL',0.5,10,18,9);
+  INSERT INTO job_part_orders VALUES(6,2.4);
+  INSERT INTO purchase_order_items VALUES(7,3.1,2.8);
+  INSERT INTO quote_items VALUES(8,'CZESC',1.97,35,68.95);
+ `)
+ migrateSchemaV16(db);migrateSchemaV16(db)
+ assert.deepEqual({...db.prepare('SELECT stock,min_stock FROM inventory_parts WHERE id=1').get()},{stock:2,min_stock:1})
+ assert.equal(db.prepare('SELECT qty FROM order_items WHERE id=4').get().qty,2)
+ assert.equal(db.prepare('SELECT qty FROM order_items WHERE id=5').get().qty,0.5)
+ assert.deepEqual({...db.prepare('SELECT parts_cost,parts_sale,other_cost,other_sale FROM orders WHERE id=3').get()},{parts_cost:40,parts_sale:70,other_cost:5,other_sale:9})
+ assert.equal(db.prepare('SELECT qty FROM job_part_orders WHERE id=6').get().qty,2)
+ assert.deepEqual({...db.prepare('SELECT qty,received_qty FROM purchase_order_items WHERE id=7').get()},{qty:3,received_qty:3})
+ assert.deepEqual({...db.prepare('SELECT qty,price_snapshot FROM quote_items WHERE id=8').get()},{qty:2,price_snapshot:70})
  db.close()
 })

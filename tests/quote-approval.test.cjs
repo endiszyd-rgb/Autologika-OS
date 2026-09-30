@@ -5,6 +5,7 @@ const fs = require('node:fs')
 const vm = require('node:vm')
 const { findQuoteApproval, assertQuoteEditable, replaceQuoteWithOrderSnapshot, materializeApprovedQuote } = require('../electron/quote-approval.cjs')
 const { requireEditableOrder } = require('../electron/inventory-usage.cjs')
+const { wholePartQuantity } = require('../electron/part-quantity.cjs')
 
 function setup(t) {
   const db = new DatabaseSync(':memory:')
@@ -23,7 +24,7 @@ function setup(t) {
   const source = fs.readFileSync(require.resolve('../electron/main.cjs'), 'utf8')
   vm.runInNewContext(source.slice(source.indexOf("ipcMain.handle('quotes:get'"), source.indexOf("ipcMain.handle('attachments:list'")), {
     ipcMain: { handle: (name, callback) => { handlers[name] = callback } },
-    getDb: () => db, findQuoteApproval, assertQuoteEditable, replaceQuoteWithOrderSnapshot, materializeApprovedQuote, requireEditableOrder, partMarkup: () => 0.2, normalizeBarcode:value=>String(value||''), syncOrderItemTotals: () => {},
+    getDb: () => db, findQuoteApproval, assertQuoteEditable, replaceQuoteWithOrderSnapshot, materializeApprovedQuote, requireEditableOrder, wholePartQuantity, partMarkup: () => 0.2, normalizeBarcode:value=>String(value||''), syncOrderItemTotals: () => {},
   })
   return { db, call: (name, arg) => handlers[`quotes:${name}`](null, arg) }
 }
@@ -64,6 +65,11 @@ test('accepting quote 1 cannot use approval for quote 10', t => {
   const { db, call } = setup(t)
   db.exec("INSERT INTO approvals(order_id,scope,status) VALUES (1,'Wycena #10 · Filtr','APPROVED')")
   assert.equal(call('accept', 1).reason, 'APPROVAL_REQUIRED')
+})
+
+test('draft quote accepts parts only in whole pieces', t => {
+  const { call } = setup(t)
+  assert.throws(() => call('addItem', { orderId:1, data:{ kind:'CZESC', name:'Filtr', qty:1.97, unit_price:50 } }), /liczbą całkowitą/)
 })
 
 test('draft item can be edited and its totals and part identity are recalculated', t => {

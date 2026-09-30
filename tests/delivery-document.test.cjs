@@ -64,3 +64,18 @@ test('imports new rows, increments an existing part and blocks a duplicate docum
  assert.throws(()=>importDeliveryDocument(db,{...payload,source_hash:'different-photo'}),/tego dostawcy został już przyjęty/)
  db.close()
 })
+
+test('delivery import rejects fractional quantities of parts',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`
+  CREATE TABLE suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,notes TEXT);
+  CREATE TABLE purchase_orders(id INTEGER PRIMARY KEY AUTOINCREMENT,supplier_id INTEGER,status TEXT,ordered_at TEXT,notes TEXT,external_document_no TEXT,document_date TEXT,source_file TEXT,source_hash TEXT,gross_total REAL);
+  CREATE TABLE purchase_order_items(id INTEGER PRIMARY KEY AUTOINCREMENT,purchase_order_id INTEGER,inventory_part_id INTEGER,part_no TEXT,name TEXT,qty REAL,unit_cost REAL,received_qty REAL);
+  CREATE TABLE inventory_parts(id INTEGER PRIMARY KEY AUTOINCREMENT,part_no TEXT,name TEXT,category TEXT,lookup_source TEXT,stock REAL,min_stock REAL,unit_cost REAL,sell_price REAL,supplier_id INTEGER,notes TEXT,updated_at TEXT);
+ `)
+ db.transaction=fn=>()=>fn()
+ const document=parseDeliveryDocument(sample)
+ document.items[0].qty=1.97
+ assert.throws(()=>importDeliveryDocument(db,{source_hash:'fractional',source_file:'C:/scan.jpg',document}),/liczbą całkowitą/)
+ db.close()
+})

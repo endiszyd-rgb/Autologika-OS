@@ -6,6 +6,13 @@ function money(value){
   return `${Number(value||0).toLocaleString('pl-PL',{minimumFractionDigits:2,maximumFractionDigits:2})} zł`
 }
 
+function itemQuantity(item){
+  const quantity=Number(item.qty||0)
+  return item.kind==='CZESC'
+    ? `${Math.round(quantity).toLocaleString('pl-PL')} szt.`
+    : quantity.toLocaleString('pl-PL',{maximumFractionDigits:2})
+}
+
 function dateTime(value=new Date()){
   const date=value instanceof Date?value:new Date(value)
   return Number.isNaN(date.getTime())?'—':date.toLocaleString('pl-PL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
@@ -41,7 +48,7 @@ function documentHtml(order,items=[],diagnosis={},notes={},type='order',signatur
   const workTotal=works.reduce((sum,item)=>sum+Number(item.price_snapshot??(Number(item.qty||item.labor_hours||0)*Number(item.unit_price||item.labor_rate||0))),0)
   const diagnosisTotal=Number(order.diagnosis_fee||0),discount=Number(order.discount||0),grandTotal=Number(order.total||0)
   const workCards=works.length?works.map((item,index)=>`<article class="workCard"><div class="workIndex">${String(index+1).padStart(2,'0')}</div><div class="workBody"><div class="workTitle"><h3>${esc(item.work_name||item.name)}</h3><strong>${money(item.price_snapshot??(Number(item.qty||0)*Number(item.unit_price||0)))}</strong></div>${item.variant_name?`<span class="variant">${esc(item.variant_name)}</span>`:''}<p>${esc(item.customer_description||item.notes||'Zakres pracy zgodny ze zleceniem.')}</p><footer><span>Czas rozliczeniowy</span><b>${Number(item.hours_snapshot??item.qty??0).toFixed(1)} h</b></footer></div></article>`).join(''):`<div class="emptyState">Brak zapisanych pozycji robocizny.</div>`
-  const itemTable=saleItems.length?`<table><thead><tr><th>Pozycja / numer</th><th>Rodzaj</th><th class="num">Ilość</th><th class="num">Cena jedn.</th><th class="num">Wartość</th></tr></thead><tbody>${saleItems.map(item=>`<tr><td><b>${esc(item.name)}</b><small>${esc(item.part_no||item.supplier||'')}</small></td><td><span class="typeTag">${esc(item.kind)}</span></td><td class="num">${Number(item.qty||0).toFixed(1)}</td><td class="num">${money(item.unit_price)}</td><td class="num totalCell">${money(Number(item.qty||0)*Number(item.unit_price||0))}</td></tr>`).join('')}</tbody></table>`:`<div class="emptyState">Brak części, materiałów i usług dodatkowych.</div>`
+  const itemTable=saleItems.length?`<table><thead><tr><th>Pozycja / numer</th><th>Rodzaj</th><th class="num">Ilość</th><th class="num">Cena jedn.</th><th class="num">Wartość</th></tr></thead><tbody>${saleItems.map(item=>`<tr><td><b>${esc(item.name)}</b><small>${esc(item.part_no||item.supplier||'')}</small></td><td><span class="typeTag">${esc(item.kind)}</span></td><td class="num">${itemQuantity(item)}</td><td class="num">${money(item.unit_price)}</td><td class="num totalCell">${money(Number(item.qty||0)*Number(item.unit_price||0))}</td></tr>`).join('')}</tbody></table>`:`<div class="emptyState">Brak części, materiałów i usług dodatkowych.</div>`
   const qcDone=qcRows.filter(row=>row.checked).length
   const qcContent=qcRows.length?`<div class="qcHeader"><div><b>${qcDone}/${qcRows.length}</b><span>potwierdzonych punktów</span></div><div class="qcBar"><i style="width:${Math.round(qcDone/qcRows.length*100)}%"></i></div></div><div class="qcGrid">${qcRows.map(row=>`<div class="qcItem ${row.checked?'checked':'pending'}"><b>${row.checked?'✓':'○'}</b><span>${esc(row.label)}</span><em>${row.checked?'POTWIERDZONO':'NIEPOTWIERDZONE'}</em></div>`).join('')}</div>`:`<div class="emptyState">Brak zapisanej listy kontroli jakości.</div>`
   const financial=`<div class="financial"><div><span>Robocizna</span><b>${money(workTotal||Number(order.labor_hours||0)*Number(order.labor_rate||0))}</b></div><div><span>Diagnostyka</span><b>${money(diagnosisTotal)}</b></div><div><span>Rabat</span><b>− ${money(discount)}</b></div><div class="grand"><span>Wartość dokumentu</span><b>${money(grandTotal)}</b></div></div>`

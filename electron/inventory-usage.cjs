@@ -1,3 +1,5 @@
+const {wholePartQuantity}=require('./part-quantity.cjs')
+
 function number(value){
   const parsed=Number(value)
   return Number.isFinite(parsed)?parsed:0
@@ -35,11 +37,10 @@ function syncOrderTotals(db,orderId){
 }
 
 function issueInventoryPart(db,{inventoryPartId,orderId,qty,oeNumber=''}){
-  const partId=Number(inventoryPartId),targetOrderId=Number(orderId),amount=number(qty)
+  const partId=Number(inventoryPartId),targetOrderId=Number(orderId),amount=wholePartQuantity(qty)
   const oe=String(oeNumber||'').trim()
   if(!Number.isInteger(partId)||partId<=0)throw new Error('Nie wybrano części z magazynu.')
   if(!Number.isInteger(targetOrderId)||targetOrderId<=0)throw new Error('Nie wybrano zlecenia.')
-  if(amount<=0)throw new Error('Ilość wydawanej części musi być większa od zera.')
 
   return db.transaction(()=>{
     const part=db.prepare(`SELECT p.*,s.name supplier FROM inventory_parts p LEFT JOIN suppliers s ON s.id=p.supplier_id WHERE p.id=?`).get(partId)
@@ -90,9 +91,8 @@ function removeOrderItem(db,id){
 }
 
 function updateOrderItem(db,id,input={}){
-  const itemId=Number(id),qty=number(input.qty),unitCost=number(input.unit_cost),unitPrice=number(input.unit_price)
+  const itemId=Number(id),rawQty=number(input.qty),unitCost=number(input.unit_cost),unitPrice=number(input.unit_price)
   if(!Number.isInteger(itemId)||itemId<=0)throw new Error('Nie wybrano pozycji zlecenia.')
-  if(qty<=0)throw new Error('Ilość lub czas muszą być większe od zera.')
   if(unitCost<0||unitPrice<0)throw new Error('Cena nie może być ujemna.')
   const name=String(input.name||'').trim()
   if(!name)throw new Error('Nazwa pozycji jest wymagana.')
@@ -102,6 +102,8 @@ function updateOrderItem(db,id,input={}){
     if(!row)throw new Error('Pozycja zlecenia już nie istnieje.')
     requireEditableOrder(db,row.order_id)
 
+    const qty=row.kind==='CZESC'?wholePartQuantity(input.qty):rawQty
+    if(qty<=0)throw new Error('Ilość lub czas muszą być większe od zera.')
     if(row.inventory_part_id){
       const delta=qty-number(row.qty)
       if(delta>0){
@@ -129,12 +131,13 @@ function updateOrderItem(db,id,input={}){
 
 function createOrderItem(db,orderId,input={}){
   const targetOrderId=Number(orderId),name=String(input.name||'').trim()
-  const qty=number(input.qty),unitCost=number(input.unit_cost),unitPrice=number(input.unit_price)
+  const rawQty=number(input.qty),unitCost=number(input.unit_cost),unitPrice=number(input.unit_price)
   if(!name)throw new Error('Nazwa pozycji jest wymagana.')
-  if(qty<=0)throw new Error('Ilość lub czas muszą być większe od zera.')
   if(unitCost<0||unitPrice<0)throw new Error('Cena nie może być ujemna.')
   const kind=String(input.kind||'CZESC').trim().toUpperCase()
   if(!['CZESC','MATERIAL','USLUGA_ZEW','ROBOCIZNA'].includes(kind))throw new Error('Nieprawidłowy typ pozycji zlecenia.')
+  const qty=kind==='CZESC'?wholePartQuantity(input.qty):rawQty
+  if(qty<=0)throw new Error('Ilość lub czas muszą być większe od zera.')
   return db.transaction(()=>{
     requireEditableOrder(db,targetOrderId)
     const description=String(input.customer_description??input.notes??'').trim()
