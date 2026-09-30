@@ -55,6 +55,26 @@ body{
     transform .16s var(--interaction-ease);
 }
 
+.navSection button>span,
+.navSection button>span svg,
+.primary svg,
+.studioTextButton svg{
+  transition:color .16s ease,transform .18s var(--interaction-ease);
+}
+
+.navSection button:not(.active):hover>span{
+  transform:translateX(2px) scale(1.04);
+}
+
+.navSection button.active>span{
+  color:var(--interaction-accent);
+  transform:scale(1.04);
+}
+
+button.primary:not(:disabled):hover{
+  box-shadow:0 9px 26px rgba(176,226,108,.2);
+}
+
 :where(button,[role="button"]):not(:disabled):not([aria-disabled="true"]){cursor:pointer}
 :where(button,[role="button"]):not(:disabled):not([aria-disabled="true"]):active{
   transform:translateY(0) scale(.985);
@@ -124,6 +144,65 @@ select{
 
 select:disabled{cursor:not-allowed}
 textarea{resize:vertical}
+
+.appLoadingState{
+  position:relative;
+  min-height:210px;
+  display:grid;
+  place-content:center;
+  justify-items:center;
+  gap:16px;
+  overflow:hidden;
+  padding:34px;
+  border:1px solid var(--line,#26382e);
+  border-radius:18px;
+  background:linear-gradient(145deg,#111914 0%,#0b110e 100%);
+  color:var(--text,#f3f6f2);
+}
+
+.appLoadingState.compact{min-height:130px;padding:24px}
+.appLoadingMark{display:flex;align-items:flex-end;gap:5px;height:28px}
+.appLoadingMark i{display:block;width:5px;height:12px;border-radius:5px;background:var(--accent,#b8f46b);animation:loadingPulse .9s ease-in-out infinite}
+.appLoadingMark i:nth-child(2){height:24px;animation-delay:.12s}
+.appLoadingMark i:nth-child(3){height:17px;animation-delay:.24s}
+.appLoadingCopy{display:grid;justify-items:center;gap:4px;text-align:center}
+.appLoadingCopy b{font-size:15px;letter-spacing:.01em}
+.appLoadingCopy span{font-size:12px;color:var(--muted,#8f9b94)}
+.appLoadingSkeleton{width:min(360px,64vw);display:grid;gap:7px;margin-top:3px}
+.appLoadingSkeleton i{height:6px;border-radius:999px;background:linear-gradient(90deg,#233029 20%,#3a4d40 45%,#233029 70%);background-size:220% 100%;animation:loadingShimmer 1.35s linear infinite}
+.appLoadingSkeleton i:nth-child(2){width:82%}.appLoadingSkeleton i:nth-child(3){width:58%}
+
+@keyframes loadingPulse{0%,100%{opacity:.38;transform:scaleY(.72)}50%{opacity:1;transform:scaleY(1)}}
+@keyframes loadingShimmer{to{background-position:-220% 0}}
+
+.appFeedbackToast{
+  position:fixed;
+  z-index:140;
+  top:18px;
+  right:20px;
+  width:min(410px,calc(100vw - 32px));
+  display:grid;
+  grid-template-columns:38px minmax(0,1fr) 32px;
+  align-items:center;
+  gap:11px;
+  padding:12px;
+  border:1px solid #49663c;
+  border-radius:14px;
+  background:#101a13f2;
+  box-shadow:0 18px 55px #000b;
+  animation:feedbackToastIn .24s var(--interaction-ease) both;
+}
+.appFeedbackToast>span{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#b8f46b1c;color:#b8f46b;font-size:20px;font-weight:900}
+.appFeedbackToast>div{min-width:0;display:grid;gap:3px}.appFeedbackToast b{font-size:13px}.appFeedbackToast small{color:#a8b4ac;line-height:1.35;overflow-wrap:anywhere}
+.appFeedbackToast>button{width:32px;height:32px;padding:0;border-color:transparent;background:transparent;font-size:18px}
+.appFeedbackToast.warning{border-color:#7f6732;background:#201b10f2}.appFeedbackToast.warning>span{background:#e8bc5118;color:#e8bc51}
+.appFeedbackToast.error{border-color:#83463f;background:#251412f2}.appFeedbackToast.error>span{background:#ef756618;color:#ff8b7e}
+@keyframes feedbackToastIn{from{opacity:0;transform:translateY(-10px) scale(.98)}to{opacity:1;transform:none}}
+@media(max-width:600px){.appFeedbackToast{top:10px;right:10px;width:calc(100vw - 20px)}}
+
+.statusBadge{--status-color:#a8b1ac;display:inline-flex;align-items:center;gap:7px;width:max-content;padding:6px 9px;border:1px solid color-mix(in srgb,var(--status-color) 34%,transparent);border-radius:999px;background:color-mix(in srgb,var(--status-color) 10%,transparent);color:var(--status-color);font-size:10px;font-weight:850;letter-spacing:.055em;text-transform:uppercase;white-space:nowrap}
+.statusBadge i{width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px color-mix(in srgb,var(--status-color) 15%,transparent)}
+.statusBadge.info{--status-color:#78c8ee}.statusBadge.warning{--status-color:#e7bd59}.statusBadge.violet{--status-color:#be9bea}.statusBadge.active{--status-color:#ee966a}.statusBadge.success{--status-color:#aeea72}.statusBadge.danger{--status-color:#ff8b7e}.statusBadge.neutral{--status-color:#9da8a2}
 
 :where(.panel,.metric,.workspaceCard,.case,.kanCol,.centerPart,.orderrow,.attentionItem){
   transition:

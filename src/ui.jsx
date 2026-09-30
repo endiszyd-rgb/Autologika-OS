@@ -31,3 +31,17 @@ const paths = {
 export function Icon({name,size=18,...props}) {
  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}><path d={paths[name]||paths.center}/></svg>
 }
+
+export function LoadingState({label='Wczytuję dane',detail='To potrwa tylko chwilę.',compact=false}){
+ return <div className={'appLoadingState'+(compact?' compact':'')} role="status" aria-live="polite" aria-busy="true">
+  <div className="appLoadingMark" aria-hidden="true"><i/><i/><i/></div>
+  <div className="appLoadingCopy"><b>{label}</b><span>{detail}</span></div>
+  <div className="appLoadingSkeleton" aria-hidden="true"><i/><i/><i/></div>
+ </div>
+}
+
+const statusTones={PRZYJETE:'info',PLAN:'info',DIAGNOZA:'warning',AKCEPTACJA:'violet',POTWIERDZONY:'violet',NAPRAWA:'active',W_TRAKCIE:'active',GOTOWE:'success',ZAKONCZONY:'success',APPROVED:'success',WYDANE:'neutral',ANULOWANY:'danger',DECLINED:'danger',EXPIRED:'warning'}
+export function StatusBadge({status,label}){
+ const key=String(status||'BRAK').toUpperCase(),tone=statusTones[key]||'neutral'
+ return <span className={'statusBadge '+tone} data-status={key}><i aria-hidden="true"/>{label||String(status||'Brak statusu')}</span>
+}

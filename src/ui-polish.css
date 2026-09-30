@@ -25,7 +25,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 
 .titleBlock h1{font-size:24px;letter-spacing:-.5px}
-.titleBlock p{color:#a9b4ab;font-size:12px;line-height:1.5}
+.titleBlock p{display:block;margin:4px 0 0;color:#8f9c92;font-size:10.5px;line-height:1.35}
 .panel,.metric,.workspaceCard{border-color:#48574b;box-shadow:0 1px 0 #ffffff0a,0 16px 38px #0003}
 .panelhead{padding-bottom:12px;border-bottom-color:#465249}
 .panelhead h2,.panel h2{font-size:14px;line-height:1.35;letter-spacing:0}
@@ -155,15 +155,20 @@ tbody tr{transition:background-color .16s ease}
 .workflowSummary small{color:#b3df7e;font-size:9px;font-weight:850;letter-spacing:.14em}
 .workflowSummary h2{margin:5px 0 3px;font-size:25px;letter-spacing:-.45px}
 .workflowSummary p{margin:0;color:#aeb9b0;font-size:11.5px}
-.workflowPulse{display:grid;grid-template-columns:repeat(2,minmax(110px,1fr));gap:8px}
+.workflowPulse{display:grid;grid-template-columns:repeat(3,minmax(94px,1fr));gap:8px}
 .workflowPulse>div{min-width:118px;padding:11px 14px;border:1px solid #455348;border-radius:11px;background:#0d130fbb}
 .workflowPulse span,.workflowPulse b{display:block}
 .workflowPulse span{color:#9eaaa0;font-size:9px;text-transform:uppercase;letter-spacing:.08em}
 .workflowPulse b{margin-top:4px;color:#eaf4e5;font-size:20px}
-.workflowLegend{display:flex;align-items:center;gap:18px;padding:0 4px;color:#aab5ac;font-size:10.5px}
-.workflowLegend span{display:flex;align-items:center;gap:6px}
-.workflowLegend i{width:8px;height:8px;border-radius:50%;box-shadow:0 0 10px currentColor}
-.workflowLegend .received{background:#75a8cf;color:#75a8cf}.workflowLegend .diagnosis{background:#e2bd65;color:#e2bd65}.workflowLegend .approval{background:#e2915f;color:#e2915f}.workflowLegend .repair{background:#a28bd9;color:#a28bd9}.workflowLegend .ready{background:#9fda72;color:#9fda72}
+.workflowPulse .amber{border-color:#665331;background:#1b1710}.workflowPulse .amber b{color:#f0c572}
+.workflowPulse .green{border-color:#435b39;background:#111a10}.workflowPulse .green b{color:#b6e58d}
+.workflowLegend{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:8px;padding:0;color:#aab5ac}
+.workflowLegend button{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:center;gap:9px;min-height:52px;padding:9px 11px;text-align:left;border-color:#3d4940;background:linear-gradient(145deg,#141b16,#0e1410);box-shadow:inset 0 1px #ffffff05}
+.workflowLegend button:hover,.workflowLegend button:focus-visible{border-color:var(--stage);background:#182119}
+.workflowLegend button>i{width:7px;height:28px;border-radius:99px;background:var(--stage,#7e9182);box-shadow:0 0 12px color-mix(in srgb,var(--stage,#7e9182) 55%,transparent)}
+.workflowLegend button>span{display:grid;gap:2px;min-width:0;color:#d4ddd5;font-size:10.5px}
+.workflowLegend button>span small{color:#718078;font-size:7.5px;font-weight:850;letter-spacing:.12em}
+.workflowLegend button>b{display:grid;place-items:center;min-width:25px;height:25px;padding:0 6px;border:1px solid color-mix(in srgb,var(--stage,#7e9182) 38%,#303a32);border-radius:8px;background:#0b100d;color:#edf4ea;font-size:11px}
 .workflowPage .kanban{gap:12px;align-items:stretch;overflow:visible}
 .workflowPage .kanCol{position:relative;min-height:500px;padding:10px;border-color:#425047;background:#0f1511;overflow:hidden}
 .workflowPage .kanCol:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--stage,#7e9182)}
@@ -201,14 +206,15 @@ tbody tr{transition:background-color .16s ease}
 }
 @media(max-width:1180px){
   .workflowPage .kanban{grid-template-columns:repeat(5,240px);overflow-x:auto;padding-bottom:8px}
-  .workflowSummary{align-items:flex-start}
+  .workflowSummary{align-items:flex-start;flex-direction:column}
+  .workflowPulse{width:100%}
+  .workflowPulse>div{min-width:0}
 }
 @media(max-width:850px){
   .navSection button{min-height:40px}
   .orderTabDock{position:static;box-shadow:0 10px 28px #0004}
   .orderCenterPage .centerHero h2{font-size:24px}
-  .workflowSummary{align-items:stretch;flex-direction:column}
-  .workflowLegend{flex-wrap:wrap;gap:10px 15px}
+  .workflowSummary{align-items:stretch}
   .centerPicker{align-items:stretch;flex-direction:column}.centerPicker .grow{display:none}.centerPicker>button,.centerDocuments,.centerDocuments>summary{width:100%}.centerDocuments>div{right:auto;left:0;width:100%}
 }
 @media(max-width:580px){

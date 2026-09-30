@@ -482,6 +482,13 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.newOrderMode>button').length`),2)
       assert.equal(await win.webContents.executeJavaScript(`getComputedStyle(document.querySelector('.modal')).backgroundColor!==getComputedStyle(document.querySelector('.newOrderStep')).backgroundColor`),true)
       await capture('new-order-existing-vehicle')
+      assert.deepEqual(await win.webContents.executeJavaScript(`({role:document.querySelector('.modal')?.getAttribute('role'),ariaModal:document.querySelector('.modal')?.getAttribute('aria-modal'),backgroundLocked:document.body.style.overflow==='hidden',focusInside:document.querySelector('.modal')?.contains(document.activeElement)})`),{role:'dialog',ariaModal:'true',backgroundLocked:true,focusInside:true})
+      await win.webContents.executeJavaScript(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}))`)
+      await delay(120)
+      assert.equal(await win.webContents.executeJavaScript(`!document.querySelector('.modal')&&document.body.style.overflow!=='hidden'`),true)
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('button')].find(x=>x.textContent.includes('Nowe zlecenie')).click()`)
+      await delay(180)
+      console.log('MODAL_KEYBOARD_GUARD','dialog focus, background scroll lock and Escape close verified')
       const database=require('../electron/db.cjs').getDb()
       const countsBefore={customers:database.prepare('SELECT COUNT(*) n FROM customers').get().n,vehicles:database.prepare('SELECT COUNT(*) n FROM vehicles').get().n,orders:database.prepare('SELECT COUNT(*) n FROM orders').get().n}
       await win.webContents.executeJavaScript(`document.querySelector('[data-vehicle-mode="new"]').click()`)
@@ -605,6 +612,8 @@ app.on('browser-window-created', (_, win) => {
       }`)
       await delay(300)
       assert.equal(database.prepare('SELECT mileage FROM vehicles WHERE id=?').get(vehicleOnly).mileage,76543)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.appFeedbackToast')?.textContent.includes('Dane pojazdu zaktualizowane')`),true)
+      console.log('GLOBAL_FEEDBACK_TOAST','successful edit produced one accessible shared application notification')
       console.log('CUSTOMER_VEHICLE_EDIT','customer company and vehicle mileage editing verified')
       const profileOrder=database.prepare("INSERT INTO orders(vehicle_id,title,status,labor_hours,labor_rate,parts_sale,parts_cost) VALUES (?,'Rozrząd i serwis','NAPRAWA',2,220,300,120)").run(vehicleOnly).lastInsertRowid
       database.prepare("INSERT INTO payments(order_id,amount,method) VALUES (?,250,'KARTA')").run(profileOrder)
