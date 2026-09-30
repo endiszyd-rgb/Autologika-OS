@@ -1,14 +1,15 @@
-import React,{useEffect,useState} from 'react'
+import React,{useEffect,useMemo,useState} from 'react'
 import {Icon} from './ui.jsx'
+import {useDebouncedValue} from './performance.js'
 
 const searchKey=value=>String(value||'').trim().toLocaleLowerCase('pl-PL').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replaceAll('ł','l').replaceAll('ø','o')
 
-export function Care({api,openOrder,openVehicle,Panel,Empty,Modal}){
+export function Care({api,openOrder,openVehicle,Panel,Empty,Modal,refresh}){
  const[rows,setRows]=useState([]),[vehicles,setVehicles]=useState([]),[show,setShow]=useState(false),[query,setQuery]=useState(''),[filter,setFilter]=useState('ALL'),[busyId,setBusyId]=useState(null)
  const load=()=>api.reminders.list().then(setRows)
- useEffect(()=>{load();api.vehicles.list().then(setVehicles)},[])
+ useEffect(()=>{load();api.vehicles.list().then(setVehicles)},[refresh])
  const counts={OVERDUE:rows.filter(x=>x.urgency==='OVERDUE').length,SOON:rows.filter(x=>x.urgency==='SOON').length,PLANNED:rows.filter(x=>x.urgency==='PLANNED').length}
- const visible=rows.filter(row=>(filter==='ALL'||row.urgency===filter)&&(!query.trim()||searchKey([row.plate,row.make,row.model,row.customer,row.title,row.note].join(' ')).includes(searchKey(query))))
+ const deferredQuery=useDebouncedValue(query),visible=useMemo(()=>rows.filter(row=>(filter==='ALL'||row.urgency===filter)&&(!deferredQuery.trim()||searchKey([row.plate,row.make,row.model,row.customer,row.title,row.note].join(' ')).includes(searchKey(deferredQuery)))),[rows,filter,deferredQuery])
  const finish=async id=>{setBusyId(id);try{await api.reminders.done(id);await load()}finally{setBusyId(null)}}
  const urgencyText=row=>row.urgency==='OVERDUE'?'PO TERMINIE':row.urgency==='SOON'?'WKRÓTCE':'ZAPLANOWANE'
  const dueText=row=>{const parts=[];if(row.due_date)parts.push(new Date(row.due_date+'T12:00:00').toLocaleDateString('pl-PL'));if(row.due_mileage)parts.push(Number(row.due_mileage).toLocaleString('pl-PL')+' km');return parts.join(' · ')||'Bez terminu'}

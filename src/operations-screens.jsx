@@ -5,11 +5,11 @@ import {LoadingState} from './ui.jsx'
 
 const lines=value=>String(value||'').split('\n').map(item=>item.trim()).filter(Boolean)
 
-export function WorkshopLive({openOrder,api,labels}){
+export function WorkshopLive({openOrder,api,labels,refresh}){
  const[data,setData]=useState({orders:[],appointments:[],active:[],parts:[]}),[now,setNow]=useState(new Date()),[stageFilter,setStageFilter]=useState('')
  const[liveState,setLiveState]=useState({loading:true,error:'',updated:null})
- const load=useCallback(async(manual=false)=>{if(manual)setLiveState(x=>({...x,loading:true,error:''}));try{const from=new Date();from.setHours(0,0,0,0);const to=new Date(from);to.setDate(to.getDate()+1);const [orders,appointments,active,parts]=await Promise.all([api.orders.list(),api.appointments.list(from.toISOString(),to.toISOString()),api.worklog.active(),api.jobParts.list('OTWARTE')]);setData({orders:orders.filter(x=>x.status!=='WYDANE'),appointments,active,parts});setLiveState({loading:false,error:'',updated:new Date()})}catch(error){console.error('Workshop LIVE refresh failed',error);setLiveState(x=>({...x,loading:false,error:'Nie udało się odświeżyć danych. Spróbuj ponownie.',updated:x.updated}))}},[])
- useEffect(()=>{load(true);const a=setInterval(()=>load(false),5000),b=setInterval(()=>setNow(new Date()),1000);return()=>{clearInterval(a);clearInterval(b)}},[load])
+ const load=useCallback(async(manual=false)=>{if(manual)setLiveState(x=>({...x,loading:true,error:''}));try{const from=new Date();from.setHours(0,0,0,0);const to=new Date(from);to.setDate(to.getDate()+1);const [orders,appointments,active,parts]=await Promise.all([api.orders.list(),api.appointments.list(from.toISOString(),to.toISOString()),api.worklog.active(),api.jobParts.list('OTWARTE')]);setData({orders:orders.filter(x=>x.status!=='WYDANE'),appointments,active,parts});setLiveState({loading:false,error:'',updated:new Date()})}catch(error){console.error('Workshop LIVE refresh failed',error);setLiveState(x=>({...x,loading:false,error:'Nie udało się odświeżyć danych. Spróbuj ponownie.',updated:x.updated}))}},[api])
+ useEffect(()=>{load(true);const poll=()=>{if(!document.hidden)load(false)},tick=()=>{if(!document.hidden)setNow(new Date())},visible=()=>{if(!document.hidden){setNow(new Date());load(false)}};const a=setInterval(poll,5000),b=setInterval(tick,1000);document.addEventListener('visibilitychange',visible);return()=>{clearInterval(a);clearInterval(b);document.removeEventListener('visibilitychange',visible)}},[load,refresh])
  const waiting=data.orders.filter(x=>x.wait_state&&x.wait_state!=='BRAK'),lateParts=data.parts.filter(x=>x.expected_at&&new Date(x.expected_at)<now&&!['ODEBRANE','ZAMONTOWANE','ANULOWANE'].includes(x.status)),next=data.appointments.filter(x=>new Date(x.end_at)>=now).sort((a,b)=>new Date(a.start_at)-new Date(b.start_at)).slice(0,6)
  const activeFor=orderId=>data.active.find(x=>Number(x.order_id)===Number(orderId)),appointmentFor=order=>data.appointments.find(x=>Number(x.order_id)===Number(order.id)||Number(x.vehicle_id)===Number(order.vehicle_id))
  const visibleOrders=[...data.orders].filter(order=>!stageFilter||order.status===stageFilter).sort((a,b)=>Number(Boolean(activeFor(b.id)))-Number(Boolean(activeFor(a.id)))||Number(Boolean(b.wait_state&&b.wait_state!=='BRAK'))-Number(Boolean(a.wait_state&&a.wait_state!=='BRAK'))||Number(a.id)-Number(b.id))
@@ -57,8 +57,8 @@ export function ProcedureTemplates({api,money,Modal}){
  </section>
 }
 
-export function Kanban({changed,openOrder,api,statuses,labels,money}){
- const[rows,setRows]=useState([]);const load=()=>api.orders.list().then(setRows);useEffect(()=>{load()},[])
+export function Kanban({changed,openOrder,api,statuses,labels,money,refresh}){
+ const[rows,setRows]=useState([]);const load=()=>api.orders.list().then(setRows);useEffect(()=>{load()},[refresh])
  const drop=async(id,status)=>{await api.orders.updateStatus(id,status);load();changed()}
  const stages=statuses.slice(0,-1),activeRows=rows.filter(x=>x.status!=='WYDANE'),inProgress=activeRows.filter(x=>x.status==='DIAGNOZA'||x.status==='NAPRAWA').length,waiting=activeRows.filter(x=>x.status==='AKCEPTACJA').length,ready=activeRows.filter(x=>x.status==='GOTOWE').length
  const focusStage=stage=>document.querySelector(`[data-workflow-column="${stage}"]`)?.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'})

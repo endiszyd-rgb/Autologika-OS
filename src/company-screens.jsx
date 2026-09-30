@@ -1,8 +1,8 @@
 ﻿import React,{useEffect,useState} from 'react'
 
-export function Finance({api,money,Loading,Modal,Empty}){
+export function Finance({api,money,Loading,Modal,Empty,refresh}){
  const[d,setD]=useState(null),[a,setA]=useState(null),[monthTarget,setMonthTarget]=useState(50000),[selectedKpi,setSelectedKpi]=useState('')
- useEffect(()=>{Promise.all([api.dashboard(),api.finance.analytics(),api.settings?.monthlyTarget?.()||Promise.resolve(50000)]).then(([data,analytics,target])=>{setD(data);setA(analytics);setMonthTarget(Number(target)||50000)})},[])
+ useEffect(()=>{Promise.all([api.dashboard(),api.finance.analytics(),api.settings?.monthlyTarget?.()||Promise.resolve(50000)]).then(([data,analytics,target])=>{setD(data);setA(analytics);setMonthTarget(Number(target)||50000)})},[refresh])
  if(!d||!a)return <Loading/>
  const rev=Number(d.month.revenue),cost=Number(d.month.variableCost),actual=Number(a.current.actual_hours||0),margin=rev-cost,targetPct=Math.min(100,Math.round(rev/monthTarget*100)),paid=Number(a.current.paid||0),receivables=Number(a.current.receivables||0)
  const now=new Date(),daysInMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate(),elapsed=Math.max(1,now.getDate()),forecast=rev/elapsed*daysInMonth

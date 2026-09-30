@@ -1,32 +1,35 @@
-import React,{useEffect,useState} from 'react'
+import React,{useEffect,useRef,useState} from 'react'
 import {Icon,StatusBadge} from './ui.jsx'
 
-const money=n=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN',maximumFractionDigits:0}).format(Number(n||0))
+const moneyFormatter=new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN',maximumFractionDigits:0})
+const money=n=>moneyFormatter.format(Number(n||0))
 const stages=[['PRZYJETE','Przyjęte'],['DIAGNOZA','Diagnoza'],['AKCEPTACJA','Akceptacja'],['NAPRAWA','Naprawa'],['GOTOWE','Gotowe']]
 const labels=Object.fromEntries([...stages,['WYDANE','Wydane']])
 const waits={KLIENT:'Kontakt z klientem',CZESCI:'Oczekiwanie na części',DECYZJA:'Decyzja klienta'}
 const positions=[[27,29],[74,35],[34,72],[71,76],[49,17],[18,51],[84,57],[52,86]]
 
 function Counter({value}){
- const [shown,setShown]=useState(value)
+ const [shown,setShown]=useState(value),shownRef=useRef(Number(value)||0)
  useEffect(()=>{
-  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){setShown(value);return}
+  const target=Number(value)||0,from=shownRef.current
+  if(target===from)return
+  if(document.hidden||window.matchMedia('(prefers-reduced-motion: reduce)').matches){shownRef.current=target;setShown(target);return}
   let frame;const start=performance.now()
-  const tick=t=>{const p=Math.min(1,(t-start)/700);setShown(Math.round(value*(1-Math.pow(1-p,3))));if(p<1)frame=requestAnimationFrame(tick)}
+  const tick=t=>{const p=Math.min(1,(t-start)/700),next=Math.round(from+(target-from)*(1-Math.pow(1-p,3)));shownRef.current=next;setShown(next);if(p<1)frame=requestAnimationFrame(tick)}
   frame=requestAnimationFrame(tick);return()=>cancelAnimationFrame(frame)
  },[value])
  return shown
 }
 
-export function WorkshopDashboard({api,go,openOrder,scanDocument}){
+export function WorkshopDashboard({api,go,openOrder,scanDocument,refresh}){
  const [data,setData]=useState(null),[target,setTarget]=useState(50000),[error,setError]=useState(''),[filter,setFilter]=useState('ALL'),[retry,setRetry]=useState(0)
- useEffect(()=>{let alive=true;setError('');Promise.all([api.dashboard(),api.settings?.monthlyTarget?.()||Promise.resolve(50000)]).then(([d,t])=>{if(alive){setData(d);setTarget(Number(t)||50000)}}).catch(e=>alive&&setError(e.message||String(e)));return()=>{alive=false}},[api,retry])
+ useEffect(()=>{let alive=true;setError('');Promise.all([api.dashboard(),api.settings?.monthlyTarget?.()||Promise.resolve(50000)]).then(([d,t])=>{if(alive){setData(d);setTarget(Number(t)||50000)}}).catch(e=>alive&&setError(e.message||String(e)));return()=>{alive=false}},[api,retry,refresh])
  if(error)return <div className="empty"><p>Nie udało się wczytać pulpitu: {error}</p><button onClick={()=>setRetry(x=>x+1)}>Spróbuj ponownie</button></div>
  if(!data)return <div className="studioSkeleton" aria-label="Ładowanie pulpitu" role="status"><div/><div/><div/></div>
  const revenue=Number(data.month?.revenue||0),cost=Number(data.month?.variableCost||0),hours=Number(data.month?.actualHours||0),open=Number(data.open||0),attention=Number(data.notificationCount||0)
  const recent=data.recent||[],active=recent.filter(x=>x.status!=='WYDANE'),blocked=active.filter(x=>waits[x.wait_state]),timers=data.active||[]
  const percent=Math.max(0,Math.min(100,Math.round(revenue/target*100))),margin=revenue-cost
- const hasMeasuredHours=hours>=1/60
+ const hasMeasuredHours=hours>=1/60,maxSource=Math.max(...(data.sources||[]).map(x=>Number(x.c)),1)
  const visible=filter==='ALL'?recent:recent.filter(o=>o.status===filter)
  return <section className="studioDashboard">
   <div className="studioHeading"><div><div className="sectionEyebrow">TWÓJ WARSZTAT. JEDEN WIDOK.</div><h2>Dobry dzień na <span>dobrą robotę.</span></h2><p>Wszystko, czego potrzebujesz, żeby utrzymać tempo.</p></div><div className="studioHeadingActions"><button className="studioDocumentScan" onClick={scanDocument}><Icon name="documents"/> Skanuj dokument</button><button className="primary studioIntake" onClick={()=>go('intake')}><Icon name="intake"/> Przyjmij pojazd</button></div></div>
@@ -54,7 +57,7 @@ export function WorkshopDashboard({api,go,openOrder,scanDocument}){
   </div><div className="studioWorkSide">
    <section className="studioPanel"><div className="studioPanelHead"><h3>Wymaga reakcji</h3><span className={'countBadge '+(attention?'amber':'')}>{attention}</span></div>{blocked.length?blocked.slice(0,3).map(o=><button className="studioAttention" key={o.id} onClick={()=>openOrder(o.id)}><span className="attentionIcon"><Icon name={o.wait_state==='CZESCI'?'inventory':'notifications'} size={17}/></span><div><b>{waits[o.wait_state]}</b><span>{o.plate} · {o.make} {o.model}</span></div><Icon name="chevron" size={14}/></button>):<div className="studioClear"><span><Icon name="check"/></span><div><b>{attention?'Sprawdź centrum uwagi':'Wszystko na dobrej drodze'}</b><small>{attention?'Pozostałe sprawy są w centrum uwagi.':'Ostatnie zlecenia nie mają blokad.'}</small></div></div>}<button className="studioFullButton" onClick={()=>go('notifications')}>Przejdź do centrum uwagi <Icon name="arrow" size={16}/></button></section>
    <section className="studioPanel"><div className="studioPanelHead"><h3>Najbliższe terminy</h3><Icon name="schedule"/></div>{data.next?.length?data.next.slice(0,4).map(a=><button className="studioAppointment" key={a.id} onClick={()=>a.order_id?openOrder(a.order_id):go('schedule')}><div className="appointmentTime"><b>{new Date(a.start_at).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})}</b><small>{new Date(a.start_at).toLocaleDateString('pl-PL',{day:'2-digit',month:'2-digit'})}</small></div><div><b>{a.plate||a.title}</b><span>{a.plate?a.title:a.bay}</span><small>{a.bay}</small></div></button>):<div className="studioEmpty compact"><Icon name="schedule"/><span>Spokojnie w kalendarzu.<br/>Zaplanuj kolejne przyjęcie.</span></div>}<button className="studioFullButton" onClick={()=>go('schedule')}>Otwórz terminarz <Icon name="arrow" size={16}/></button></section>
-   <section className="studioPanel studioSources"><div className="studioPanelHead"><h3>Skąd trafiają klienci?</h3></div>{data.sources?.length?data.sources.map(s=><div className="studioSource" key={s.source}><div><span>{s.source||'Nie określono'}</span><b>{s.c}</b></div><div className="studioSourceTrack"><i style={{width:`${Number(s.c)/Math.max(...data.sources.map(x=>Number(x.c)),1)*100}%`}}/></div></div>):<p className="muted">Źródła pojawią się po przyjęciu zleceń.</p>}</section>
+   <section className="studioPanel studioSources"><div className="studioPanelHead"><h3>Skąd trafiają klienci?</h3></div>{data.sources?.length?data.sources.map(s=><div className="studioSource" key={s.source}><div><span>{s.source||'Nie określono'}</span><b>{s.c}</b></div><div className="studioSourceTrack"><i style={{width:`${Number(s.c)/maxSource*100}%`}}/></div></div>):<p className="muted">Źródła pojawią się po przyjęciu zleceń.</p>}</section>
   </div></div><div className="studioFooter"><span>AUTOLOGIKA <b>OS</b></span><span>Dobra organizacja. Dobra robota.</span></div>
  </section>
 }
