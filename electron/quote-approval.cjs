@@ -131,8 +131,8 @@ function materializeApprovedQuote(db, approvalOrQuoteId) {
     COALESCE(SUM(CASE WHEN kind!='CZESC' THEN qty*unit_cost ELSE 0 END),0) oc,
     COALESCE(SUM(CASE WHEN kind!='CZESC' THEN qty*unit_price ELSE 0 END),0) os
     FROM order_items WHERE order_id=?`).get(quote.order_id)
-  db.prepare('UPDATE orders SET parts_cost=?,parts_sale=?,other_cost=?,other_sale=?,status=?,wait_state=? WHERE id=?')
-    .run(sums.pc, sums.ps, sums.oc, sums.os, parts ? 'AKCEPTACJA' : 'NAPRAWA', parts ? 'CZESCI' : 'BRAK', quote.order_id)
+  db.prepare("UPDATE orders SET parts_cost=?,parts_sale=?,other_cost=?,other_sale=?,status='NAPRAWA',wait_state=? WHERE id=?")
+    .run(sums.pc, sums.ps, sums.oc, sums.os, parts ? 'CZESCI' : 'BRAK', quote.order_id)
   db.prepare("UPDATE quotes SET status='ZAAKCEPTOWANA',accepted_at=CURRENT_TIMESTAMP WHERE id=?").run(quoteId)
   db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(
     quote.order_id, 'QUOTE_PREPARED', parts ? 'Zakres zaakceptowany — części do zamówienia' : 'Zakres zaakceptowany — gotowe do naprawy',

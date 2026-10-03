@@ -161,4 +161,5 @@ test('accepting an imported scope does not duplicate order work or planned parts
   assert.equal(db.prepare('SELECT COUNT(*) n FROM order_items WHERE order_id=1').get().n,1)
   assert.equal(db.prepare('SELECT COUNT(*) n FROM job_part_orders WHERE order_id=1').get().n,1)
   assert.equal(db.prepare('SELECT status FROM quotes WHERE id=?').get(quote.id).status,'ZAAKCEPTOWANA')
+  assert.deepEqual({...db.prepare('SELECT status,wait_state FROM orders WHERE id=1').get()},{status:'NAPRAWA',wait_state:'CZESCI'})
 })

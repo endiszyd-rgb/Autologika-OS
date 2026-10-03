@@ -6,7 +6,7 @@ export function deriveOrderAdvice({order={},diagnosis,items=[],parts=[],approval
   const latestApproval=approvals.reduce((latest,item)=>!latest||Number(item.id||0)>Number(latest.id||0)?item:latest,null)
   const approved=latestApproval?.status==='APPROVED'
   const pending=latestApproval?.status==='PENDING'
-  const openParts=parts.filter(item=>!['ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE'].includes(item.status))
+  const blockingParts=parts.filter(item=>['DO_ZAMOWIENIA','ZAMOWIONE','W_DRODZE'].includes(item.status))
   const hasWorkScope=items.length>0||procedures.length>0
   const workLogged=logs.some(item=>Boolean(item.ended_at)||Number(item.duration_minutes)>0)
   const qcDone=qcRows.length>=8&&qcRows.filter(item=>item.checked).length>=8
@@ -17,8 +17,9 @@ export function deriveOrderAdvice({order={},diagnosis,items=[],parts=[],approval
   if(order.status==='DIAGNOZA'&&!hasBasicDiagnosis(diagnosis))return {title:'Uzupełnij opis usterki',detail:'Krótki opis rozpoznanej usterki wystarczy, aby zamknąć podstawową diagnozę.',tab:'diagnosis'}
   if(order.status==='DIAGNOZA')return {title:'Przejdź do akceptacji',detail:'Diagnoza jest zapisana. Przygotuj zakres i uzyskaj decyzję klienta.',status:'AKCEPTACJA',wait:'DECYZJA',tab:'quote'}
   if(order.status==='AKCEPTACJA'&&!approved)return {title:pending?'Sprawdź decyzję klienta':'Zarejestruj akceptację klienta',detail:pending?'Akceptacja została wysłana i nadal jest oczekująca.':'Brak zatwierdzonego zakresu prac.',wait:'DECYZJA',tab:'quote'}
-  if(order.status==='AKCEPTACJA'&&openParts.length)return {title:'Sprawdź zamówione części',detail:`Akceptacja jest zapisana. ${openParts.length} pozycji nadal wymaga dostawy.`,wait:'CZESCI',tab:'parts'}
+  if(order.status==='AKCEPTACJA'&&blockingParts.length)return {title:'Sprawdź zamówione części',detail:`Akceptacja jest zapisana. ${blockingParts.length} pozycji nadal wymaga dostawy.`,wait:'CZESCI',tab:'parts'}
   if(order.status==='AKCEPTACJA')return {title:'Rozpocznij naprawę',detail:'Zakres zaakceptowany i brak blokady części.',status:'NAPRAWA',wait:'BRAK',tab:'works'}
+  if(order.status==='NAPRAWA'&&blockingParts.length)return {title:'Sprawdź zamówione części',detail:`Zakres jest zaakceptowany, ale ${blockingParts.length} pozycji nadal wymaga dostawy.`,wait:'CZESCI',tab:'parts'}
   if(order.status==='NAPRAWA'&&!hasWorkScope)return {title:'Dodaj zakres wykonanych prac',detail:'Zapisz co zostało wykonane, zanim przejdziesz do czasu pracy i kontroli jakości.',tab:'works'}
   if(order.status==='NAPRAWA'&&!workLogged)return {title:'Zarejestruj czas pracy',detail:'Zakres jest zapisany. Dodaj zakończony wpis czasu pracy.',tab:'time'}
   if(order.status==='NAPRAWA'&&!qcDone)return {title:'Wykonaj kontrolę jakości',detail:'Przed oznaczeniem auta jako gotowe potwierdź wszystkie punkty QC.',tab:'release'}

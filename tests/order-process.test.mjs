@@ -35,3 +35,15 @@ test('najnowsza decyzja klienta zastępuje wcześniejszą akceptację',()=>{
  assert.equal(advice.status,undefined)
  assert.match(advice.title,/akceptację/i)
 })
+
+test('zaakceptowane zlecenie czekające na dostawę kieruje do części',()=>{
+ const advice=deriveOrderAdvice({...base,parts:[{status:'ODEBRANE'},{status:'W_DRODZE'}]})
+ assert.equal(advice.tab,'parts')
+ assert.equal(advice.wait,'CZESCI')
+ assert.match(advice.detail,/1 pozycji/)
+})
+
+test('odebrane części nie blokują rozpoczęcia pracy',()=>{
+ const advice=deriveOrderAdvice({...base,parts:[{status:'ODEBRANE'}]})
+ assert.equal(advice.tab,'time')
+})
