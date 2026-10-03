@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const { DatabaseSync } = require('node:sqlite')
 const fs = require('node:fs')
 const vm = require('node:vm')
-const { findQuoteApproval, assertQuoteEditable, replaceQuoteWithOrderSnapshot, materializeApprovedQuote } = require('../electron/quote-approval.cjs')
+const { findQuoteApproval, assertQuoteEditable, quoteIdFromApproval, replaceQuoteWithOrderSnapshot, materializeApprovedQuote } = require('../electron/quote-approval.cjs')
 const { requireEditableOrder } = require('../electron/inventory-usage.cjs')
 const { wholePartQuantity } = require('../electron/part-quantity.cjs')
 
@@ -28,6 +28,13 @@ function setup(t) {
   })
   return { db, call: (name, arg) => handlers[`quotes:${name}`](null, arg) }
 }
+
+test('quote identifier is read safely from SQLite records without a prototype', () => {
+  const approval = Object.assign(Object.create(null), { scope: 'Wycena #17 · dodatkowy zakres' })
+  assert.equal(quoteIdFromApproval(approval), 17)
+  assert.equal(quoteIdFromApproval(23), 23)
+  assert.equal(quoteIdFromApproval('23'), 23)
+})
 
 test('quote 1 does not use quote 10 approval or another order approval', t => {
   const { db } = setup(t)

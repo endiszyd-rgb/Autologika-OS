@@ -167,9 +167,12 @@ async function archiveApprovalPdf(approvalId,{force=false,c=loadConfig(),db=getD
 async function syncApprovalArchive(){const db=getDb(),rows=db.prepare("SELECT * FROM approvals WHERE status='APPROVED' AND pdf_storage_path!='' ORDER BY id").all().filter(row=>approvalEvidenceState(row)!=='COMPLETE');let completed=0,downloaded=0;const errors=[];for(const row of rows){try{const result=await archiveApprovalPdf(row.id);completed++;if(result.downloaded)downloaded++}catch(error){errors.push({id:row.id,error:String(error.message||error)})}}return {ok:errors.length===0,completed,downloaded,errors,pending:rows.length-completed}}
 async function downloadApprovalSignature(approvalId){const db=getDb(),row=db.prepare('SELECT * FROM approvals WHERE id=?').get(Number(approvalId));if(!row?.signature_storage_path)throw new Error('Podpis nie jest jeszcze dostępny.');const archived=row.local_pdf_path?approvalEvidencePaths(row.local_pdf_path).signature:'',dest=archived||path.join(app.getPath('userData'),'approval-evidence-cache',`signature-${Number(approvalId)}.png`);if(!fs.existsSync(dest)||row.signature_hash&&fileHash(dest)!==row.signature_hash)await storageDownloadFrom(loadConfig(),'approval-evidence',row.signature_storage_path,dest);if(row.signature_hash&&fileHash(dest)!==row.signature_hash)throw new Error('Suma kontrolna podpisu jest niezgodna.');return {ok:true,path:dest}}
 
-async function scanRemoteApprovals(c=loadConfig(),db=getDb()){
+async function scanRemoteApprovals(c=loadConfig(),db=getDb(),hooks={}){
+  const requestRows=hooks.requestRows||request;
+  const archivePdf=hooks.archivePdf||archiveApprovalPdf;
+  const emitApproval=hooks.emitApproval||((item)=>events.emit('remote-approval',item));
   const workshopId=c.workshopId||c.user?.id;if(!workshopId)return [];
-  const rows=await request(c,`/rest/v1/customer_approval_links?select=${remoteApprovalFields()}&workshop_id=eq.${encodeURIComponent(workshopId)}&order=created_at.desc&limit=500`,{method:'GET'})||[];
+  const rows=await requestRows(c,`/rest/v1/customer_approval_links?select=${remoteApprovalFields()}&workshop_id=eq.${encodeURIComponent(workshopId)}&order=created_at.desc&limit=500`,{method:'GET'})||[];
   const changed=[];
   for(const source of latestRemoteApprovals(rows)){
     const r=effectiveRemoteApproval(source)
@@ -178,7 +181,7 @@ async function scanRemoteApprovals(c=loadConfig(),db=getDb()){
     updateLocalEvidence(db,approval.id,r)
     const outcome=remoteApprovalOutcome(r.status)
     if(!outcome.terminal)continue
-    if(approval.status!=='PENDING'){if(r.status==='APPROVED'&&r.pdf_storage_path&&(!approval.local_pdf_path||!fs.existsSync(approval.local_pdf_path)))try{await archiveApprovalPdf(approval.id,{c,db})}catch{};continue}
+    if(approval.status!=='PENDING'){if(r.status==='APPROVED'&&r.pdf_storage_path&&(!approval.local_pdf_path||!fs.existsSync(approval.local_pdf_path)))try{await archivePdf(approval.id,{c,db})}catch{};continue}
     const order=db.prepare(`SELECT o.id,o.title,v.plate,v.make,v.model,c.name customer FROM orders o JOIN vehicles v ON v.id=o.vehicle_id LEFT JOIN customers c ON c.id=v.customer_id WHERE o.id=?`).get(approval.order_id)||{};
     const decidedAt=r.decided_at||new Date().toISOString();
     let prepared={prepared:false,parts:0};
@@ -188,8 +191,8 @@ async function scanRemoteApprovals(c=loadConfig(),db=getDb()){
       db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(approval.order_id,'REMOTE_APPROVAL',outcome.eventTitle,`${Number(approval.amount||0).toFixed(2)} zł${r.customer_note?` · ${r.customer_note}`:''}`);
     })();
     const item={approvalId:approval.id,orderId:approval.order_id,status:r.status,amount:Number(approval.amount||0),note:r.customer_note||'',decidedAt,customer:order.customer||'',plate:order.plate||'',vehicle:`${order.make||''} ${order.model||''}`.trim(),title:order.title||'',prepared:prepared.prepared,partsPrepared:prepared.parts||0,toastTitle:outcome.toastTitle,tone:outcome.tone,icon:outcome.icon};
-    changed.push(item);events.emit('remote-approval',item);
-    if(r.status==='APPROVED'&&r.pdf_storage_path)try{await archiveApprovalPdf(approval.id,{c,db})}catch(error){item.archiveError=String(error.message||error)}
+    changed.push(item);emitApproval(item);
+    if(r.status==='APPROVED'&&r.pdf_storage_path)try{await archivePdf(approval.id,{c,db})}catch(error){item.archiveError=String(error.message||error)}
   }
   return changed;
 }

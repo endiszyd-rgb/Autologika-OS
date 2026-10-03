@@ -13,7 +13,8 @@ function assertQuoteEditable(db, quote) {
 }
 
 function quoteIdFromApproval(value) {
-  if (Number.isInteger(Number(value)) && Number(value) > 0) return Number(value)
+  const direct = typeof value === 'number' || typeof value === 'string' ? Number(value) : NaN
+  if (Number.isInteger(direct) && direct > 0) return direct
   const match = String(value?.scope || '').match(/Wycena #(\d+)/)
   return match ? Number(match[1]) : 0
 }
