@@ -10,7 +10,7 @@ const registrationSample = fs.readFileSync(path.join(__dirname, '..', 'tests', '
 fs.mkdirSync(output, { recursive: true })
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 const errors = []
-setTimeout(() => { console.error('UI smoke test timed out'); app.exit(1) }, 75000).unref()
+setTimeout(() => { console.error('UI smoke test timed out'); app.exit(1) }, 90000).unref()
 app.on('browser-window-created', (_, win) => {
   win.webContents.on('console-message', (_, level, message) => {
     if (level >= 3) errors.push(message)
@@ -536,6 +536,57 @@ app.on('browser-window-created', (_, win) => {
       await win.webContents.executeJavaScript(`document.querySelector('input[aria-label="Szukaj zlecenia"]').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`)
       await delay(180)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.orderReadOnlyPreview h2').textContent`),'PO TEST1')
+      const flowOrder=database.prepare("SELECT o.id FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE v.plate='PO TEST1' ORDER BY o.id DESC LIMIT 1").get()
+      assert.ok(flowOrder?.id)
+      await win.webContents.executeJavaScript(`document.querySelector('.readOnlyNotice .primary').click()`)
+      await delay(450)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('select[aria-label="Wybierz zlecenie"]').value`),String(flowOrder.id))
+      await win.webContents.executeJavaScript(`document.querySelector('[data-order-tab="works"]').click()`)
+      await delay(180)
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.workspaceContent button')].find(button=>button.textContent.includes('Dodaj pakiet z katalogu')).click()`)
+      await delay(350)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.bundleModal .actionrow.right .primary').disabled`),false)
+      await win.webContents.executeJavaScript(`document.querySelector('.bundleModal .actionrow.right .primary').click()`)
+      await delay(650)
+      assert.equal(database.prepare("SELECT COUNT(*) count FROM order_items WHERE order_id=? AND kind='ROBOCIZNA'").get(flowOrder.id).count,1)
+      await win.webContents.executeJavaScript(`document.querySelector('[data-order-tab="parts"]').click()`)
+      await delay(180)
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.workspaceContent button')].find(button=>button.textContent.includes('+ Część')).click()`)
+      await delay(260)
+      await win.webContents.executeJavaScript(`{
+        const set=(prefix,value)=>{const input=[...document.querySelectorAll('.modal label')].find(label=>label.textContent.startsWith(prefix)).querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}))};
+        set('Nazwa części','Filtr testowy Etap 4');set('Nr katalogowy części','FLOW-TEST-01');set('Numer OE','OE-FLOW-01');set('Ilość','2');set('Zakup','30');set('Sprzedaż','55');
+      }`)
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.modal button')].find(button=>button.textContent.includes('Dodaj do zamówień')).disabled`),false)
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.modal button')].find(button=>button.textContent.includes('Dodaj do zamówień')).click()`)
+      await delay(550)
+      const flowPart=database.prepare("SELECT * FROM job_part_orders WHERE order_id=? AND part_no='FLOW-TEST-01'").get(flowOrder.id)
+      assert.equal(flowPart.oe_number,'OE-FLOW-01')
+      assert.equal(flowPart.qty,2)
+      assert.equal(database.prepare('SELECT wait_state FROM orders WHERE id=?').get(flowOrder.id).wait_state,'CZESCI')
+      await win.webContents.executeJavaScript(`document.querySelector('[data-order-tab="quote"]').click()`)
+      await delay(180)
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.workspaceContent button')].find(button=>button.textContent.includes('Importuj i otwórz wycenę')).click()`)
+      await delay(550)
+      const flowQuote=database.prepare("SELECT * FROM quotes WHERE order_id=? AND status='ROBOCZA' ORDER BY id DESC LIMIT 1").get(flowOrder.id)
+      assert.equal(flowQuote.source_type,'ORDER_SNAPSHOT')
+      assert.equal(database.prepare('SELECT COUNT(*) count FROM quote_items WHERE quote_id=? AND source_order_item_id IS NOT NULL').get(flowQuote.id).count,1)
+      assert.equal(database.prepare('SELECT COUNT(*) count FROM quote_items WHERE quote_id=? AND source_job_part_id IS NOT NULL').get(flowQuote.id).count,1)
+      const flowQuoteTotal=database.prepare("SELECT COALESCE(SUM(CASE WHEN kind='ROBOCIZNA' THEN labor_hours*labor_rate ELSE qty*unit_price END),0) total FROM quote_items WHERE quote_id=?").get(flowQuote.id).total
+      assert.equal(flowQuoteTotal,330)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.quoteSnapshotTable').textContent.includes('Filtr testowy Etap 4')`),true)
+      await capture('new-order-complete-flow')
+      await win.webContents.executeJavaScript(`document.querySelector('.modalhead button').click()`)
+      console.log('NEW_ORDER_END_TO_END','new customer and vehicle continued through labor, OE part and one-source quote on the same order')
+      await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Zlecenia"]').click()`)
+      await delay(350)
+      await win.webContents.executeJavaScript(`{
+        const setValue=(element,value)=>{const prototype=element.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(prototype,'value').set.call(element,value);element.dispatchEvent(new Event('input',{bubbles:true}));element.dispatchEvent(new Event('change',{bubbles:true}))};
+        setValue(document.querySelector('input[aria-label="Szukaj zlecenia"]'),'POTEST1');
+        setValue(document.querySelector('select[aria-label="Filtr etapu zlecenia"]'),'PRZYJETE');
+        setValue(document.querySelector('select[aria-label="Filtr priorytetu zlecenia"]'),'NORMALNY');
+      }`)
+      await delay(260)
       await capture('orders-search-filters')
       await win.webContents.executeJavaScript(`[...document.querySelectorAll('.orderFilterBar button')].find(button=>button.textContent.includes('Wyczyść')).click()`)
       await delay(260)
