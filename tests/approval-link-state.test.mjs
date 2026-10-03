@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {approvalEventMatches,approvalLinkState} from '../src/approval-link-state.mjs'
+import {approvalEventMatches,approvalLinkState,latestQuoteApproval} from '../src/approval-link-state.mjs'
 
 const now=Date.parse('2026-09-26T12:00:00Z')
 
@@ -24,4 +24,14 @@ test('remote decision refreshes only its open quote',()=>{
  assert.equal(approvalEventMatches({approvalId:99,orderId:'4'},{id:17},4),true)
  assert.equal(approvalEventMatches({approvalId:99,orderId:8},{id:17},4),false)
  assert.equal(approvalEventMatches({},null,4),false)
+})
+
+test('order center keeps the latest quote decision visible after the toast disappears',()=>{
+ const rows=[
+  {id:8,scope:'Odbiór pojazdu',status:'APPROVED',created_at:'2026-09-26T12:30:00Z'},
+  {id:6,scope:'Wycena #3 · poprzednia',status:'APPROVED',decided_at:'2026-09-26T10:00:00Z'},
+  {id:7,scope:'Wycena #4 · aktualna',status:'APPROVED',decided_at:'2026-09-26T12:00:00Z'}
+ ]
+ assert.equal(latestQuoteApproval(rows)?.id,7)
+ assert.equal(latestQuoteApproval([{id:1,scope:'Zgoda na jazdę próbną'}]),null)
 })

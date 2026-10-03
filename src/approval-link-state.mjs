@@ -14,3 +14,10 @@ export function approvalEventMatches(event,approval,orderId){
  const eventApproval=Number(event?.approvalId),currentApproval=Number(approval?.id),eventOrder=Number(event?.orderId),currentOrder=Number(orderId)
  return(Number.isFinite(eventApproval)&&eventApproval>0&&eventApproval===currentApproval)||(Number.isFinite(eventOrder)&&eventOrder>0&&eventOrder===currentOrder)
 }
+
+export function latestQuoteApproval(rows=[]){
+ return rows.filter(row=>/^Wycena #\d+(?:\s|$)/.test(String(row?.scope||''))).sort((left,right)=>{
+  const byTime=timestamp(right.decided_at||right.created_at)-timestamp(left.decided_at||left.created_at)
+  return byTime||Number(right.id||0)-Number(left.id||0)
+ })[0]||null
+}
