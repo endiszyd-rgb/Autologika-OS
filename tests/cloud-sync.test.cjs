@@ -39,6 +39,14 @@ test('PC accepts the Android QC key field used by older mobile records',()=>{
  db.close()
 })
 
+test('PC normalizes legacy Android labor names before saving an order item',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE orders(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE inventory_parts(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE order_items(id INTEGER PRIMARY KEY,order_id INTEGER,inventory_part_id INTEGER,kind TEXT,name TEXT,qty REAL,cloud_id TEXT,updated_at TEXT); INSERT INTO orders VALUES(3,'order-cloud');`)
+ applyPayload(db,'order_items','android-labor',{order_cloud_id:'order-cloud',kind:'LABOR',name:'Diagnostyka',qty:1},'2026-10-03T12:00:00.000Z')
+ assert.deepEqual({...db.prepare("SELECT order_id,kind,name,qty FROM order_items WHERE cloud_id='android-labor'").get()},{order_id:3,kind:'ROBOCIZNA',name:'Diagnostyka',qty:1})
+ db.close()
+})
+
 test('missing optional approval table is distinguished from other Cloud failures',()=>{
  assert.equal(isMissingApprovalTable(new Error(`Cloud 404: {"code":"PGRST205","message":"Could not find the table 'public.customer_approval_links' in the schema cache"}`)),true)
  assert.equal(isMissingApprovalTable(new Error('Cloud 500: połączenie przerwane')),false)
