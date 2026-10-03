@@ -54,6 +54,15 @@ test('public approval page keeps the token in the URL fragment and talks only to
  assert.doesNotThrow(()=>new Function(script))
 })
 
+test('public approval page presents customer-facing labels and exact approval identity',()=>{
+ assert.match(client,/approval\.approvalDocumentNo\|\|approval\.documentNo/)
+ assert.match(client,/ROBOCIZNA:'Robocizna'/)
+ assert.match(client,/CZESC:'Część'/)
+ assert.match(client,/item\.quantity[\s\S]*item\.unit[\s\S]*item\.unitPrice/)
+ assert.match(client,/approval\.customer\?\.name/)
+ assert.match(client,/approval\.scope/)
+})
+
 test('approved evidence uploads a signature and printable PDF and removes orphaned uploads',()=>{
  assert.match(edge,/upload\(signaturePath,signatureBytes/)
  assert.match(edge,/upload\(pdfPath,pdfBytes/)
