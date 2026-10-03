@@ -25,6 +25,7 @@ const { customerProfile } = require('./customer-profile.cjs')
 const { listDebtors } = require('./debtors.cjs')
 const { listServiceReminders, createServiceReminder, setServiceReminderStatus } = require('./service-reminders.cjs')
 const { buildVehicleHealth } = require('./vehicle-health.cjs')
+const { vehicleHistoryDetails } = require('./vehicle-history.cjs')
 const { archiveBasePath, vehicleArchiveFolder, approvalArchiveState, approvalEvidenceInspection, approvalEvidenceState } = require('./approval-archive.cjs')
 const { ORDER_BASE_SQL, ORDER_TOTAL_SQL, ORDER_COST_SQL, finalPriceChange } = require('./order-financials.cjs')
 const { deriveOrderReadiness } = require('./order-readiness.cjs')
@@ -456,7 +457,8 @@ ipcMain.handle('vehicles:profile',(_,id)=>{
   const diagnostics=db.prepare(`SELECT d.*,o.opened_at,o.id order_id,o.title FROM diagnostics d JOIN orders o ON o.id=d.order_id WHERE o.vehicle_id=? AND d.deleted_at IS NULL ORDER BY o.opened_at DESC LIMIT 20`).all(id)
   const tech=db.prepare(`SELECT COUNT(*) total,SUM(CASE WHEN verified=1 THEN 1 ELSE 0 END) verified FROM technical_data_entries WHERE deleted_at IS NULL AND (vehicle_id=? OR (make=? AND engine_code!='' AND engine_code=?))`).get(id,vehicle.make||'',vehicle.engine_code||'')
   const totals=orders.reduce((a,o)=>{a.revenue+=Number(o.total||0);a.contribution+=Number(o.contribution||0);return a},{revenue:0,contribution:0})
-  return {vehicle,orders,findings,reminders,diagnostics,health:buildVehicleHealth({vehicle,orders,findings,reminders,diagnostics}),tech:{total:Number(tech?.total||0),verified:Number(tech?.verified||0)},totals}
+  const history=vehicleHistoryDetails(db,id)
+  return {vehicle,orders,findings,reminders,diagnostics,...history,health:buildVehicleHealth({vehicle,orders,findings,reminders,diagnostics}),tech:{total:Number(tech?.total||0),verified:Number(tech?.verified||0)},totals}
 })
 ipcMain.handle('vehicleFindings:list',(_,vehicleId)=>getDb().prepare(`SELECT * FROM vehicle_findings WHERE vehicle_id=? AND deleted_at IS NULL ORDER BY CASE status WHEN 'OPEN' THEN 0 WHEN 'MONITOR' THEN 1 ELSE 2 END,created_at DESC`).all(vehicleId))
 ipcMain.handle('vehicleFindings:create',(_,{vehicleId,orderId,data})=>{const r=getDb().prepare(`INSERT INTO vehicle_findings(vehicle_id,source_order_id,category,title,details,severity,status,due_date,due_mileage) VALUES (?,?,?,?,?,?,?,?,?)`).run(vehicleId,orderId||null,data.category||'USTERKA',data.title,data.details||'',data.severity||'INFO',data.status||'OPEN',data.due_date||null,data.due_mileage||null);return{id:Number(r.lastInsertRowid)}})
