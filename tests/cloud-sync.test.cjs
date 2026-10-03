@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute,sqliteBindValue,isMissingApprovalTable,syncResultSnapshot,approvalDeploymentMessage}}=require('../electron/cloud-sync.cjs')
+const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute,sqliteBindValue,isMissingApprovalTable,syncResultSnapshot,approvalDeploymentMessage,backgroundMode}}=require('../electron/cloud-sync.cjs')
 
 test('PC compares SQLite UTC timestamps with Cloud ISO timestamps without a local timezone shift',()=>{
  assert.equal(timestampMs('2026-09-20 10:15:30'),Date.parse('2026-09-20T10:15:30.000Z'))
@@ -48,6 +48,13 @@ test('missing optional approval table is distinguished from other Cloud failures
 test('saved sync result retains the optional approval module warning',()=>{
  const snapshot=syncResultSnapshot({ok:true,pushed:2,pulled:3,pending:0,approvalModuleUnavailable:true,at:'2026-09-28T08:00:00.000Z'})
  assert.deepEqual(snapshot,{ok:true,error:'',pushed:2,pulled:3,conflicts:0,pending:0,approvalModuleUnavailable:true,at:'2026-09-28T08:00:00.000Z'})
+})
+
+test('remote approvals remain active when full automatic synchronization is disabled',()=>{
+ const base={url:'https://example.supabase.co',key:'sb_publishable_test_key_long_enough',accessToken:'token'}
+ assert.equal(backgroundMode({...base,enabled:true}),'SYNC')
+ assert.equal(backgroundMode({...base,enabled:false}),'APPROVALS')
+ assert.equal(backgroundMode({...base,accessToken:'',enabled:false}),'OFF')
 })
 
 test('approval deployment diagnostics identify the missing Cloud component',()=>{

@@ -13,7 +13,7 @@ const { roundedPartQuantity } = require('./part-quantity.cjs')
 
 const SYNC_TABLES = ['app_settings','customers','suppliers','inventory_parts','vehicles','orders','diagnostics','order_notes','job_part_orders','payments','appointments','order_items','work_logs','communications','approvals','order_events','sales_refs','service_reminders_v2','attachments','delivery_document_imports','signatures','work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps']
 const events = new EventEmitter()
-let running = false, timer = null
+let running = false, approvalPolling = false, timer = null
 function configPath(){ return path.join(app.getPath('userData'),'cloud-sync.json') }
 function defaultConfig(){ return { enabled:false,url:'',key:'',intervalSeconds:30,deviceName:os.hostname(),deviceId:crypto.randomUUID(),lastSync:'',syncCursorVersion:0,lastFullSyncAt:'',syncOwnerId:'',lastResult:null,workshopId:'',accessToken:'',refreshToken:'',expiresAt:0,user:null } }
 function normalizeUrl(value=''){return String(value||'').trim().replace(/\/+(rest|auth|storage)\/v1\/?$/i,'').replace(/\/+$/,'')}
@@ -202,6 +202,15 @@ function queueState(db){
 function syncResultSnapshot(result){return {ok:!!result.ok,error:result.error||'',pushed:Number(result.pushed||0),pulled:Number(result.pulled||0),conflicts:Number(result.conflicts||0),pending:Number(result.pending||0),approvalModuleUnavailable:!!result.approvalModuleUnavailable,at:result.at||new Date().toISOString()}}
 function rememberResult(result){try{saveConfig({lastResult:syncResultSnapshot(result)})}catch{}return result}
 function isMissingApprovalTable(error){const message=String(error?.message||error||'');return /(?:PGRST205|schema cache)/i.test(message)&&/customer_approval_links/i.test(message)}
+function backgroundMode(c){if(!isConfigured(c)||!c.accessToken)return 'OFF';return c.enabled?'SYNC':'APPROVALS'}
+async function pollRemoteApprovals(){
+ const c=loadConfig()
+ if(backgroundMode(c)==='OFF'||running||approvalPolling)return []
+ approvalPolling=true
+ try{return await scanRemoteApprovals(c,getDb())}
+ catch(error){if(isMissingApprovalTable(error))return [];throw error}
+ finally{approvalPolling=false}
+}
 async function syncNow(){
  if(running)return {ok:false,busy:true}
  let c=loadConfig()
@@ -228,7 +237,14 @@ async function syncNow(){
 }
 function status(){const c=loadConfig(),db=getDb();return {configured:isConfigured(c),loggedIn:!!c.accessToken,email:c.user?.email||'',workshopId:c.workshopId||c.user?.id||'',enabled:c.enabled,running,lastSync:c.lastSync||'',lastResult:c.lastResult||null,deviceName:c.deviceName,deviceId:c.deviceId,intervalSeconds:c.intervalSeconds,url:c.url,...queueState(db)}}
 async function retryPending(id){const db=getDb(),row=db.prepare('SELECT id FROM sync_queue WHERE id=?').get(Number(id));if(!row)return {ok:false,error:'Ta zmiana nie oczekuje już na wysłanie.'};db.prepare('UPDATE sync_queue SET attempts=0,last_error=NULL WHERE id=?').run(row.id);return syncNow()}
-function startAuto(){stopAuto();const c=loadConfig();if(c.enabled&&isConfigured(c)&&c.accessToken){timer=setInterval(()=>syncNow().catch(()=>{}),c.intervalSeconds*1000);setTimeout(()=>syncNow().catch(()=>{}),2500)}}
+function startAuto(){
+ stopAuto()
+ const c=loadConfig(),mode=backgroundMode(c)
+ if(mode==='OFF')return
+ const run=()=>{const current=loadConfig();return backgroundMode(current)==='SYNC'?syncNow():pollRemoteApprovals()}
+ timer=setInterval(()=>run().catch(()=>{}),c.intervalSeconds*1000)
+ setTimeout(()=>run().catch(()=>{}),2500)
+}
 function stopAuto(){if(timer){clearInterval(timer);timer=null}}
 
 async function approvalDeploymentStatus(){
@@ -257,4 +273,4 @@ async function pullRemoteApproval(approvalId){
   return {ok:true,...r,status:local?.status||r.status,customer_note:local?.note||r.customer_note||'',decided_at:local?.decided_at||r.decided_at};
 }
 
-module.exports={loadConfig,saveConfig,publicConfig,status,syncNow,retryPending,startAuto,stopAuto,login,signup,logout,account,testConnection,approvalDeploymentStatus,createRemoteApproval,pullRemoteApproval,scanRemoteApprovals,archiveApprovalPdf,syncApprovalArchive,downloadApprovalSignature,ensureAttachmentLocal,ensureDeliveryDocumentLocal,on:(name,fn)=>events.on(name,fn),_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute,sqliteBindValue,isMissingApprovalTable,syncResultSnapshot,approvalDeploymentMessage}}
+module.exports={loadConfig,saveConfig,publicConfig,status,syncNow,retryPending,startAuto,stopAuto,login,signup,logout,account,testConnection,approvalDeploymentStatus,createRemoteApproval,pullRemoteApproval,scanRemoteApprovals,archiveApprovalPdf,syncApprovalArchive,downloadApprovalSignature,ensureAttachmentLocal,ensureDeliveryDocumentLocal,on:(name,fn)=>events.on(name,fn),_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute,sqliteBindValue,isMissingApprovalTable,syncResultSnapshot,approvalDeploymentMessage,backgroundMode}}
