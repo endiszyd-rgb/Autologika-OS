@@ -195,7 +195,12 @@ function importDeliveryDocument(db,payload,{markup=defaultMarkup}={}){
       }
       insertItem.run(order.lastInsertRowid,partId,item.part_no,item.name,item.qty,item.unit_cost,item.qty)
     }
-    return{purchase_id:order.lastInsertRowid,supplier_id:supplier.id,supplier_name:supplier.name,created,updated,item_count:cleanItems.length,quantity:cleanItems.reduce((sum,item)=>sum+item.qty,0)}
+    const quantity=cleanItems.reduce((sum,item)=>sum+item.qty,0)
+    const itemsGrossTotal=roundMoney(cleanItems.reduce((sum,item)=>sum+Number(item.gross_total||item.qty*item.unit_cost),0))
+    const ext=path.extname(payload.source_file||'').toLowerCase(),mime=ext==='.png'?'image/png':ext==='.webp'?'image/webp':'image/jpeg'
+    const history=db.prepare(`INSERT INTO delivery_document_imports(supplier_name,document_no,document_date,gross_total,items_gross_total,item_count,quantity,items_json,file_path,mime,size_bytes,cloud_id)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(supplier.name,document.document_no||'',document.document_date||null,roundMoney(document.gross_total||itemsGrossTotal),itemsGrossTotal,cleanItems.length,quantity,JSON.stringify(cleanItems),payload.source_file||'',mime,payload.source_file&&fs.existsSync(payload.source_file)?fs.statSync(payload.source_file).size:null,hash)
+    return{purchase_id:order.lastInsertRowid,delivery_document_id:history.lastInsertRowid,supplier_id:supplier.id,supplier_name:supplier.name,created,updated,item_count:cleanItems.length,quantity}
   })()
 }
 

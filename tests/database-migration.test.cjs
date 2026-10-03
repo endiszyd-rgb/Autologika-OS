@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {migrateSchemaV9,migrateSchemaV10,migrateSchemaV12,migrateSchemaV13,migrateSchemaV14,migrateSchemaV15,migrateSchemaV16}=require('../electron/db.cjs')
+const {migrateSchemaV9,migrateSchemaV10,migrateSchemaV12,migrateSchemaV13,migrateSchemaV14,migrateSchemaV15,migrateSchemaV16,migrateSchemaV17}=require('../electron/db.cjs')
 
 test('schema v9 preserves ordered parts and adds scanned catalog fields',()=>{
  const db=new DatabaseSync(':memory:')
@@ -112,5 +112,27 @@ test('schema v16 converts fractional part counts into whole pieces and recalcula
  assert.equal(db.prepare('SELECT qty FROM job_part_orders WHERE id=6').get().qty,2)
  assert.deepEqual({...db.prepare('SELECT qty,received_qty FROM purchase_order_items WHERE id=7').get()},{qty:3,received_qty:3})
  assert.deepEqual({...db.prepare('SELECT qty,price_snapshot FROM quote_items WHERE id=8').get()},{qty:2,price_snapshot:70})
+ db.close()
+})
+
+test('schema v17 creates synchronized delivery history and migrates earlier OCR imports',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`
+  CREATE TABLE sync_meta(key TEXT PRIMARY KEY,value TEXT);
+  CREATE TABLE sync_queue(id INTEGER PRIMARY KEY AUTOINCREMENT,entity_type TEXT,row_id INTEGER,cloud_id TEXT,operation TEXT,queued_at TEXT DEFAULT CURRENT_TIMESTAMP);
+  CREATE TABLE suppliers(id INTEGER PRIMARY KEY,name TEXT);
+  CREATE TABLE purchase_orders(id INTEGER PRIMARY KEY,supplier_id INTEGER,ordered_at TEXT,external_document_no TEXT,document_date TEXT,source_file TEXT,source_hash TEXT,gross_total REAL);
+  CREATE TABLE purchase_order_items(id INTEGER PRIMARY KEY,purchase_order_id INTEGER,part_no TEXT,name TEXT,qty REAL,unit_cost REAL);
+  INSERT INTO suppliers VALUES(2,'XENO-ŚWIST');
+  INSERT INTO purchase_orders VALUES(7,2,'2026-09-29','3/WZ/2026/124','2026-09-29','C:/scan.jpg','hash-124',180);
+  INSERT INTO purchase_order_items VALUES(1,7,'M2H-254','Drążek kierowniczy',2,25.2),(2,7,'K2-K156','Płyn do opon',1,17.89);
+ `)
+ migrateSchemaV17(db);migrateSchemaV17(db)
+ const row=db.prepare("SELECT * FROM delivery_document_imports WHERE cloud_id='hash-124'").get()
+ assert.equal(row.document_no,'3/WZ/2026/124')
+ assert.equal(row.item_count,2)
+ assert.equal(row.quantity,3)
+ assert.equal(JSON.parse(row.items_json)[0].part_no,'M2H-254')
+ assert.equal(db.prepare("SELECT COUNT(*) c FROM sync_queue WHERE entity_type='delivery_document_imports'").get().c,1)
  db.close()
 })

@@ -6,7 +6,7 @@ const { seedTechnicalReference } = require('./technical-seed.cjs')
 const { migrateLegacyServiceReminders } = require('./service-reminders.cjs')
 
 let db
-const SCHEMA_VERSION = 16
+const SCHEMA_VERSION = 17
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -144,6 +144,46 @@ function migrate(db,currentVersion=0) {
   }
   if(currentVersion<16){
     db.transaction(()=>{migrateSchemaV16(db);db.pragma('user_version = 16')})()
+    currentVersion=16
+  }
+  if(currentVersion<17){
+    db.transaction(()=>{migrateSchemaV17(db);db.pragma('user_version = 17')})()
+  }
+}
+
+function migrateSchemaV17(db){
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS delivery_document_imports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      supplier_name TEXT, document_no TEXT, document_date TEXT,
+      gross_total REAL NOT NULL DEFAULT 0, items_gross_total REAL NOT NULL DEFAULT 0,
+      item_count INTEGER NOT NULL DEFAULT 0, quantity INTEGER NOT NULL DEFAULT 0,
+      items_json TEXT NOT NULL DEFAULT '[]', file_path TEXT NOT NULL DEFAULT '', storage_path TEXT,
+      mime TEXT, size_bytes INTEGER, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      cloud_id TEXT, updated_at TEXT, deleted_at TEXT, version INTEGER NOT NULL DEFAULT 1
+    );
+    CREATE INDEX IF NOT EXISTS idx_delivery_document_date ON delivery_document_imports(document_date,created_at);
+    CREATE INDEX IF NOT EXISTS idx_delivery_document_number ON delivery_document_imports(document_no);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_delivery_document_imports_cloud_id ON delivery_document_imports(cloud_id) WHERE cloud_id IS NOT NULL;
+    CREATE TRIGGER IF NOT EXISTS sync_delivery_document_imports_assign_cloud AFTER INSERT ON delivery_document_imports
+    WHEN NEW.cloud_id IS NULL BEGIN UPDATE delivery_document_imports SET cloud_id=lower(hex(randomblob(16))),updated_at=CURRENT_TIMESTAMP WHERE id=NEW.id; END;
+    CREATE TRIGGER IF NOT EXISTS sync_delivery_document_imports_insert AFTER INSERT ON delivery_document_imports
+    WHEN NEW.cloud_id IS NOT NULL AND COALESCE((SELECT value FROM sync_meta WHERE key='applying_remote'),'0')!='1'
+    BEGIN INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation) VALUES ('delivery_document_imports',NEW.id,NEW.cloud_id,'UPSERT'); END;
+    CREATE TRIGGER IF NOT EXISTS sync_delivery_document_imports_update AFTER UPDATE ON delivery_document_imports
+    WHEN COALESCE((SELECT value FROM sync_meta WHERE key='applying_remote'),'0')!='1'
+    BEGIN UPDATE delivery_document_imports SET updated_at=CURRENT_TIMESTAMP,version=COALESCE(OLD.version,1)+1 WHERE id=NEW.id AND NEW.updated_at IS OLD.updated_at; DELETE FROM sync_queue WHERE entity_type='delivery_document_imports' AND row_id=NEW.id; INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation) VALUES ('delivery_document_imports',NEW.id,COALESCE(NEW.cloud_id,OLD.cloud_id),'UPSERT'); END;
+    CREATE TRIGGER IF NOT EXISTS sync_delivery_document_imports_delete AFTER DELETE ON delivery_document_imports
+    WHEN COALESCE((SELECT value FROM sync_meta WHERE key='applying_remote'),'0')!='1'
+    BEGIN DELETE FROM sync_queue WHERE entity_type='delivery_document_imports' AND cloud_id=OLD.cloud_id; INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation) VALUES ('delivery_document_imports',NULL,OLD.cloud_id,'DELETE'); END;
+  `)
+  const legacyDeliveries=db.prepare(`SELECT po.*,s.name supplier FROM purchase_orders po LEFT JOIN suppliers s ON s.id=po.supplier_id WHERE COALESCE(po.source_hash,'')!=''`).all()
+  const insertHistory=db.prepare(`INSERT OR IGNORE INTO delivery_document_imports(supplier_name,document_no,document_date,gross_total,items_gross_total,item_count,quantity,items_json,file_path,mime,size_bytes,cloud_id,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)`)
+  for(const order of legacyDeliveries){
+    if(db.prepare('SELECT id FROM delivery_document_imports WHERE cloud_id=?').get(order.source_hash))continue
+    const items=db.prepare('SELECT part_no,name,qty,unit_cost,ROUND(qty*unit_cost,2) gross_total FROM purchase_order_items WHERE purchase_order_id=? ORDER BY id').all(order.id)
+    const file=String(order.source_file||''),ext=path.extname(file).toLowerCase(),mime=ext==='.png'?'image/png':ext==='.webp'?'image/webp':'image/jpeg'
+    insertHistory.run(order.supplier||'',order.external_document_no||'',order.document_date||order.ordered_at||null,Number(order.gross_total||0),items.reduce((sum,item)=>sum+Number(item.gross_total||0),0),items.length,items.reduce((sum,item)=>sum+Number(item.qty||0),0),JSON.stringify(items),file,mime,file&&fs.existsSync(file)?fs.statSync(file).size:null,order.source_hash)
   }
 }
 
@@ -748,7 +788,28 @@ function migrateSchemaV1(db) {
   ensureColumns('job_part_orders',[['oe_number','TEXT'],['inventory_part_id','INTEGER'],['vehicle_snapshot','TEXT'],['supplier_name','TEXT'],['barcode','TEXT'],['brand','TEXT'],['vehicle_fitment','TEXT'],['cross_numbers','TEXT'],['lookup_source','TEXT'],['lookup_url','TEXT']])
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_parts_barcode ON inventory_parts(barcode) WHERE barcode IS NOT NULL AND barcode!=''")
 
-  const syncTables=['app_settings','customers','vehicles','orders','diagnostics','order_notes','job_part_orders','payments','appointments','suppliers','inventory_parts','order_items','work_logs','communications','approvals','order_events','sales_refs','service_reminders_v2','attachments','signatures','work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps']
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS delivery_document_imports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      supplier_name TEXT,
+      document_no TEXT,
+      document_date TEXT,
+      gross_total REAL NOT NULL DEFAULT 0,
+      items_gross_total REAL NOT NULL DEFAULT 0,
+      item_count INTEGER NOT NULL DEFAULT 0,
+      quantity INTEGER NOT NULL DEFAULT 0,
+      items_json TEXT NOT NULL DEFAULT '[]',
+      file_path TEXT NOT NULL DEFAULT '',
+      storage_path TEXT,
+      mime TEXT,
+      size_bytes INTEGER,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_delivery_document_date ON delivery_document_imports(document_date,created_at);
+    CREATE INDEX IF NOT EXISTS idx_delivery_document_number ON delivery_document_imports(document_no);
+  `)
+
+  const syncTables=['app_settings','customers','vehicles','orders','diagnostics','order_notes','job_part_orders','payments','appointments','suppliers','inventory_parts','order_items','work_logs','communications','approvals','order_events','sales_refs','service_reminders_v2','attachments','delivery_document_imports','signatures','work_procedure_runs','technical_data_entries','vehicle_findings','order_qc','work_templates','technical_manual_pages','technical_manual_hotspots','technical_manual_steps']
   for(const table of syncTables){
     const names=db.prepare(`PRAGMA table_info(${table})`).all().map(x=>x.name)
     if(!names.includes('cloud_id')) db.exec(`ALTER TABLE ${table} ADD COLUMN cloud_id TEXT`)
@@ -843,4 +904,4 @@ function seed(db) {
     .run(o.lastInsertRowid,v.lastInsertRowid,'Diagnostyka braku mocy',start.toISOString(),end.toISOString(),'Stanowisko 1','PLAN')
 }
 
-module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10, migrateSchemaV12, migrateSchemaV13, migrateSchemaV14, migrateSchemaV15, migrateSchemaV16 }
+module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10, migrateSchemaV12, migrateSchemaV13, migrateSchemaV14, migrateSchemaV15, migrateSchemaV16, migrateSchemaV17 }

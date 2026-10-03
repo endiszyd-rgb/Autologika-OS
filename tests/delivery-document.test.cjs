@@ -47,7 +47,8 @@ test('imports new rows, increments an existing part and blocks a duplicate docum
   CREATE TABLE suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,notes TEXT);
   CREATE TABLE purchase_orders(id INTEGER PRIMARY KEY AUTOINCREMENT,supplier_id INTEGER,status TEXT,ordered_at TEXT,notes TEXT,external_document_no TEXT,document_date TEXT,source_file TEXT,source_hash TEXT,gross_total REAL);
   CREATE UNIQUE INDEX idx_purchase_orders_source_hash ON purchase_orders(source_hash) WHERE source_hash IS NOT NULL AND source_hash!='';
-  CREATE TABLE purchase_order_items(id INTEGER PRIMARY KEY AUTOINCREMENT,purchase_order_id INTEGER,inventory_part_id INTEGER,part_no TEXT,name TEXT,qty REAL,unit_cost REAL,received_qty REAL);
+   CREATE TABLE purchase_order_items(id INTEGER PRIMARY KEY AUTOINCREMENT,purchase_order_id INTEGER,inventory_part_id INTEGER,part_no TEXT,name TEXT,qty REAL,unit_cost REAL,received_qty REAL);
+   CREATE TABLE delivery_document_imports(id INTEGER PRIMARY KEY AUTOINCREMENT,supplier_name TEXT,document_no TEXT,document_date TEXT,gross_total REAL,items_gross_total REAL,item_count INTEGER,quantity INTEGER,items_json TEXT,file_path TEXT,mime TEXT,size_bytes INTEGER,cloud_id TEXT UNIQUE);
   CREATE TABLE inventory_parts(id INTEGER PRIMARY KEY AUTOINCREMENT,part_no TEXT,name TEXT,category TEXT,lookup_source TEXT,stock REAL,min_stock REAL,unit_cost REAL,sell_price REAL,supplier_id INTEGER,notes TEXT,updated_at TEXT);
   INSERT INTO inventory_parts(part_no,name,stock,unit_cost,sell_price) VALUES ('KTCZETR1345','Uszczelniacz półosi',3,15,22);
  `)
@@ -59,7 +60,11 @@ test('imports new rows, increments an existing part and blocks a duplicate docum
  assert.equal(result.updated,1)
  assert.equal(result.item_count,3)
  assert.equal(db.prepare("SELECT stock FROM inventory_parts WHERE part_no='KTCZETR1345'").get().stock,5)
- assert.equal(db.prepare('SELECT COUNT(*) count FROM purchase_order_items').get().count,3)
+  assert.equal(db.prepare('SELECT COUNT(*) count FROM purchase_order_items').get().count,3)
+  const history=db.prepare('SELECT * FROM delivery_document_imports').get()
+  assert.equal(history.cloud_id,'abc123')
+  assert.equal(history.item_count,3)
+  assert.equal(JSON.parse(history.items_json)[0].part_no,'KTCZETR1345')
  assert.throws(()=>importDeliveryDocument(db,payload),/już przyjęty/)
  assert.throws(()=>importDeliveryDocument(db,{...payload,source_hash:'different-photo'}),/tego dostawcy został już przyjęty/)
  db.close()

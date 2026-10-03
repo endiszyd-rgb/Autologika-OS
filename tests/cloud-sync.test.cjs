@@ -147,6 +147,19 @@ test('inventory part preserves barcode and supplier through cloud synchronizatio
  assert.equal(remote.supplier_id,1)
 })
 
+test('delivery document keeps its recognized rows while device file paths stay local',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE delivery_document_imports(id INTEGER PRIMARY KEY,supplier_name TEXT,document_no TEXT,item_count INTEGER,items_json TEXT,file_path TEXT,storage_path TEXT,cloud_id TEXT,updated_at TEXT); INSERT INTO delivery_document_imports VALUES(1,'XENO-ŚWIST','3/WZ/2026/124',2,'[{"part_no":"M2H-254","qty":2}]','C:/local/scan.jpg','workshop/delivery/scan.jpg','delivery-1','2026-10-03T10:00:00.000Z');`)
+ const payload=buildPayload(db,'delivery_document_imports',db.prepare('SELECT * FROM delivery_document_imports WHERE id=1').get())
+ assert.equal(payload.file_path,undefined)
+ assert.deepEqual(payload.items,[{part_no:'M2H-254',qty:2}])
+ applyPayload(db,'delivery_document_imports','delivery-2',{supplier_name:'Inter Cars',document_no:'FV/12',item_count:1,items:[{part_no:'W712/95',name:'Filtr oleju',qty:1}],storage_path:'workshop/delivery/remote.jpg'},'2026-10-03T11:00:00.000Z')
+ const remote=db.prepare("SELECT * FROM delivery_document_imports WHERE cloud_id='delivery-2'").get()
+ assert.equal(remote.file_path,null)
+ assert.equal(JSON.parse(remote.items_json)[0].part_no,'W712/95')
+ db.close()
+})
+
 test('order item preserves its inventory source through cloud synchronization',()=>{
  const db=new DatabaseSync(':memory:')
  db.exec(`CREATE TABLE inventory_parts(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE orders(id INTEGER PRIMARY KEY,cloud_id TEXT); CREATE TABLE order_items(id INTEGER PRIMARY KEY,order_id INTEGER,inventory_part_id INTEGER,name TEXT,cloud_id TEXT,updated_at TEXT); INSERT INTO inventory_parts VALUES(7,'inventory-cloud'); INSERT INTO orders VALUES(3,'order-cloud'); INSERT INTO order_items VALUES(11,3,7,'Filtr oleju','item-cloud','2026-09-11T10:00:00.000Z');`)

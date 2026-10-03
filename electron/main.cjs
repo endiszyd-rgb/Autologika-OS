@@ -812,6 +812,8 @@ ipcMain.handle('inventory:importDeliveryDocument',(_event,payload)=>{
     return{...result,archive_file:archived}
   }catch(error){if(copied)try{fs.unlinkSync(archived)}catch{};throw error}
 })
+ipcMain.handle('deliveryDocuments:list',()=>getDb().prepare(`SELECT * FROM delivery_document_imports WHERE deleted_at IS NULL ORDER BY COALESCE(document_date,created_at) DESC,created_at DESC`).all().map(row=>{let items=[];try{items=JSON.parse(row.items_json||'[]')}catch{}return{...row,items}}))
+ipcMain.handle('deliveryDocuments:open',async(_event,id)=>{const file=await cloudSync.ensureDeliveryDocumentLocal(id);const error=await shell.openPath(file);if(error)throw new Error(error);return true})
 
 ipcMain.handle('purchases:list',()=>getDb().prepare(`SELECT po.*,s.name supplier,COUNT(i.id) item_count,COALESCE(SUM(i.qty*i.unit_cost),0) total FROM purchase_orders po LEFT JOIN suppliers s ON s.id=po.supplier_id LEFT JOIN purchase_order_items i ON i.purchase_order_id=po.id GROUP BY po.id ORDER BY po.created_at DESC`).all())
 ipcMain.handle('purchases:create',(_,d)=>{const r=getDb().prepare('INSERT INTO purchase_orders(supplier_id,status,ordered_at,expected_at,notes) VALUES (?,?,?,?,?)').run(d.supplier_id||null,d.status||'ROBOCZE',d.ordered_at||null,d.expected_at||null,d.notes||'');return{id:r.lastInsertRowid}})
