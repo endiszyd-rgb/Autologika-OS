@@ -170,3 +170,29 @@ test('accepting an imported scope does not duplicate order work or planned parts
   assert.equal(db.prepare('SELECT status FROM quotes WHERE id=?').get(quote.id).status,'ZAAKCEPTOWANA')
   assert.deepEqual({...db.prepare('SELECT status,wait_state FROM orders WHERE id=1').get()},{status:'NAPRAWA',wait_state:'CZESCI'})
 })
+
+test('additional scope creates a new immutable quote while preserving both decisions without duplicating order rows', t => {
+  const { db, call } = setup(t)
+  db.exec("INSERT INTO order_items(order_id,kind,name,qty,unit_cost,unit_price) VALUES (1,'MATERIAL','Płyn hamulcowy',1,20,45)")
+
+  assert.equal(call('importOrder',1).total,45)
+  const firstQuote=db.prepare("SELECT * FROM quotes WHERE order_id=1 AND status='ROBOCZA' ORDER BY id DESC LIMIT 1").get()
+  const firstApproval=call('requestApproval',firstQuote.id)
+  db.prepare("UPDATE approvals SET status='APPROVED' WHERE id=?").run(firstApproval.approvalId)
+  assert.equal(call('accept',firstQuote.id).ok,true)
+
+  db.exec("INSERT INTO order_items(order_id,kind,name,qty,unit_cost,unit_price) VALUES (1,'ROBOCIZNA','Kontrola dodatkowa',0.5,0,120)")
+  assert.equal(call('importOrder',1).total,105)
+  const secondQuote=db.prepare("SELECT * FROM quotes WHERE order_id=1 AND status='ROBOCZA' ORDER BY id DESC LIMIT 1").get()
+  assert.notEqual(secondQuote.id,firstQuote.id)
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM quote_items WHERE quote_id=?').get(firstQuote.id).n,1)
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM quote_items WHERE quote_id=?').get(secondQuote.id).n,2)
+
+  const secondApproval=call('requestApproval',secondQuote.id)
+  db.prepare("UPDATE approvals SET status='APPROVED' WHERE id=?").run(secondApproval.approvalId)
+  assert.equal(call('accept',secondQuote.id).ok,true)
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM quotes WHERE order_id=1 AND status='ZAAKCEPTOWANA'").get().n,2)
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM approvals WHERE order_id=1 AND status='APPROVED'").get().n,2)
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM order_items WHERE order_id=1').get().n,2)
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM order_events WHERE event_type='QUOTE_APPROVED'").get().n,2)
+})
