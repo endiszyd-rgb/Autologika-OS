@@ -198,11 +198,14 @@ tbody tr{transition:background-color .16s ease}
 @keyframes uiContentIn{from{opacity:.6;transform:translateY(4px)}to{opacity:1;transform:none}}
 
 @media(max-width:1250px){
-  .orderTabDock{display:flex;gap:4px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+  .orderTabDock{display:flex;gap:4px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#61735f transparent;scroll-padding-inline:18px;scroll-snap-type:x proximity}
+  .orderTabDock::-webkit-scrollbar{height:5px}
+  .orderTabDock::-webkit-scrollbar-track{background:transparent}
+  .orderTabDock::-webkit-scrollbar-thumb{border-radius:99px;background:#61735f}
   .orderTabGroup{display:contents}
   .orderTabGroup>small{display:none}
   .orderTabGroup>div{display:flex;flex:0 0 auto;gap:4px}
-  .orderTabGroup button{min-width:max-content;min-height:38px;padding:7px 11px}
+  .orderTabGroup button{min-width:max-content;min-height:38px;padding:7px 11px;scroll-snap-align:center}
 }
 @media(max-width:1180px){
   .workflowPage .kanban{grid-template-columns:repeat(5,240px);overflow-x:auto;padding-bottom:8px}

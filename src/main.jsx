@@ -695,6 +695,7 @@ function Notifications({changed,openOrder,refreshToken}){
 
 function OrderCenter({changed,refreshToken,initialId,openManual}){
  const[orders,setOrders]=useState([]),[id,setId]=useState(initialId||null),[tab,setTab]=useState('overview'),[loadError,setLoadError]=useState('')
+ const tabDockRef=useRef(null)
  const[o,setO]=useState(null),[items,setItems]=useState([]),[parts,setParts]=useState([]),[diag,setDiag]=useState(null),[logs,setLogs]=useState([]),[files,setFiles]=useState([]),[mediaCategory,setMediaCategory]=useState('PRZYJECIE'),[docsSyncing,setDocsSyncing]=useState(false),[docsSyncMessage,setDocsSyncMessage]=useState(''),[notes,setNotes]=useState({}),[employees,setEmployees]=useState([]),[employeeId,setEmployeeId]=useState(''),[showPart,setShowPart]=useState(false),[showQuote,setShowQuote]=useState(false),[comms,setComms]=useState([]),[approvals,setApprovals]=useState([]),[timeline,setTimeline]=useState([]),[payments,setPayments]=useState([]),[closeout,setCloseout]=useState(null),[salesRefs,setSalesRefs]=useState([]),[serviceReminders,setServiceReminders]=useState([]),[showWork,setShowWork]=useState(false),[reopen,setReopen]=useState(false),[procedures,setProcedures]=useState([]),[technical,setTechnical]=useState([]),[findings,setFindings]=useState([]),[qcRows,setQcRows]=useState([]),[vehicleHealth,setVehicleHealth]=useState(null),[quoteBusy,setQuoteBusy]=useState(false),[quoteError,setQuoteError]=useState('')
  const errorText=error=>String(error?.message||error||'Nie udało się pobrać danych zlecenia.').replace(/^Error invoking remote method '[^']+': Error:\s*/,'')
  const loadOrders=async()=>{try{let r=await api.orders.list();if(initialId&&!r.some(order=>order.id===Number(initialId))){const linked=await api.orders.get(Number(initialId));if(linked)r=[linked,...r]}setOrders(r);if(!id&&r[0])setId(r[0].id);setLoadError('')}catch(error){console.error('Order Center list failed',error);setLoadError(errorText(error))}}
@@ -705,6 +706,13 @@ function OrderCenter({changed,refreshToken,initialId,openManual}){
  const reload=async()=>{await load();await loadOrders();changed?.()}
  const syncDocumentation=async(silent=false)=>{if(!id||docsSyncing)return;setDocsSyncing(true);if(!silent)setDocsSyncMessage('Pobieram dokumentację z telefonu…');try{const result=await api.cloudSync.now();const latest=await api.attachments.list(id);setFiles(latest);setDocsSyncMessage(result?.ok===false?`Synchronizacja: ${result.error||'sprawdź ustawienia chmury'}`:`Dokumentacja aktualna · ${latest.length} plików`)}catch(error){setDocsSyncMessage(`Nie udało się pobrać dokumentacji: ${errorText(error)}`)}finally{setDocsSyncing(false)}}
  useEffect(()=>{if(tab==='docs'&&id)syncDocumentation(true)},[tab,id])
+ useEffect(()=>{
+   const dock=tabDockRef.current,active=dock?.querySelector(`[data-order-tab="${tab}"]`)
+   if(!dock||!active||dock.scrollWidth<=dock.clientWidth)return
+   const left=Math.max(0,active.offsetLeft-(dock.clientWidth-active.offsetWidth)/2)
+   const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+   dock.scrollTo({left,behavior:reduced?'auto':'smooth'})
+ },[tab])
  const openQuote=async()=>{setQuoteBusy(true);setQuoteError('');try{await api.quotes.importOrder(o.id);setShowQuote(true)}catch(error){setQuoteError(errorText(error))}finally{setQuoteBusy(false)}}
  const handleClosed=async()=>{const remaining=await api.orders.list();setOrders(remaining);const next=remaining.find(x=>x.id!==o.id)||remaining[0];if(next){setId(next.id);setTab('overview')}else{setId(null);setO(null)}changed?.()}
  if(loadError)return <section><Panel title="Centrum zlecenia"><div className="warnbox closeoutError"><b>Nie udało się załadować zlecenia.</b><p>{loadError}</p><button className="primary" onClick={async()=>{await loadOrders();await load()}}>Spróbuj ponownie</button></div></Panel></section>
@@ -724,6 +732,15 @@ function OrderCenter({changed,refreshToken,initialId,openManual}){
    ['NAPRAWA',tabs.filter(([key])=>['works','quote','parts','time'].includes(key))],
    ['OBSŁUGA',tabs.filter(([key])=>['docs','contact','settlement','reminders','timeline','release'].includes(key))]
  ]
+ const navigateTabs=event=>{
+   if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return
+   const buttons=[...tabDockRef.current.querySelectorAll('[data-order-tab]')]
+   const current=Math.max(0,buttons.indexOf(event.currentTarget))
+   const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(current+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length
+   event.preventDefault()
+   buttons[next].focus()
+   setTab(buttons[next].dataset.orderTab)
+ }
  return <section className="orderCenterPage">
    <div className="centerPicker"><label>Aktywne zlecenie<select aria-label="Wybierz zlecenie" value={id||''} onChange={e=>{setId(Number(e.target.value));setTab('overview')}}>{orders.map(x=><option key={x.id} value={x.id}>#{x.id} · {x.plate} · {x.make} {x.model} · {x.title}</option>)}</select></label><div className="grow"/><button className="primary" onClick={()=>openManual?.(o)}>◫ Dokumentacja auta</button><details className="centerDocuments"><summary>Dokumenty PDF ▾</summary><div><button onClick={()=>api.orders.exportPdf(o.id,'intake')}>Protokół przyjęcia</button><button onClick={()=>api.orders.exportPdf(o.id,'order')}>Zlecenie serwisowe</button><button onClick={()=>api.orders.exportPdf(o.id,'release')}>Protokół wydania</button></div></details></div>
     <div className="centerHero">
@@ -734,9 +751,9 @@ function OrderCenter({changed,refreshToken,initialId,openManual}){
    {locked&&<div className="orderLockNotice"><div><b>✓ Zlecenie zamknięte — zakres prac jest chroniony</b><span>Możesz przeglądać dokumentację, wystawiać numery dokumentów i rejestrować późniejsze wpłaty. Pozycje, ceny składowe oraz stan magazynu pozostają niezmienne.</span></div><button onClick={()=>setReopen(true)}>↩ Otwórz do korekty</button></div>}
     <div className="workflowAdvisor"><div><small>NASTĘPNY KROK</small><b>{advice.title}</b><span>{advice.detail}</span></div><div className="actionrow"><button className="primary" disabled={locked&&Boolean(advice.status||advice.wait)} title={locked&&Boolean(advice.status||advice.wait)?'Najpierw otwórz zlecenie do korekty':''} onClick={applyAdvice}>{advice.title} →</button></div></div>
    <details className="centerManualProcess"><summary><span>Ręczne sterowanie procesem</span><em>{labels[o.status]} · oczekiwanie: {{BRAK:'brak',KLIENT:'klient',CZESCI:'części',DECYZJA:'decyzja'}[o.wait_state||'BRAK']}</em></summary><div><div className="steps centerSteps">{statuses.map(s=><button key={s} className={o.status===s?'sel':''} disabled={locked||(s==='WYDANE'&&o.status!=='WYDANE')} title={locked?'Najpierw otwórz zlecenie do korekty':s==='WYDANE'&&o.status!=='WYDANE'?'Wydanie potwierdź w zakładce QC / wydanie':''} onClick={async()=>{await api.orders.updateStatus(o.id,s);reload()}}>{labels[s]}</button>)}</div><div className="waitBar"><span>Oczekiwanie:</span>{[['BRAK','brak'],['KLIENT','na klienta'],['CZESCI','na części'],['DECYZJA','na decyzję']].map(([v,l])=><button key={v} disabled={locked} title={locked?'Najpierw otwórz zlecenie do korekty':''} className={(o.wait_state||'BRAK')===v?'active':''} onClick={async()=>{await api.orders.updateWait(o.id,v);reload()}}>{l}</button>)}</div></div></details>
-   <nav className="centerTabs orderTabDock" aria-label="Sekcje Centrum zlecenia">{tabGroups.map(([group,groupTabs])=><div className="orderTabGroup" key={group}><small>{group}</small><div>{groupTabs.map(([k,l])=><button data-order-tab={k} aria-current={tab===k?'page':undefined} className={tab===k?'active':''} key={k} onClick={()=>setTab(k)}>{l}{k==='parts'&&partsOpen.length>0?<i>{partsOpen.length}</i>:null}{k==='time'&&active.length>0?<i>{active.length}</i>:null}{k==='docs'&&files.length>0?<i>{files.length}</i>:null}</button>)}</div></div>)}</nav>
+   <nav ref={tabDockRef} className="centerTabs orderTabDock" aria-label="Sekcje Centrum zlecenia" role="tablist">{tabGroups.map(([group,groupTabs])=><div className="orderTabGroup" role="presentation" key={group}><small>{group}</small><div role="presentation">{groupTabs.map(([k,l])=><button type="button" role="tab" id={`order-tab-${k}`} aria-controls="order-tab-content" aria-selected={tab===k} aria-current={tab===k?'page':undefined} tabIndex={tab===k?0:-1} data-order-tab={k} className={tab===k?'active':''} key={k} onKeyDown={navigateTabs} onClick={()=>setTab(k)}>{l}{k==='parts'&&partsOpen.length>0?<i>{partsOpen.length}</i>:null}{k==='time'&&active.length>0?<i>{active.length}</i>:null}{k==='docs'&&files.length>0?<i>{files.length}</i>:null}</button>)}</div></div>)}</nav>
 
-   <div className="workspaceContent">
+   <div className="workspaceContent" id="order-tab-content" role="tabpanel" aria-labelledby={`order-tab-${tab}`}>
 
    {tab==='overview'&&<div className="centerGrid">
       <Panel title="Zgłoszenie klienta"><p className="complaint">{o.complaint||'Brak opisu objawu'}</p><div className="centerFacts"><div><span>Przebieg</span><b>{Number(o.mileage||0).toLocaleString('pl-PL')} km</b></div><div><span>Silnik</span><b>{o.engine||'—'}</b></div><div><span>Limit diagnozy</span><b>{money(o.diagnosis_limit)}</b></div><div><span>Priorytet</span><b>{o.priority}</b></div></div></Panel>
