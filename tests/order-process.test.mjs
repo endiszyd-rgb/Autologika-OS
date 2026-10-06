@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {deriveOrderAdvice} from '../src/order-process.mjs'
+import {deriveOrderAdvice,procedureProgress} from '../src/order-process.mjs'
 
 const base={order:{status:'NAPRAWA',total:1000},diagnosis:{conclusion:'Potwierdzona usterka'},items:[{id:1}],parts:[],approvals:[{status:'APPROVED'}],payments:[],qcRows:[],logs:[],procedures:[]}
 
@@ -46,4 +46,17 @@ test('zaakceptowane zlecenie czekające na dostawę kieruje do części',()=>{
 test('odebrane części nie blokują rozpoczęcia pracy',()=>{
  const advice=deriveOrderAdvice({...base,parts:[{status:'ODEBRANE'}]})
  assert.equal(advice.tab,'time')
+})
+
+test('postęp procedury obejmuje wyłącznie istniejące punkty checklisty',()=>{
+ const progress=procedureProgress({pre:['A'],steps:['B','C'],qc:['D'],progress:{'pre:0':true,'steps:0':true,'qc:0':true,'stary:0':true}})
+ assert.deepEqual(progress,{completed:3,total:4,remaining:1,percent:75,complete:false})
+})
+
+test('niedokończona procedura prowadzi do wykonanych prac przed czasem pracy',()=>{
+ const procedures=[{pre:['Sprawdź pojazd'],steps:['Wykonaj naprawę'],qc:['Zweryfikuj efekt'],progress:{'pre:0':true}}]
+ const advice=deriveOrderAdvice({...base,procedures})
+ assert.equal(advice.tab,'works')
+ assert.match(advice.title,/procedurę/i)
+ assert.match(advice.detail,/2 punktów/i)
 })

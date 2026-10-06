@@ -2,11 +2,21 @@ const hasText=value=>Boolean(String(value||'').trim())
 
 export const hasBasicDiagnosis=diagnosis=>['symptom_confirmed','conclusion','recommendation'].some(key=>hasText(diagnosis?.[key]))
 
+export function procedureProgress(procedure={}){
+  const keys=[]
+  for(const section of ['pre','steps','qc'])for(let index=0;index<(procedure?.[section]||[]).length;index++)keys.push(`${section}:${index}`)
+  const completed=keys.filter(key=>Boolean(procedure?.progress?.[key])).length
+  const total=keys.length
+  return {completed,total,remaining:Math.max(0,total-completed),percent:total?Math.round(completed/total*100):100,complete:completed===total}
+}
+
 export function deriveOrderAdvice({order={},diagnosis,items=[],parts=[],approvals=[],payments=[],qcRows=[],logs=[],procedures=[]}={}){
   const latestApproval=approvals.reduce((latest,item)=>!latest||Number(item.id||0)>Number(latest.id||0)?item:latest,null)
   const approved=latestApproval?.status==='APPROVED'
   const pending=latestApproval?.status==='PENDING'
   const blockingParts=parts.filter(item=>['DO_ZAMOWIENIA','ZAMOWIONE','W_DRODZE'].includes(item.status))
+  const incompleteProcedures=procedures.map(procedureProgress).filter(progress=>!progress.complete)
+  const remainingProcedureSteps=incompleteProcedures.reduce((sum,progress)=>sum+progress.remaining,0)
   const hasWorkScope=items.length>0||procedures.length>0
   const workLogged=logs.some(item=>Boolean(item.ended_at)||Number(item.duration_minutes)>0)
   const qcDone=qcRows.length>=8&&qcRows.filter(item=>item.checked).length>=8
@@ -21,6 +31,7 @@ export function deriveOrderAdvice({order={},diagnosis,items=[],parts=[],approval
   if(order.status==='AKCEPTACJA')return {title:'Rozpocznij naprawę',detail:'Zakres zaakceptowany i brak blokady części.',status:'NAPRAWA',wait:'BRAK',tab:'works'}
   if(order.status==='NAPRAWA'&&blockingParts.length)return {title:'Sprawdź zamówione części',detail:`Zakres jest zaakceptowany, ale ${blockingParts.length} pozycji nadal wymaga dostawy.`,wait:'CZESCI',tab:'parts'}
   if(order.status==='NAPRAWA'&&!hasWorkScope)return {title:'Dodaj zakres wykonanych prac',detail:'Zapisz co zostało wykonane, zanim przejdziesz do czasu pracy i kontroli jakości.',tab:'works'}
+  if(order.status==='NAPRAWA'&&incompleteProcedures.length)return {title:'Dokończ procedurę naprawy',detail:`Pozostało ${remainingProcedureSteps} punktów w ${incompleteProcedures.length} ${incompleteProcedures.length===1?'procedurze':'procedurach'}.`,tab:'works'}
   if(order.status==='NAPRAWA'&&!workLogged)return {title:'Zarejestruj czas pracy',detail:'Zakres jest zapisany. Dodaj zakończony wpis czasu pracy.',tab:'time'}
   if(order.status==='NAPRAWA'&&!qcDone)return {title:'Wykonaj kontrolę jakości',detail:'Przed oznaczeniem auta jako gotowe potwierdź wszystkie punkty QC.',tab:'release'}
   if(order.status==='NAPRAWA')return {title:'Oznacz jako gotowe',detail:'Kontrola jakości jest zapisana. Auto może przejść do rozliczenia i wydania.',status:'GOTOWE',wait:'BRAK',tab:'settlement'}
