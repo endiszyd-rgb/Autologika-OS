@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {deriveOrderAdvice,procedureProgress} from '../src/order-process.mjs'
+import {deriveOrderAdvice,procedureProgress,summarizeProcedures} from '../src/order-process.mjs'
 
 const base={order:{status:'NAPRAWA',total:1000},diagnosis:{conclusion:'Potwierdzona usterka'},items:[{id:1}],parts:[],approvals:[{status:'APPROVED'}],payments:[],qcRows:[],logs:[],procedures:[]}
 
@@ -59,4 +59,12 @@ test('niedokończona procedura prowadzi do wykonanych prac przed czasem pracy',(
  assert.equal(advice.tab,'works')
  assert.match(advice.title,/procedurę/i)
  assert.match(advice.detail,/2 punktów/i)
+})
+
+test('podsumowanie procedur łączy postęp kilku pakietów naprawy',()=>{
+ const summary=summarizeProcedures([
+  {pre:['A'],steps:['B'],qc:[],progress:{'pre:0':true,'steps:0':true}},
+  {pre:[],steps:['C','D'],qc:['E'],progress:{'steps:0':true}}
+ ])
+ assert.deepEqual(summary,{runs:2,completedRuns:1,completed:3,total:5,remaining:2,percent:60,complete:false})
 })

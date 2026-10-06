@@ -10,6 +10,13 @@ export function procedureProgress(procedure={}){
   return {completed,total,remaining:Math.max(0,total-completed),percent:total?Math.round(completed/total*100):100,complete:completed===total}
 }
 
+export function summarizeProcedures(procedures=[]){
+  const rows=procedures.map(procedureProgress)
+  const completed=rows.reduce((sum,row)=>sum+row.completed,0)
+  const total=rows.reduce((sum,row)=>sum+row.total,0)
+  return {runs:rows.length,completedRuns:rows.filter(row=>row.complete).length,completed,total,remaining:Math.max(0,total-completed),percent:total?Math.round(completed/total*100):(rows.length?100:0),complete:rows.every(row=>row.complete)}
+}
+
 export function deriveOrderAdvice({order={},diagnosis,items=[],parts=[],approvals=[],payments=[],qcRows=[],logs=[],procedures=[]}={}){
   const latestApproval=approvals.reduce((latest,item)=>!latest||Number(item.id||0)>Number(latest.id||0)?item:latest,null)
   const approved=latestApproval?.status==='APPROVED'
