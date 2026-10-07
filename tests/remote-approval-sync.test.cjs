@@ -22,7 +22,7 @@ function setup(t) {
       lookup_source TEXT,lookup_url TEXT
     );
     CREATE TABLE approvals(
-      id INTEGER PRIMARY KEY,order_id INTEGER,status TEXT DEFAULT 'PENDING',amount REAL DEFAULT 0,scope TEXT DEFAULT '',note TEXT,decided_at TEXT,
+      id INTEGER PRIMARY KEY,cloud_id TEXT,order_id INTEGER,status TEXT DEFAULT 'PENDING',amount REAL DEFAULT 0,scope TEXT DEFAULT '',note TEXT,decided_at TEXT,
       remote_id TEXT,snapshot_json TEXT,snapshot_hash TEXT,hash_algorithm TEXT,terms_version TEXT,terms_text TEXT,
       signature_storage_path TEXT,signature_hash TEXT,pdf_storage_path TEXT,pdf_hash TEXT,local_pdf_path TEXT,
       remote_expires_at TEXT,remote_synced_at TEXT,client_user_agent TEXT,document_no TEXT,approval_sequence INTEGER,
@@ -47,7 +47,7 @@ function setup(t) {
       VALUES(1,7,'ROBOCIZNA','Wymiana klocków',1,0,0,1.5,220,'Wymiana klocków',1.5,330);
     INSERT INTO quote_items(id,quote_id,kind,name,qty,unit_cost,unit_price,part_no,oe_number,brand)
       VALUES(2,7,'CZESC','Klocki hamulcowe',1,120,190,'13.0460-7184.2','5Q0698451','ATE');
-    INSERT INTO approvals(id,order_id,status,amount,scope) VALUES(12,1,'PENDING',520,'Wycena #7 · hamulce');
+    INSERT INTO approvals(id,cloud_id,order_id,status,amount,scope) VALUES(12,'desktop-12',1,'PENDING',520,'Wycena #7 · hamulce');
   `)
   db.transaction = fn => (...args) => {
     db.exec('BEGIN')
@@ -116,4 +116,20 @@ test('remote rejection keeps the quote editable scope unmaterialized and waits f
   assert.equal(db.prepare('SELECT COUNT(*) count FROM job_part_orders').get().count, 0)
   assert.equal(archived.length, 0)
   assert.equal(emitted.length, 1)
+})
+
+test('desktop matches an Android remote approval by its synchronized cloud id', async t => {
+  const db = setup(t)
+  db.prepare("UPDATE approvals SET cloud_id='7b3b3c78-4b67-4f42-9b67-3f8c3b4c0d11' WHERE id=12").run()
+  const result = await scanRemoteApprovals(
+    { workshopId: 'workshop-1' }, db,
+    {
+      requestRows: async () => [remoteRow('DECLINED', { approval_local_id: 1712345678900123, approval_cloud_id: '7b3b3c78-4b67-4f42-9b67-3f8c3b4c0d11' })],
+      archivePdf: async () => ({ ok: true }),
+      emitApproval: () => {}
+    }
+  )
+  assert.equal(result.length, 1)
+  assert.equal(result[0].approvalId, 12)
+  assert.equal(db.prepare('SELECT status FROM approvals WHERE id=12').get().status, 'DECLINED')
 })
