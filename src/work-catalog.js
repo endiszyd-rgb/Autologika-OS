@@ -1,6 +1,9 @@
 import {WORK_CATALOG_EXPANSION} from './work-catalog-expansion.js'
 import {expandCatalogDiagnostics} from './work-catalog-diagnostics.js'
 import {expandCatalogSpecialists} from './work-catalog-specialist.js'
+import {WORK_CATALOG_WORKSHOP_EXTRA} from './work-catalog-workshop-extra.js'
+import {WORK_CATALOG_WORKSHOP_V2} from './work-catalog-workshop-v2.js'
+import {WORK_CATALOG_WORKSHOP_V3} from './work-catalog-workshop-v3.js'
 
 const BASE_WORK_CATALOG = [
   {
@@ -2555,7 +2558,32 @@ const BASE_WORK_CATALOG = [
 
 ]
 
-const RAW_WORK_CATALOG=expandCatalogSpecialists(expandCatalogDiagnostics([...BASE_WORK_CATALOG,...WORK_CATALOG_EXPANSION]))
+const mergeKey=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/&|\+|\//g,' i ').replace(/\bi\b/g,' ').replace(/[^a-z0-9]+/g,' ').trim()
+const variantKey=variant=>mergeKey(typeof variant==='string'?variant:variant?.name)
+
+const mergeWorkGroups=groups=>{
+  const mergedGroups=new Map()
+  for(const sourceGroup of groups){
+    const groupKey=mergeKey(sourceGroup.group)
+    if(!mergedGroups.has(groupKey))mergedGroups.set(groupKey,{...sourceGroup,jobs:[]})
+    const targetGroup=mergedGroups.get(groupKey)
+    for(const sourceJob of sourceGroup.jobs||[]){
+      const jobKey=mergeKey(sourceJob.name),existing=targetGroup.jobs.find(job=>mergeKey(job.name)===jobKey)
+      if(!existing){targetGroup.jobs.push(sourceJob);continue}
+      const knownVariants=new Set((existing.variants||[]).map(variantKey))
+      for(const variant of sourceJob.variants||[])if(!knownVariants.has(variantKey(variant))){existing.variants.push(variant);knownVariants.add(variantKey(variant))}
+    }
+  }
+  return [...mergedGroups.values()]
+}
+
+const RAW_WORK_CATALOG=expandCatalogSpecialists(expandCatalogDiagnostics(mergeWorkGroups([
+  ...BASE_WORK_CATALOG,
+  ...WORK_CATALOG_EXPANSION,
+  ...WORK_CATALOG_WORKSHOP_EXTRA,
+  ...WORK_CATALOG_WORKSHOP_V2,
+  ...WORK_CATALOG_WORKSHOP_V3
+])))
 
 const slug=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,42)||'pozycja'
 const stableHash=value=>{let hash=2166136261;for(const char of String(value)){hash^=char.codePointAt(0);hash=Math.imul(hash,16777619)}return (hash>>>0).toString(36)}

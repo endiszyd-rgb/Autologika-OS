@@ -852,7 +852,7 @@ app.on('browser-window-created', (_, win) => {
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Szablony prac"]').click()`)
       await delay(500)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.ptCatalogCard').length`),48)
-      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.ptStats').textContent.includes('1599')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.ptStats').textContent.includes('3065')`),true)
       assert.equal((await inspect()).fatal,false)
       await capture('procedure-templates')
       await win.webContents.executeJavaScript(`document.querySelector('.ptCatalogCard footer button').click()`)
