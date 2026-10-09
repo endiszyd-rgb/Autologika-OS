@@ -2641,5 +2641,21 @@ export const WORK_CATALOG=RAW_WORK_CATALOG.map(group=>({
 export const variantName=variant=>typeof variant==='string'?variant:variant?.name||''
 export const variantFor=(workId,variantId)=>WORK_CATALOG.flatMap(group=>group.jobs).find(job=>job.id===workId)?.variants.find(variant=>variant.id===variantId)||null
 export const catalogRows=()=>WORK_CATALOG.flatMap(group=>group.jobs.flatMap(job=>job.variants.map(variant=>({group:group.group,job,variant}))))
+const searchKey=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pl').replace(/[^a-z0-9]+/g,' ').trim()
+const tokenHit=(value,token)=>value.includes(token)||(token.length>=4&&value.includes(token.slice(0,-1)))
+export const searchCatalogRows=(query,limit=60)=>{
+  const tokens=searchKey(query).split(/\s+/).filter(Boolean)
+  if(!tokens.length)return []
+  return catalogRows().map(row=>{
+    const group=searchKey(row.group),work=searchKey(row.job.name),variant=searchKey(row.variant.name)
+    const details=searchKey(`${row.variant.customer_description||''} ${row.variant.technical_description||''}`)
+    const content=`${group} ${work} ${variant} ${details}`
+    if(!tokens.every(token=>tokenHit(content,token)))return null
+    const phrase=tokens.join(' ')
+    const tokenScore=tokens.reduce((sum,token)=>sum+(work===token?45:work.startsWith(token)?35:work.includes(token)?25:tokenHit(work,token)?16:0)+(variant===token?24:variant.startsWith(token)?18:variant.includes(token)?12:tokenHit(variant,token)?8:0)+(tokenHit(group,token)?7:0),0)
+    const score=tokenScore+(work===phrase?100:work.startsWith(phrase)?80:work.includes(phrase)?60:0)+(variant===phrase?50:variant.startsWith(phrase)?40:variant.includes(phrase)?30:0)+(group.includes(phrase)?20:0)
+    return {...row,score}
+  }).filter(Boolean).sort((a,b)=>b.score-a.score||a.job.name.localeCompare(b.job.name,'pl')||a.variant.name.localeCompare(b.variant.name,'pl')).slice(0,Math.max(1,Number(limit)||60))
+}
 export const workGroups=()=>WORK_CATALOG.map(x=>x.group)
 export const jobsForGroup=group=>WORK_CATALOG.find(x=>x.group===group)?.jobs||[]

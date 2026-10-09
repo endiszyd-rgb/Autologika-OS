@@ -27,7 +27,7 @@ import {procedureFor} from './work-procedures.js'
 import {analyzeDiagnostic} from './diagnostic-assistant.mjs'
 import {TECH_CATEGORIES,TECH_LABELS,SOURCE_TYPES,relevantTechnical,techValue,verificationLabel} from './technical-data.js'
 import {analyzeScan,createKeyboardWedge,isProductBarcode,normalizeProductBarcode} from './zebra-scanner.js'
-import {CatalogPricingV2,WorkCatalogModalV2,QuoteCatalogModalV2} from './work-catalog-ui.jsx'
+import {CatalogPricingV2,WorkCatalogModalV2,QuoteCatalogModalV2,WorkCatalogSearch} from './work-catalog-ui.jsx'
 import {matchingVehicleParts,oeNumbers,vehicleLabel} from './vehicle-part-match.js'
 import {ageLabel,attentionHeadline,attentionMeta,attentionStats,filterAttention} from './attention-center.mjs'
 import {deriveOrderAdvice,hasBasicDiagnosis,procedureProgress,summarizeProcedures} from './order-process.mjs'
@@ -224,7 +224,7 @@ function RepairScopeCascade({onAdd}){
  useEffect(()=>{if(job&&(!variantId||!job.variants.some(item=>item.id===variantId)))setVariantId(job.variants[0]?.id||'')},[job,variantId])
  return <div className="repairCascade">
    <div className="repairCascadeHead"><div><small>BAZA NAPRAW AUTOLOGIKI</small><h4>Wybierz zakres diagnostyki lub naprawy</h4></div><span>{WORK_CATALOG.length} grup · {variantCount} wariantów</span></div>
-   <div className="repairCascadeSteps"><label><span>1</span>Układ<select aria-label="Grupa napraw" value={group} onChange={e=>{setGroup(e.target.value);setWorkId('');setVariantId('')}}>{WORK_CATALOG.map(item=><option key={item.group}>{item.group}</option>)}</select></label><label><span>2</span>Praca<select aria-label="Rodzaj naprawy" value={job?.id||''} onChange={e=>{setWorkId(e.target.value);setVariantId('')}}>{jobs.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label><span>3</span>Wariant<select aria-label="Wariant naprawy" value={variant?.id||''} onChange={e=>setVariantId(e.target.value)}>{(job?.variants||[]).map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label></div>
+   <WorkCatalogSearch onSelect={row=>{setGroup(row.group);setWorkId(row.job.id);setVariantId(row.variant.id)}}/><div className="repairCascadeSteps"><label><span>1</span>Układ<select aria-label="Grupa napraw" value={group} onChange={e=>{setGroup(e.target.value);setWorkId('');setVariantId('')}}>{WORK_CATALOG.map(item=><option key={item.group}>{item.group}</option>)}</select></label><label><span>2</span>Praca<select aria-label="Rodzaj naprawy" value={job?.id||''} onChange={e=>{setWorkId(e.target.value);setVariantId('')}}>{jobs.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label><span>3</span>Wariant<select aria-label="Wariant naprawy" value={variant?.id||''} onChange={e=>setVariantId(e.target.value)}>{(job?.variants||[]).map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label></div>
    {variant&&<div className="repairScopePreview"><div><small>WYBRANY ZAKRES</small><b>{job.name}</b><span>{variant.name}</span><p>{variant.customer_description}</p></div><div className="repairScopeNumbers"><strong>{money(variant.price)}</strong><span>{Number(variant.hours||0).toFixed(1)} h</span><small>{(procedure?.pre?.length||0)+(procedure?.steps?.length||0)+(procedure?.qc?.length||0)} punktów procedury</small></div></div>}
    <button className="primary repairAddSelected" disabled={!variant} onClick={()=>onAdd({group,workId:job.id,variantId:variant.id})}>+ Dodaj wybrany zakres naprawy</button>
  </div>

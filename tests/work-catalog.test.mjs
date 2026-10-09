@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {WORK_CATALOG,catalogRows,jobsForGroup,variantFor} from '../src/work-catalog.js'
+import {WORK_CATALOG,catalogRows,jobsForGroup,variantFor,searchCatalogRows} from '../src/work-catalog.js'
 import {CATALOG_DIAGNOSTIC_ADDITIONS} from '../src/work-catalog-diagnostics.js'
 import {CATALOG_SPECIALIST_ADDITIONS} from '../src/work-catalog-specialist.js'
 import {procedureFor} from '../src/work-procedures.js'
@@ -90,4 +90,14 @@ test('V3 operation completes the selection to procedure flow',()=>{
  assert.ok(procedure.steps.length)
  assert.ok(procedure.qc.length)
  assert.ok(catalogRows().some(row=>`${row.group} ${row.job.name} ${row.variant.name}`.toLowerCase().includes('ea888')))
+})
+
+test('catalog search finds work and variants without Polish diacritics',()=>{
+ const pressure=searchCatalogRows('diagnostyka czujnika roznicy cisnien',20)
+ assert.ok(pressure.length)
+ assert.match(pressure[0].job.name,/Diagnostyka czujnika różnicy ciśnień/i)
+ const ea888=searchCatalogRows('ea888 odma',10)
+ assert.ok(ea888.some(row=>row.job.name==='Wymiana odmy silnika EA888'))
+ assert.deepEqual(searchCatalogRows(''),[])
+ assert.ok(searchCatalogRows('wymiana',7).length<=7)
 })
