@@ -1,4 +1,13 @@
 // Match the complete identifier, including the separator used by saved scopes.
+function ensureRepairColumns(db){
+ for(const table of ['quote_items','order_items','job_part_orders']){
+  const exists=db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table)
+  if(!exists)continue
+  const columns=db.prepare(`PRAGMA table_info(${table})`).all().map(row=>row.name)
+  if(!columns.includes('repair_operation_id'))db.exec(`ALTER TABLE ${table} ADD COLUMN repair_operation_id INTEGER`)
+ }
+}
+
 function findQuoteApproval(db, orderId, quoteId) {
   const scope = `Wycena #${quoteId}`
   return db.prepare(`SELECT * FROM approvals WHERE order_id=?
@@ -20,6 +29,7 @@ function quoteIdFromApproval(value) {
 }
 
 function replaceQuoteWithOrderSnapshot(db, quote) {
+  ensureRepairColumns(db)
   assertQuoteEditable(db, quote)
   const order = db.prepare('SELECT * FROM orders WHERE id=?').get(quote.order_id)
   if (!order) throw new Error('Zlecenie nie istnieje.')
@@ -30,8 +40,8 @@ function replaceQuoteWithOrderSnapshot(db, quote) {
     quote_id,kind,name,qty,unit_cost,unit_price,labor_hours,labor_rate,notes,
     catalog_work_id,catalog_variant_id,work_name,variant_name,customer_description,technical_description,hours_snapshot,price_snapshot,
     part_no,oe_number,inventory_part_id,supplier_name,barcode,brand,vehicle_fitment,cross_numbers,lookup_source,lookup_url,
-    source_order_item_id,source_job_part_id
-  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    source_order_item_id,source_job_part_id,repair_operation_id
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
   let subtotal = 0
   for (const item of orderItems) {
     const labor = item.kind === 'ROBOCIZNA'
@@ -43,7 +53,7 @@ function replaceQuoteWithOrderSnapshot(db, quote) {
       quote.id,item.kind,item.name,Number(item.qty||1),Number(item.unit_cost||0),Number(item.unit_price||0),labor?qty:0,labor?price:0,item.notes||'',
       item.catalog_work_id||null,item.catalog_variant_id||null,item.work_name||item.name,item.variant_name||'',item.customer_description||item.notes||'',item.technical_description||'',labor?qty:(item.hours_snapshot??null),value,
       item.part_no||'',item.oe_number||'',item.inventory_part_id||null,item.supplier||'',item.barcode||'',item.brand||'',item.vehicle_fitment||'',item.cross_numbers||'',item.lookup_source||'',item.lookup_url||'',
-      item.id,null
+      item.id,null,item.repair_operation_id||null
     )
   }
   for (const part of plannedParts) {
@@ -53,14 +63,14 @@ function replaceQuoteWithOrderSnapshot(db, quote) {
       quote.id,'CZESC',part.name,qty,Number(part.unit_cost||0),price,0,0,part.notes||'',
       null,null,part.name,'',part.notes||'',part.notes||'',null,value,
       part.part_no||'',part.oe_number||'',part.inventory_part_id||null,part.supplier_name||'',part.barcode||'',part.brand||'',part.vehicle_fitment||'',part.cross_numbers||'',part.lookup_source||'',part.lookup_url||'',
-      null,part.id
+      null,part.id,part.repair_operation_id||null
     )
   }
   const addAdjustment = (kind, name, amount, note) => {
     const value = Math.round(Number(amount || 0) * 100) / 100
     if (!value) return
     subtotal += value
-    insert.run(quote.id,kind,name,1,0,value,0,0,note||'',null,null,name,'',note||'',note||'',null,value,'','',null,'','','','','','','',null,null)
+    insert.run(quote.id,kind,name,1,0,value,0,0,note||'',null,null,name,'',note||'',note||'',null,value,'','',null,'','','','','','','',null,null,null)
   }
   addAdjustment('OPLATA','Diagnostyka',Number(order.diagnosis_fee||0),'Opłata diagnostyczna zapisana w zleceniu')
   addAdjustment('RABAT','Rabat',-Number(order.discount||0),'Rabat zapisany w zleceniu')
@@ -72,6 +82,7 @@ function replaceQuoteWithOrderSnapshot(db, quote) {
 }
 
 function materializeApprovedQuote(db, approvalOrQuoteId) {
+  ensureRepairColumns(db)
   const quoteId = quoteIdFromApproval(approvalOrQuoteId)
   if (!quoteId) return { prepared: false, parts: 0, quoteId: 0, reason: 'QUOTE_NOT_LINKED' }
   const quote = db.prepare('SELECT * FROM quotes WHERE id=?').get(quoteId)
@@ -93,22 +104,22 @@ function materializeApprovedQuote(db, approvalOrQuoteId) {
   let parts = 0
   const insertOrderItem = db.prepare(`INSERT INTO order_items(
     order_id,kind,name,qty,unit_cost,unit_price,notes,catalog_work_id,catalog_variant_id,
-    work_name,variant_name,customer_description,technical_description,hours_snapshot,price_snapshot
-  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    work_name,variant_name,customer_description,technical_description,hours_snapshot,price_snapshot,repair_operation_id
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
   const vehicle = db.prepare(`SELECT v.id vehicle_id,v.plate,v.vin,v.make,v.model,v.generation,v.year,v.engine,v.engine_code
     FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE o.id=?`).get(quote.order_id) || {}
   const vehicleSnapshot = JSON.stringify(vehicle)
   const insertPart = db.prepare(`INSERT INTO job_part_orders(
     order_id,supplier_name,part_no,oe_number,inventory_part_id,vehicle_snapshot,barcode,brand,vehicle_fitment,cross_numbers,
-    lookup_source,lookup_url,name,qty,unit_cost,unit_price,status,notes
-  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'DO_ZAMOWIENIA',?)`)
+    lookup_source,lookup_url,name,qty,unit_cost,unit_price,status,notes,repair_operation_id
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'DO_ZAMOWIENIA',?,?)`)
 
   for (const item of items) {
     if (item.kind === 'CZESC') {
       insertPart.run(
         quote.order_id,item.supplier_name||'',item.part_no||'',item.oe_number||'',item.inventory_part_id||null,vehicleSnapshot,
         item.barcode||'',item.brand||'',item.vehicle_fitment||'',item.cross_numbers||'',item.lookup_source||'',item.lookup_url||'',
-        item.name,Number(item.qty||1),Number(item.unit_cost||0),Number(item.unit_price||0),`Z zaakceptowanego kosztorysu #${quoteId}`
+        item.name,Number(item.qty||1),Number(item.unit_cost||0),Number(item.unit_price||0),`Z zaakceptowanego kosztorysu #${quoteId}`,item.repair_operation_id||null
       )
       parts++
       continue
@@ -122,7 +133,7 @@ function materializeApprovedQuote(db, approvalOrQuoteId) {
       item.catalog_work_id || null, item.catalog_variant_id || null, item.work_name || item.name,
       item.variant_name || '', item.customer_description || item.notes || '', item.technical_description || '',
       labor ? Number(item.hours_snapshot ?? item.labor_hours ?? 1) : (item.hours_snapshot ?? null),
-      Number(item.price_snapshot ?? quantity * unitPrice)
+      Number(item.price_snapshot ?? quantity * unitPrice),item.repair_operation_id||null
     )
   }
 

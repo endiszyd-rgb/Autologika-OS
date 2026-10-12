@@ -124,7 +124,7 @@ app.on('browser-window-created', (_, win) => {
       assert.equal((await inspect()).overflow,false)
       await capture('intake-duplicate-warning')
       console.log('QUICK_INTAKE_CUSTOMER_PICKER','saved customer and vehicle autofilled the form and blocked an accidental duplicate active order')
-      assert.equal(inventoryDb.pragma('user_version',{simple:true}),17)
+      assert.equal(inventoryDb.pragma('user_version',{simple:true}),18)
       for(const column of ['barcode','brand','vehicle_fitment','cross_numbers','lookup_source','lookup_url'])assert.equal(inventoryDb.prepare('PRAGMA table_info(job_part_orders)').all().some(item=>item.name===column),true,`job_part_orders.${column}`)
       inventoryDb.prepare(`INSERT INTO inventory_parts(barcode,part_no,name,brand,vehicle_fitment,cross_numbers,stock,min_stock,unit_cost,sell_price,location) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run('4006381333931','W 712/95','Filtr oleju','MANN-FILTER','BMW 320d','11428507683\n11427854445',4,2,24.5,49,'A-03')
       const removablePart=inventoryDb.prepare(`INSERT INTO inventory_parts(part_no,name,brand,stock,min_stock,unit_cost,sell_price) VALUES (?,?,?,?,?,?,?)`).run('TEST-DELETE','Błędny wpis do usunięcia','TEST',0,0,0,0).lastInsertRowid
@@ -921,7 +921,10 @@ app.on('browser-window-created', (_, win) => {
         start_at:collisionStart.toISOString(),
         end_at:collisionEnd.toISOString(),
         bay:'Stanowisko 1',
-        status:'POTWIERDZONY'
+        status:'POTWIERDZONY',
+        override_conflict:true,
+        override_reason:'Kontrolowany scenariusz podglądu kolizji terminarza',
+        override_actor:'UI smoke test'
       })
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Terminarz 2.0"]').click()`)
       await delay(500)
@@ -931,6 +934,7 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.plannerOrderChoices')?.textContent.includes('CENTRUM ZLECENIA')`),true)
       assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.plannerOrderChoiceList [data-order-id="${customOrderId}"]')`),true)
       await win.webContents.executeJavaScript(`document.querySelector('.plannerOrderChoiceList [data-order-id="${customOrderId}"]').click()`)
+      await delay(100)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.plannerModal select[name="order_id"]').value===String(${customOrderId})`),true)
       assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.plannerModal select[name="vehicle_id"]').value`),true)
       await capture('schedule-new-visit-orders')

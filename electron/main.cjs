@@ -9,7 +9,8 @@ const { databaseHealth } = require('./database-health.cjs')
 const cloudSync = require('./cloud-sync.cjs')
 const updater = require('./updater.cjs')
 const { findQuoteApproval, assertQuoteEditable, replaceQuoteWithOrderSnapshot, materializeApprovedQuote } = require('./quote-approval.cjs')
-const { listAppointments, createAppointment, updateAppointment, removeAppointment } = require('./appointments.cjs')
+const { listAppointments, createAppointment, updateAppointment, removeAppointment, listResources, createResource } = require('./appointments.cjs')
+const { createSmartJob, listRepairOperations, reserveInventoryPart, issueRepairPart, returnRepairPart, orderEstimate, snapshotEstimate, createDviInspection, addDviItem, listDvi, decideDviItem, convertDviItemToRepair, createDviToken } = require('./repair-operations.cjs')
 const { deletionPreview, removeEntity } = require('./entity-deletion.cjs')
 const { createCustomer, updateCustomer, createVehicle, updateVehicle } = require('./record-editing.cjs')
 const { decodeRegistrationPayload } = require('./registration-decoder.cjs')
@@ -542,6 +543,8 @@ ipcMain.handle('appointments:list',(_,{from,to})=>listAppointments(getDb(),from,
 ipcMain.handle('appointments:create',(_,d)=>createAppointment(getDb(),d))
 ipcMain.handle('appointments:update',(_,{id,data})=>updateAppointment(getDb(),id,data))
 ipcMain.handle('appointments:remove',(_,id)=>removeAppointment(getDb(),id))
+ipcMain.handle('resources:list',()=>listResources(getDb()))
+ipcMain.handle('resources:create',(_,data)=>createResource(getDb(),data))
 
 ipcMain.handle('knowledge:list',(_,q='')=>getDb().prepare(`SELECT * FROM knowledge_cases WHERE symptom LIKE ? OR COALESCE(dtcs,'') LIKE ? OR COALESCE(tags,'') LIKE ? OR COALESCE(vehicle,'') LIKE ? ORDER BY created_at DESC`).all(`%${q}%`,`%${q}%`,`%${q}%`,`%${q}%`))
 ipcMain.handle('knowledge:create',(_,d)=>{const r=getDb().prepare('INSERT INTO knowledge_cases(vehicle,engine,symptom,dtcs,measurements,cause,solution,tags,source_order_id) VALUES (?,?,?,?,?,?,?,?,?)').run(d.vehicle||'',d.engine||'',d.symptom,d.dtcs||'',d.measurements||'',d.cause||'',d.solution||'',d.tags||'',d.source_order_id||null);return{id:r.lastInsertRowid}})
@@ -642,6 +645,7 @@ ipcMain.handle('quotes:requestApproval',(_,id)=>{
   const summary=items.slice(0,5).map(x=>x.name).join(', ')+(items.length>5?` +${items.length-5}`:'')
   const scope=`Wycena #${id} · ${summary||'zakres naprawy'}`
   const r=db.prepare(`INSERT INTO approvals(order_id,status,amount,scope,channel,note) VALUES (?,'PENDING',?,?,?,?)`).run(q.order_id,total,scope,'SMS',`Kosztorys ${items.length} pozycji`)
+  if(typeof snapshotEstimate==='function'&&db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='repair_estimate_snapshots'").get())snapshotEstimate(db,{orderId:q.order_id,quoteId:id,status:'SENT'})
   db.prepare(`UPDATE orders SET status='AKCEPTACJA',wait_state='DECYZJA' WHERE id=?`).run(q.order_id)
   db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(q.order_id,'APPROVAL','Wycena wysłana do akceptacji',`${total.toFixed(2)} zł · ${scope}`)
   return{ok:true,approvalId:r.lastInsertRowid,total}
@@ -653,7 +657,8 @@ ipcMain.handle('quotes:accept',(_,id)=>{
   requireEditableOrder(db,quote.order_id)
   const approval=findQuoteApproval(db,quote.order_id,id)
   if(!approval||approval.status!=='APPROVED')return{ok:false,reason:'APPROVAL_REQUIRED'}
-  return db.transaction(()=>materializeApprovedQuote(db,id))()
+  const result=db.transaction(()=>{const value=materializeApprovedQuote(db,id);if(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='repair_estimate_snapshots'").get())db.prepare("UPDATE repair_estimate_snapshots SET status='ACCEPTED' WHERE quote_id=? AND status='SENT'").run(id);return value})()
+  return result
 })
 ipcMain.handle('attachments:list',(_,orderId)=>getDb().prepare("SELECT id,order_id,name,file_path,mime,storage_path,size_bytes,sha256,category,cloud_id,updated_at,created_at FROM attachments WHERE order_id=? AND deleted_at IS NULL ORDER BY created_at DESC").all(orderId))
 ipcMain.handle('attachments:pick',async(_,{orderId,category='PRZYJECIE'}={})=>{const r=await dialog.showOpenDialog({properties:['openFile','multiSelections'],filters:[{name:'Zdjęcia i PDF',extensions:['jpg','jpeg','png','webp','heic','pdf']}]});if(r.canceled)return[];const db=getDb();const dir=path.join(app.getPath('userData'),'attachments',String(orderId));fs.mkdirSync(dir,{recursive:true});const out=[];for(const src of r.filePaths){const ext=path.extname(src).toLowerCase();const name=path.basename(src);const dst=path.join(dir,`${Date.now()}-${crypto.randomBytes(3).toString('hex')}${ext}`);fs.copyFileSync(src,dst);const buf=fs.readFileSync(dst);const mime=ext==='.pdf'?'application/pdf':`image/${ext.replace('.','').replace('jpg','jpeg')}`;const rr=db.prepare('INSERT INTO attachments(order_id,name,file_path,mime,size_bytes,sha256,category) VALUES (?,?,?,?,?,?,?)').run(orderId,name,dst,mime,buf.length,crypto.createHash('sha256').update(buf).digest('hex'),category);out.push({id:rr.lastInsertRowid,name,file_path:dst,category})}return out})
@@ -1080,18 +1085,20 @@ ipcMain.handle('workTemplates:update',(_d,{id,data})=>{const db=getDb();const j=
 ipcMain.handle('workTemplates:remove',(_d,id)=>{getDb().prepare('UPDATE work_templates SET active=0,deleted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(id);return true})
 
 ipcMain.handle('procedures:list',(_,orderId)=>getDb().prepare('SELECT * FROM work_procedure_runs WHERE order_id=? ORDER BY id DESC').all(orderId).map(x=>{for(const k of ['pre_json','steps_json','qc_json','recommendations_json','safety_json','parts_json','materials_json','technical_json','progress_json']){try{x[k.replace('_json','')]=JSON.parse(x[k]|| (k==='progress_json'?'{}':'[]'))}catch{x[k.replace('_json','')]=k==='progress_json'?{}:[]}}return x}))
-ipcMain.handle('procedures:createBundle',(_,{orderId,data})=>{const db=getDb();const tx=db.transaction(()=>{
-  requireEditableOrder(db,orderId)
-  const hours=+data.hours||1,unitPrice=+data.rate||0,total=hours*unitPrice
-  const labor=db.prepare("INSERT INTO order_items(order_id,kind,name,qty,unit_cost,unit_price,notes,catalog_work_id,catalog_variant_id,work_name,variant_name,customer_description,technical_description,hours_snapshot,price_snapshot) VALUES (?,'ROBOCIZNA',?,?,?,?,?,?,?,?,?,?,?,?,?)").run(orderId,data.name,hours,0,unitPrice,data.scope||'',data.catalog_work_id||null,data.catalog_variant_id||null,data.title||data.name,data.variant||'',data.scope||'',data.technicalDescription||'',hours,total)
-  const selectedParts=(data.parts||[]).filter(x=>x.selected!==false)
-  const partIds=[]
-  for(const p of selectedParts){const qty=wholePartQuantity(p.qty||1);const r=db.prepare("INSERT INTO job_part_orders(order_id,part_no,name,qty,unit_cost,unit_price,status,notes) VALUES (?,?,?,?,?,?,'DO_ZAMOWIENIA',?)").run(orderId,'',p.name,qty,0,0,`Sugestia z procedury: ${data.name}${p.note?` · ${p.note}`:''}`);partIds.push(Number(r.lastInsertRowid))}
-  const progress={};for(const section of ['pre','steps','qc'])for(let i=0;i<(data[section]||[]).length;i++)progress[`${section}:${i}`]=false
-  const proc=db.prepare(`INSERT INTO work_procedure_runs(order_id,order_item_id,template_key,title,variant,pre_json,steps_json,qc_json,recommendations_json,safety_json,parts_json,materials_json,technical_json,progress_json,catalog_work_id,catalog_variant_id,technical_description,technical_data_key) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(orderId,labor.lastInsertRowid,data.template_key||'',data.title||data.name,data.variant||'',JSON.stringify(data.pre||[]),JSON.stringify(data.steps||[]),JSON.stringify(data.qc||[]),JSON.stringify(data.recommendations||[]),JSON.stringify(data.safety||[]),JSON.stringify(selectedParts),JSON.stringify((data.materials||[]).filter(x=>x.selected!==false)),JSON.stringify(data.technical||[]),JSON.stringify(progress),data.catalog_work_id||null,data.catalog_variant_id||null,data.technicalDescription||'',data.technicalDataKey||null)
-  db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(orderId,'PROCEDURE','Dodano pakiet procedury',`${data.name} · ${selectedParts.length} sugerowanych części`)
-  syncOrderItemTotals(orderId);return {procedureId:Number(proc.lastInsertRowid),orderItemId:Number(labor.lastInsertRowid),partIds}
- });return tx()})
+ipcMain.handle('procedures:createBundle',(_,{orderId,data})=>{const db=getDb();requireEditableOrder(db,orderId);const result=createSmartJob(db,{orderId,data,idempotencyKey:data.idempotency_key});syncOrderItemTotals(orderId);return result})
+ipcMain.handle('repairs:list',(_,orderId)=>listRepairOperations(getDb(),orderId))
+ipcMain.handle('repairs:reserveInventory',(_,{operationId,inventoryPartId,qty,eventKey})=>reserveInventoryPart(getDb(),{operationId,inventoryPartId,qty,eventKey}))
+ipcMain.handle('repairs:issuePart',(_,{repairPartId,qty,eventKey})=>{const db=getDb(),result=issueRepairPart(db,{repairPartId,qty,eventKey});const row=db.prepare('SELECT order_id FROM repair_parts WHERE id=?').get(repairPartId);if(row)syncOrderItemTotals(row.order_id);return result})
+ipcMain.handle('repairs:returnPart',(_,{repairPartId,qty,eventKey})=>{const db=getDb(),result=returnRepairPart(db,{repairPartId,qty,eventKey});const row=db.prepare('SELECT order_id FROM repair_parts WHERE id=?').get(repairPartId);if(row)syncOrderItemTotals(row.order_id);return result})
+ipcMain.handle('repairs:estimate',(_,orderId)=>orderEstimate(getDb(),orderId))
+ipcMain.handle('repairs:snapshotEstimate',(_,{orderId,quoteId,status})=>snapshotEstimate(getDb(),{orderId,quoteId,status}))
+ipcMain.handle('dvi:list',(_,orderId)=>listDvi(getDb(),orderId))
+ipcMain.handle('dvi:create',(_,{orderId,author})=>createDviInspection(getDb(),{orderId,author}))
+ipcMain.handle('dvi:addItem',(_,{inspectionId,data})=>addDviItem(getDb(),{inspectionId,data}))
+ipcMain.handle('dvi:decide',(_,{itemId,decision,decidedBy})=>decideDviItem(getDb(),{itemId,decision,decidedBy}))
+ipcMain.handle('dvi:convertToRepair',(_,{itemId,data})=>convertDviItemToRepair(getDb(),{itemId,data}))
+ipcMain.handle('dvi:createToken',(_,{inspectionId,ttlHours})=>createDviToken(getDb(),{inspectionId,ttlHours}))
+ipcMain.handle('dvi:pickMedia',async(_,{orderId,itemId})=>{const item=getDb().prepare(`SELECT i.id,d.order_id FROM dvi_items i JOIN dvi_inspections d ON d.id=i.inspection_id WHERE i.id=?`).get(Number(itemId));if(!item||Number(item.order_id)!==Number(orderId))throw new Error('Pozycja DVI nie należy do tego zlecenia.');const result=await dialog.showOpenDialog({properties:['openFile','multiSelections'],filters:[{name:'Zdjęcia i filmy DVI',extensions:['jpg','jpeg','png','webp','mp4','mov','m4v']}]});if(result.canceled)return[];const dir=path.join(app.getPath('userData'),'attachments',String(orderId),'dvi');fs.mkdirSync(dir,{recursive:true});const output=[];for(const source of result.filePaths){const stat=fs.statSync(source);if(stat.size>25*1024*1024)throw new Error('Plik DVI przekracza limit 25 MB.');const ext=path.extname(source).toLowerCase(),video=['.mp4','.mov','.m4v'].includes(ext),mime=video?`video/${ext.slice(1).replace('mov','quicktime')}`:`image/${ext.slice(1).replace('jpg','jpeg')}`,target=path.join(dir,`${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`);fs.copyFileSync(source,target);const buffer=fs.readFileSync(target),attachment=getDb().prepare(`INSERT INTO attachments(order_id,name,file_path,mime,size_bytes,sha256,category,dvi_item_id) VALUES (?,?,?,?,?,?,?,?)`).run(orderId,path.basename(source),target,mime,buffer.length,crypto.createHash('sha256').update(buffer).digest('hex'),'DVI',itemId);getDb().prepare('INSERT INTO dvi_media(dvi_item_id,attachment_id,media_type) VALUES (?,?,?)').run(itemId,attachment.lastInsertRowid,video?'VIDEO':'IMAGE');output.push({id:Number(attachment.lastInsertRowid),name:path.basename(source),media_type:video?'VIDEO':'IMAGE'})}return output})
 ipcMain.handle('procedures:toggle',(_,{id,key,checked})=>{const db=getDb();const row=db.prepare('SELECT order_id,progress_json FROM work_procedure_runs WHERE id=?').get(id);if(!row)return false;requireEditableOrder(db,row.order_id);let p={};try{p=JSON.parse(row.progress_json||'{}')}catch{}p[key]=!!checked;db.prepare('UPDATE work_procedure_runs SET progress_json=? WHERE id=?').run(JSON.stringify(p),id);return true})
 ipcMain.handle('procedures:setProgress',(_,{id,progress})=>{const db=getDb(),row=db.prepare('SELECT order_id FROM work_procedure_runs WHERE id=?').get(id);if(!row)return false;requireEditableOrder(db,row.order_id);const clean=Object.fromEntries(Object.entries(progress||{}).filter(([key])=>/^(pre|steps|qc):\d+$/.test(key)).map(([key,value])=>[key,!!value]));db.prepare('UPDATE work_procedure_runs SET progress_json=? WHERE id=?').run(JSON.stringify(clean),id);return true})
 ipcMain.handle('procedures:remove',(_,id)=>{const db=getDb(),row=db.prepare('SELECT order_id FROM work_procedure_runs WHERE id=?').get(id);if(!row)return false;requireEditableOrder(db,row.order_id);db.prepare('DELETE FROM work_procedure_runs WHERE id=?').run(id);return true})

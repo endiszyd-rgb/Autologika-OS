@@ -6,7 +6,7 @@ const { seedTechnicalReference } = require('./technical-seed.cjs')
 const { migrateLegacyServiceReminders } = require('./service-reminders.cjs')
 
 let db
-const SCHEMA_VERSION = 17
+const SCHEMA_VERSION = 18
 const databasePath = () => path.join(app.getPath('userData'), 'autologika.db')
 const backupDirectory = () => path.join(app.getPath('userData'), 'backups')
 const safeTimestamp = () => new Date().toISOString().replace(/[:.]/g,'-')
@@ -148,6 +148,241 @@ function migrate(db,currentVersion=0) {
   }
   if(currentVersion<17){
     db.transaction(()=>{migrateSchemaV17(db);db.pragma('user_version = 17')})()
+    currentVersion=17
+  }
+  if(currentVersion<18){
+    db.transaction(()=>{migrateSchemaV18(db);db.pragma('user_version = 18')})()
+  }
+}
+
+function migrateSchemaV18(db){
+  const addColumn=(table,name,type)=>{
+    const columns=db.prepare(`PRAGMA table_info(${table})`).all().map(row=>row.name)
+    if(!columns.includes(name))db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`)
+  }
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS order_repair_operations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL,
+      idempotency_key TEXT NOT NULL,
+      order_item_id INTEGER,
+      procedure_run_id INTEGER,
+      catalog_work_id TEXT,
+      catalog_variant_id TEXT,
+      title TEXT NOT NULL,
+      variant TEXT,
+      customer_description TEXT,
+      technical_description TEXT,
+      status TEXT NOT NULL DEFAULT 'PLANNED',
+      planned_hours REAL NOT NULL DEFAULT 0,
+      labor_rate REAL NOT NULL DEFAULT 0,
+      labor_cost_rate REAL NOT NULL DEFAULT 0,
+      discount_percent REAL NOT NULL DEFAULT 0,
+      vat_rate REAL NOT NULL DEFAULT 23,
+      other_cost REAL NOT NULL DEFAULT 0,
+      other_price REAL NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(order_id,idempotency_key),
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
+      FOREIGN KEY(order_item_id) REFERENCES order_items(id) ON DELETE SET NULL,
+      FOREIGN KEY(procedure_run_id) REFERENCES work_procedure_runs(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_repair_operations_order ON order_repair_operations(order_id,id);
+
+    CREATE TABLE IF NOT EXISTS repair_parts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      repair_operation_id INTEGER NOT NULL,
+      order_id INTEGER NOT NULL,
+      inventory_part_id INTEGER,
+      job_part_order_id INTEGER,
+      order_item_id INTEGER,
+      name TEXT NOT NULL,
+      part_no TEXT,
+      oe_number TEXT,
+      source TEXT NOT NULL DEFAULT 'SUGGESTED',
+      qty INTEGER NOT NULL DEFAULT 1 CHECK(qty>0),
+      reserved_qty INTEGER NOT NULL DEFAULT 0 CHECK(reserved_qty>=0),
+      issued_qty INTEGER NOT NULL DEFAULT 0 CHECK(issued_qty>=0),
+      returned_qty INTEGER NOT NULL DEFAULT 0 CHECK(returned_qty>=0),
+      installed_qty INTEGER NOT NULL DEFAULT 0 CHECK(installed_qty>=0),
+      unit_cost REAL NOT NULL DEFAULT 0,
+      unit_price REAL NOT NULL DEFAULT 0,
+      vat_rate REAL NOT NULL DEFAULT 23,
+      status TEXT NOT NULL DEFAULT 'SUGGESTED',
+      fitment_status TEXT NOT NULL DEFAULT 'UNVERIFIED',
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(repair_operation_id) REFERENCES order_repair_operations(id) ON DELETE CASCADE,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
+      FOREIGN KEY(inventory_part_id) REFERENCES inventory_parts(id) ON DELETE SET NULL,
+      FOREIGN KEY(job_part_order_id) REFERENCES job_part_orders(id) ON DELETE SET NULL,
+      FOREIGN KEY(order_item_id) REFERENCES order_items(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_repair_parts_operation ON repair_parts(repair_operation_id,id);
+    CREATE INDEX IF NOT EXISTS idx_repair_parts_inventory ON repair_parts(inventory_part_id,status);
+
+    CREATE TABLE IF NOT EXISTS repair_part_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      repair_part_id INTEGER NOT NULL,
+      event_key TEXT NOT NULL UNIQUE,
+      event_type TEXT NOT NULL,
+      qty INTEGER NOT NULL CHECK(qty>0),
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(repair_part_id) REFERENCES repair_parts(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS repair_estimate_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL,
+      quote_id INTEGER,
+      version INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'DRAFT',
+      totals_json TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(order_id,version),
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
+      FOREIGN KEY(quote_id) REFERENCES quotes(id) ON DELETE SET NULL
+    );
+    CREATE TABLE IF NOT EXISTS repair_estimate_snapshot_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      snapshot_id INTEGER NOT NULL,
+      repair_operation_id INTEGER,
+      snapshot_json TEXT NOT NULL,
+      FOREIGN KEY(snapshot_id) REFERENCES repair_estimate_snapshots(id) ON DELETE CASCADE,
+      FOREIGN KEY(repair_operation_id) REFERENCES order_repair_operations(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS dvi_inspections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER NOT NULL,
+      vehicle_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'DRAFT',
+      author TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      completed_at TEXT,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
+      FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS dvi_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      inspection_id INTEGER NOT NULL,
+      repair_operation_id INTEGER,
+      area TEXT NOT NULL,
+      description TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('OK','OBSERVATION','REPAIR')),
+      author TEXT,
+      proposed_catalog_work_id TEXT,
+      proposed_catalog_variant_id TEXT,
+      proposed_amount REAL NOT NULL DEFAULT 0,
+      decision TEXT NOT NULL DEFAULT 'PENDING',
+      decision_at TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(inspection_id) REFERENCES dvi_inspections(id) ON DELETE CASCADE,
+      FOREIGN KEY(repair_operation_id) REFERENCES order_repair_operations(id) ON DELETE SET NULL
+    );
+    CREATE TABLE IF NOT EXISTS dvi_media (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dvi_item_id INTEGER NOT NULL,
+      attachment_id INTEGER NOT NULL,
+      media_type TEXT NOT NULL CHECK(media_type IN ('IMAGE','VIDEO')),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(dvi_item_id,attachment_id),
+      FOREIGN KEY(dvi_item_id) REFERENCES dvi_items(id) ON DELETE CASCADE,
+      FOREIGN KEY(attachment_id) REFERENCES attachments(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS dvi_access_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      inspection_id INTEGER NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      revoked_at TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(inspection_id) REFERENCES dvi_inspections(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS dvi_decisions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dvi_item_id INTEGER NOT NULL,
+      decision TEXT NOT NULL CHECK(decision IN ('APPROVED','DECLINED')),
+      amount_snapshot REAL NOT NULL DEFAULT 0,
+      version INTEGER NOT NULL DEFAULT 1,
+      decided_by TEXT,
+      decided_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(dvi_item_id,version),
+      FOREIGN KEY(dvi_item_id) REFERENCES dvi_items(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS work_resources (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      resource_type TEXT NOT NULL CHECK(resource_type IN ('BAY','LIFT','MECHANIC')),
+      name TEXT NOT NULL,
+      capacity INTEGER NOT NULL DEFAULT 1 CHECK(capacity>0),
+      active INTEGER NOT NULL DEFAULT 1,
+      work_calendar_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(resource_type,name)
+    );
+    CREATE TABLE IF NOT EXISTS resource_unavailability (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      resource_id INTEGER NOT NULL,
+      start_at TEXT NOT NULL,
+      end_at TEXT NOT NULL,
+      reason TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(resource_id) REFERENCES work_resources(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS appointment_resources (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      appointment_id INTEGER NOT NULL,
+      resource_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(appointment_id,resource_id),
+      FOREIGN KEY(appointment_id) REFERENCES appointments(id) ON DELETE CASCADE,
+      FOREIGN KEY(resource_id) REFERENCES work_resources(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS schedule_conflict_overrides (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      appointment_id INTEGER NOT NULL,
+      resource_id INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      actor TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(appointment_id) REFERENCES appointments(id) ON DELETE CASCADE,
+      FOREIGN KEY(resource_id) REFERENCES work_resources(id) ON DELETE CASCADE
+    );
+  `)
+  addColumn('order_items','repair_operation_id','INTEGER')
+  addColumn('work_procedure_runs','repair_operation_id','INTEGER')
+  addColumn('job_part_orders','repair_operation_id','INTEGER')
+  addColumn('quote_items','repair_operation_id','INTEGER')
+  addColumn('order_qc','repair_operation_id','INTEGER')
+  addColumn('attachments','dvi_item_id','INTEGER')
+  addColumn('appointments','planned_minutes','INTEGER')
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_order_items_repair ON order_items(repair_operation_id);
+    CREATE INDEX IF NOT EXISTS idx_job_parts_repair ON job_part_orders(repair_operation_id);
+    CREATE INDEX IF NOT EXISTS idx_qc_repair ON order_qc(repair_operation_id);
+    INSERT OR IGNORE INTO work_resources(resource_type,name)
+      SELECT 'BAY',bay FROM appointments WHERE TRIM(COALESCE(bay,''))!='';
+    INSERT OR IGNORE INTO work_resources(resource_type,name) VALUES ('BAY','Stanowisko 1');
+    INSERT OR IGNORE INTO appointment_resources(appointment_id,resource_id)
+      SELECT a.id,r.id FROM appointments a JOIN work_resources r ON r.resource_type='BAY' AND r.name=a.bay;
+  `)
+  const syncTables=['order_repair_operations','repair_parts','repair_part_events','dvi_inspections','dvi_items','dvi_media','dvi_decisions','work_resources','resource_unavailability','appointment_resources','schedule_conflict_overrides']
+  db.exec(`CREATE TABLE IF NOT EXISTS sync_meta(key TEXT PRIMARY KEY,value TEXT);CREATE TABLE IF NOT EXISTS sync_queue(id INTEGER PRIMARY KEY AUTOINCREMENT,entity_type TEXT NOT NULL,row_id INTEGER,cloud_id TEXT,operation TEXT NOT NULL DEFAULT 'UPSERT',queued_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,attempts INTEGER NOT NULL DEFAULT 0,last_error TEXT);`)
+  for(const table of syncTables){
+    addColumn(table,'cloud_id','TEXT');addColumn(table,'updated_at','TEXT');addColumn(table,'deleted_at','TEXT');addColumn(table,'version','INTEGER NOT NULL DEFAULT 1')
+    db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_${table}_cloud_id ON ${table}(cloud_id) WHERE cloud_id IS NOT NULL`)
+    db.prepare(`UPDATE ${table} SET cloud_id=lower(hex(randomblob(16))),updated_at=COALESCE(updated_at,created_at,CURRENT_TIMESTAMP) WHERE cloud_id IS NULL`).run()
+    db.exec(`
+      CREATE TRIGGER IF NOT EXISTS sync_${table}_assign_cloud AFTER INSERT ON ${table} WHEN NEW.cloud_id IS NULL BEGIN UPDATE ${table} SET cloud_id=lower(hex(randomblob(16))),updated_at=CURRENT_TIMESTAMP WHERE id=NEW.id; END;
+      CREATE TRIGGER IF NOT EXISTS sync_${table}_insert AFTER INSERT ON ${table} WHEN NEW.cloud_id IS NOT NULL AND COALESCE((SELECT value FROM sync_meta WHERE key='applying_remote'),'0')!='1' BEGIN INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation) VALUES ('${table}',NEW.id,NEW.cloud_id,'UPSERT'); END;
+      CREATE TRIGGER IF NOT EXISTS sync_${table}_update AFTER UPDATE ON ${table} WHEN COALESCE((SELECT value FROM sync_meta WHERE key='applying_remote'),'0')!='1' BEGIN UPDATE ${table} SET updated_at=CURRENT_TIMESTAMP,version=COALESCE(OLD.version,1)+1 WHERE id=NEW.id AND NEW.updated_at IS OLD.updated_at; DELETE FROM sync_queue WHERE entity_type='${table}' AND row_id=NEW.id; INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation) VALUES ('${table}',NEW.id,COALESCE(NEW.cloud_id,OLD.cloud_id),'UPSERT'); END;
+      CREATE TRIGGER IF NOT EXISTS sync_${table}_delete AFTER DELETE ON ${table} WHEN COALESCE((SELECT value FROM sync_meta WHERE key='applying_remote'),'0')!='1' BEGIN DELETE FROM sync_queue WHERE entity_type='${table}' AND cloud_id=OLD.cloud_id; INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation) VALUES ('${table}',NULL,OLD.cloud_id,'DELETE'); END;
+    `)
   }
 }
 
@@ -904,4 +1139,4 @@ function seed(db) {
     .run(o.lastInsertRowid,v.lastInsertRowid,'Diagnostyka braku mocy',start.toISOString(),end.toISOString(),'Stanowisko 1','PLAN')
 }
 
-module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10, migrateSchemaV12, migrateSchemaV13, migrateSchemaV14, migrateSchemaV15, migrateSchemaV16, migrateSchemaV17 }
+module.exports = { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSION, migrateSchemaV8, migrateSchemaV9, migrateSchemaV10, migrateSchemaV12, migrateSchemaV13, migrateSchemaV14, migrateSchemaV15, migrateSchemaV16, migrateSchemaV17, migrateSchemaV18 }
