@@ -126,6 +126,66 @@ function returnRepairPart(db,{repairPartId,qty,eventKey}){
   })()
 }
 
+function cancelRepairPartReservation(db,{repairPartId,qty,eventKey}){
+  const amount=integer(qty),key=String(eventKey||'').trim()
+  if(!key)throw new Error('Brakuje klucza zdarzenia anulowania rezerwacji.')
+  return db.transaction(()=>{
+    const duplicate=db.prepare('SELECT * FROM repair_part_events WHERE event_key=?').get(key)
+    if(duplicate)return{repairPartId:duplicate.repair_part_id,existing:true}
+    const row=db.prepare('SELECT * FROM repair_parts WHERE id=?').get(Number(repairPartId))
+    if(!row||!row.inventory_part_id)throw new Error('Ta pozycja nie jest częścią magazynową.')
+    const reserved=Math.max(0,Number(row.reserved_qty)||0)
+    if(amount>reserved)throw new Error(`Do anulowania pozostało ${reserved} szt.`)
+    const remaining=reserved-amount,status=remaining>0?'RESERVED':Number(row.issued_qty)>Number(row.returned_qty)?'ISSUED':'CANCELLED'
+    db.prepare('UPDATE repair_parts SET reserved_qty=?,status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(remaining,status,row.id)
+    if(row.job_part_order_id)db.prepare("UPDATE job_part_orders SET status=CASE WHEN ?=0 THEN 'ANULOWANE' ELSE status END WHERE id=?").run(remaining,row.job_part_order_id)
+    db.prepare('INSERT INTO repair_part_events(repair_part_id,event_key,event_type,qty) VALUES (?,?,?,?)').run(row.id,key,'CANCEL_RESERVATION',amount)
+    return{repairPartId:row.id,cancelled:amount,reserved:remaining,existing:false}
+  })()
+}
+
+function installRepairPart(db,{repairPartId,qty,eventKey}){
+  const amount=integer(qty),key=String(eventKey||'').trim()
+  if(!key)throw new Error('Brakuje klucza zdarzenia montażu.')
+  return db.transaction(()=>{
+    const duplicate=db.prepare('SELECT * FROM repair_part_events WHERE event_key=?').get(key)
+    if(duplicate)return{repairPartId:duplicate.repair_part_id,existing:true}
+    const row=db.prepare('SELECT * FROM repair_parts WHERE id=?').get(Number(repairPartId))
+    if(!row)throw new Error('Powiązanie części z naprawą nie istnieje.')
+    const installable=Math.max(0,Number(row.issued_qty)-Number(row.returned_qty)-Number(row.installed_qty))
+    if(amount>installable)throw new Error(`Do oznaczenia jako zamontowane pozostało ${installable} szt.`)
+    const installed=Number(row.installed_qty)+amount,remaining=installable-amount,status=remaining>0?'ISSUED':'INSTALLED'
+    db.prepare('UPDATE repair_parts SET installed_qty=?,status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(installed,status,row.id)
+    if(row.job_part_order_id)db.prepare("UPDATE job_part_orders SET status='ZAMONTOWANA' WHERE id=?").run(row.job_part_order_id)
+    db.prepare('INSERT INTO repair_part_events(repair_part_id,event_key,event_type,qty) VALUES (?,?,?,?)').run(row.id,key,'INSTALL',amount)
+    return{repairPartId:row.id,installed:amount,totalInstalled:installed,existing:false}
+  })()
+}
+
+function updateRepairOperation(db,{operationId,data={}}){
+  const operation=assertOperation(db,operationId),number=(value,fallback,min=0,max=Number.MAX_SAFE_INTEGER)=>{
+    if(value===undefined)return fallback
+    const parsed=Number(value)
+    if(!Number.isFinite(parsed)||parsed<min||parsed>max)throw new Error('Nieprawidłowa wartość kosztorysu naprawy.')
+    return parsed
+  }
+  const next={
+    planned_hours:number(data.planned_hours,operation.planned_hours),
+    labor_rate:number(data.labor_rate,operation.labor_rate),
+    labor_cost_rate:number(data.labor_cost_rate,operation.labor_cost_rate),
+    discount_percent:number(data.discount_percent,operation.discount_percent,0,100),
+    vat_rate:number(data.vat_rate,operation.vat_rate,0,100),
+    other_cost:number(data.other_cost,operation.other_cost),
+    other_price:number(data.other_price,operation.other_price)
+  }
+  return db.transaction(()=>{
+    db.prepare(`UPDATE order_repair_operations SET planned_hours=?,labor_rate=?,labor_cost_rate=?,discount_percent=?,vat_rate=?,other_cost=?,other_price=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(next.planned_hours,next.labor_rate,next.labor_cost_rate,next.discount_percent,next.vat_rate,next.other_cost,next.other_price,operation.id)
+    if(operation.order_item_id)db.prepare('UPDATE order_items SET qty=?,unit_cost=?,unit_price=?,hours_snapshot=?,price_snapshot=? WHERE id=?').run(next.planned_hours,next.labor_cost_rate,next.labor_rate,next.planned_hours,money(next.planned_hours*next.labor_rate),operation.order_item_id)
+    db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(operation.order_id,'REPAIR_ESTIMATE_UPDATED','Zmieniono kosztorys naprawy',`${operation.title} · ${next.planned_hours.toFixed(2)} h · ${money(next.labor_rate)} zł/h · VAT ${next.vat_rate}%`)
+    return{operationId:operation.id,estimate:calculateRepairEstimate(db,operation.id)}
+  })()
+}
+
 function calculateRepairEstimate(db,operationId){
   const operation=assertOperation(db,operationId),parts=db.prepare('SELECT * FROM repair_parts WHERE repair_operation_id=?').all(operation.id)
   const laborNet=money(operation.planned_hours*operation.labor_rate),laborCost=money(operation.planned_hours*operation.labor_cost_rate)
@@ -201,4 +261,4 @@ function convertDviItemToRepair(db,{itemId,data={}}){
   return{operationId,existing:Boolean(result.existing)}
 }
 
-module.exports={money,listRepairOperations,createSmartJob,listRepairParts,reserveInventoryPart,issueRepairPart,returnRepairPart,calculateRepairEstimate,orderEstimate,snapshotEstimate,createDviInspection,addDviItem,listDvi,decideDviItem,convertDviItemToRepair,createDviToken}
+module.exports={money,listRepairOperations,createSmartJob,listRepairParts,reserveInventoryPart,issueRepairPart,returnRepairPart,cancelRepairPartReservation,installRepairPart,updateRepairOperation,calculateRepairEstimate,orderEstimate,snapshotEstimate,createDviInspection,addDviItem,listDvi,decideDviItem,convertDviItemToRepair,createDviToken}
