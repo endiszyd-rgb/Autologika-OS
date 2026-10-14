@@ -223,23 +223,67 @@ function addDviItem(db,{inspectionId,data}){
   return{id:Number(result.lastInsertRowid)}
 }
 function listDvi(db,orderId){
-  return db.prepare('SELECT * FROM dvi_inspections WHERE order_id=? ORDER BY id DESC').all(Number(orderId)).map(inspection=>({...inspection,items:db.prepare(`SELECT i.*,(SELECT COUNT(*) FROM dvi_media m WHERE m.dvi_item_id=i.id) media_count FROM dvi_items i WHERE inspection_id=? ORDER BY id`).all(inspection.id)}))
+  return db.prepare('SELECT * FROM dvi_inspections WHERE order_id=? ORDER BY id DESC').all(Number(orderId)).map(inspection=>({...inspection,items:db.prepare(`SELECT i.*,
+    (SELECT COUNT(*) FROM dvi_media m WHERE m.dvi_item_id=i.id) media_count,
+    (SELECT MAX(version) FROM dvi_decisions x WHERE x.dvi_item_id=i.id) decision_version,
+    (SELECT amount_snapshot FROM dvi_decisions x WHERE x.dvi_item_id=i.id ORDER BY version DESC LIMIT 1) decision_amount_snapshot
+    FROM dvi_items i WHERE inspection_id=? ORDER BY id`).all(inspection.id)}))
 }
-function decideDviItem(db,{itemId,decision,decidedBy=''}){
+function finishDviIfComplete(db,inspectionId){
+  const pending=Number(db.prepare("SELECT COUNT(*) count FROM dvi_items WHERE inspection_id=? AND status='REPAIR' AND decision='PENDING'").get(Number(inspectionId))?.count||0)
+  if(pending)return false
+  db.prepare("UPDATE dvi_inspections SET status='COMPLETED',completed_at=COALESCE(completed_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE id=?").run(Number(inspectionId))
+  db.prepare('UPDATE dvi_access_tokens SET revoked_at=COALESCE(revoked_at,CURRENT_TIMESTAMP) WHERE inspection_id=?').run(Number(inspectionId))
+  return true
+}
+function decideDviItem(db,{itemId,decision,decidedBy='',tokenInspectionId=null,requirePending=false}){
   const value=String(decision||'').toUpperCase();if(!['APPROVED','DECLINED'].includes(value))throw new Error('Nieprawidłowa decyzja DVI.')
   return db.transaction(()=>{
     const item=db.prepare('SELECT * FROM dvi_items WHERE id=?').get(Number(itemId));if(!item)throw new Error('Pozycja DVI nie istnieje.')
+    if(tokenInspectionId!==null&&Number(item.inspection_id)!==Number(tokenInspectionId))throw new Error('Pozycja DVI nie należy do udostępnionej inspekcji.')
+    if(item.status!=='REPAIR')throw new Error('Decyzja klienta dotyczy wyłącznie pozycji wymagającej naprawy.')
+    if(requirePending&&item.decision!=='PENDING')throw new Error('Ta pozycja DVI została już rozpatrzona.')
     const version=Number(db.prepare('SELECT COALESCE(MAX(version),0)+1 version FROM dvi_decisions WHERE dvi_item_id=?').get(item.id).version)
     db.prepare('INSERT INTO dvi_decisions(dvi_item_id,decision,amount_snapshot,version,decided_by) VALUES (?,?,?,?,?)').run(item.id,value,item.proposed_amount,version,String(decidedBy||''))
     db.prepare('UPDATE dvi_items SET decision=?,decision_at=CURRENT_TIMESTAMP WHERE id=?').run(value,item.id)
-    return{itemId:item.id,decision:value,version,amountSnapshot:item.proposed_amount}
+    const inspectionCompleted=finishDviIfComplete(db,item.inspection_id)
+    return{itemId:item.id,inspectionId:Number(item.inspection_id),decision:value,version,amountSnapshot:item.proposed_amount,inspectionCompleted}
   })()
 }
 
 function createDviToken(db,{inspectionId,ttlHours=72}){
+  const inspection=db.prepare('SELECT id,status FROM dvi_inspections WHERE id=?').get(Number(inspectionId))
+  if(!inspection)throw new Error('Inspekcja DVI nie istnieje.')
+  if(inspection.status==='COMPLETED')throw new Error('Inspekcja DVI została już zakończona.')
+  const pending=Number(db.prepare("SELECT COUNT(*) count FROM dvi_items WHERE inspection_id=? AND status='REPAIR' AND decision='PENDING'").get(inspection.id)?.count||0)
+  if(!pending)throw new Error('Brak pozycji wymagających decyzji klienta.')
   const token=crypto.randomBytes(24).toString('hex'),hash=crypto.createHash('sha256').update(token).digest('hex'),hours=Math.min(720,Math.max(1,Number(ttlHours)||72)),expiresAt=new Date(Date.now()+hours*3600000).toISOString()
-  db.prepare('INSERT INTO dvi_access_tokens(inspection_id,token_hash,expires_at) VALUES (?,?,?)').run(Number(inspectionId),hash,expiresAt)
-  return{token,expiresAt}
+  db.transaction(()=>{
+    db.prepare('UPDATE dvi_access_tokens SET revoked_at=COALESCE(revoked_at,CURRENT_TIMESTAMP) WHERE inspection_id=?').run(inspection.id)
+    db.prepare('INSERT INTO dvi_access_tokens(inspection_id,token_hash,expires_at) VALUES (?,?,?)').run(inspection.id,hash,expiresAt)
+    db.prepare("UPDATE dvi_inspections SET status='AWAITING_DECISION',completed_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?").run(inspection.id)
+  })()
+  return{token,expiresAt,inspectionId:Number(inspection.id),pendingItems:pending}
+}
+
+function resolveDviToken(db,{token,now=new Date()}){
+  const raw=String(token||'').trim().toLowerCase()
+  if(!/^[a-f0-9]{48}$/.test(raw))throw new Error('Nieprawidłowy token DVI.')
+  const hash=crypto.createHash('sha256').update(raw).digest('hex'),row=db.prepare(`SELECT t.*,i.order_id,i.vehicle_id,i.status inspection_status,i.author,i.created_at inspection_created_at
+    FROM dvi_access_tokens t JOIN dvi_inspections i ON i.id=t.inspection_id WHERE t.token_hash=?`).get(hash)
+  if(!row)throw new Error('Link DVI jest nieprawidłowy.')
+  if(row.revoked_at)throw new Error('Link DVI został unieważniony.')
+  if(Date.parse(row.expires_at)<=new Date(now).getTime())throw new Error('Link DVI wygasł.')
+  if(row.inspection_status==='COMPLETED')throw new Error('Inspekcja DVI została już zakończona.')
+  const items=db.prepare(`SELECT i.id,i.area,i.description,i.status,i.proposed_amount,i.decision,i.decision_at,
+    (SELECT COUNT(*) FROM dvi_media m WHERE m.dvi_item_id=i.id) media_count
+    FROM dvi_items i WHERE i.inspection_id=? ORDER BY i.id`).all(row.inspection_id)
+  return{inspectionId:Number(row.inspection_id),orderId:Number(row.order_id),vehicleId:Number(row.vehicle_id),status:row.inspection_status,author:row.author||'',createdAt:row.inspection_created_at,expiresAt:row.expires_at,items}
+}
+
+function decideDviItemWithToken(db,{token,itemId,decision,decidedBy='Klient'}){
+  const access=resolveDviToken(db,{token})
+  return decideDviItem(db,{itemId,decision,decidedBy,tokenInspectionId:access.inspectionId,requirePending:true})
 }
 
 function convertDviItemToRepair(db,{itemId,data={}}){
@@ -261,4 +305,4 @@ function convertDviItemToRepair(db,{itemId,data={}}){
   return{operationId,existing:Boolean(result.existing)}
 }
 
-module.exports={money,listRepairOperations,createSmartJob,listRepairParts,reserveInventoryPart,issueRepairPart,returnRepairPart,cancelRepairPartReservation,installRepairPart,updateRepairOperation,calculateRepairEstimate,orderEstimate,snapshotEstimate,createDviInspection,addDviItem,listDvi,decideDviItem,convertDviItemToRepair,createDviToken}
+module.exports={money,listRepairOperations,createSmartJob,listRepairParts,reserveInventoryPart,issueRepairPart,returnRepairPart,cancelRepairPartReservation,installRepairPart,updateRepairOperation,calculateRepairEstimate,orderEstimate,snapshotEstimate,createDviInspection,addDviItem,listDvi,decideDviItem,convertDviItemToRepair,createDviToken,resolveDviToken,decideDviItemWithToken}
