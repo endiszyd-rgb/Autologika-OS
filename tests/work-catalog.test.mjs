@@ -101,3 +101,9 @@ test('catalog search finds work and variants without Polish diacritics',()=>{
  assert.deepEqual(searchCatalogRows(''),[])
  assert.ok(searchCatalogRows('wymiana',7).length<=7)
 })
+
+test('catalog reuses its flattened search source between keystrokes',()=>{
+ assert.strictEqual(catalogRows(),catalogRows())
+ assert.ok(searchCatalogRows('hamulce',32).length<=32)
+ assert.ok(searchCatalogRows('hamulce tarcze',32).every(row=>row.group&&row.job?.id&&row.variant?.id))
+})

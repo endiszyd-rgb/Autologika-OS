@@ -375,7 +375,13 @@ ipcMain.handle('dashboard:get',()=>{
   const open=db.prepare("SELECT COUNT(*) c FROM orders WHERE archived_at IS NULL AND status != 'WYDANE'").get().c
   const today=db.prepare("SELECT COUNT(*) c FROM orders WHERE date(opened_at)=date('now','localtime')").get().c
   const month=db.prepare(`SELECT COALESCE(SUM(${ORDER_TOTAL_SQL}),0) revenue,COALESCE(SUM(parts_cost + other_cost),0) variableCost,COALESCE(SUM(labor_hours),0) laborHours FROM orders o WHERE strftime('%Y-%m',opened_at)=strftime('%Y-%m','now','localtime')`).get()
-  const actual=db.prepare(`SELECT COALESCE(SUM(CASE WHEN duration_minutes IS NOT NULL THEN duration_minutes ELSE (julianday('now')-julianday(started_at))*1440 END),0) minutes FROM work_logs WHERE strftime('%Y-%m',started_at)=strftime('%Y-%m','now','localtime')`).get().minutes
+  const productive=db.prepare(`SELECT COALESCE(SUM(
+    CASE WHEN EXISTS(SELECT 1 FROM order_items labor WHERE labor.order_id=o.id AND labor.kind='ROBOCIZNA')
+      THEN COALESCE((SELECT SUM(labor.qty*labor.unit_price) FROM order_items labor WHERE labor.order_id=o.id AND labor.kind='ROBOCIZNA'),0)
+      ELSE COALESCE(o.labor_hours,0)*COALESCE(o.labor_rate,0) END
+    +COALESCE((SELECT SUM(service.qty*service.unit_price) FROM order_items service WHERE service.order_id=o.id AND service.kind='USLUGA_ZEW'),0)
+    +COALESCE(o.diagnosis_fee,0)),0) revenue FROM orders o WHERE strftime('%Y-%m',o.opened_at)=strftime('%Y-%m','now','localtime')`).get().revenue
+  const actual=db.prepare(`SELECT COALESCE(SUM(MIN(960,MAX(0,CASE WHEN duration_minutes IS NOT NULL THEN duration_minutes ELSE (julianday('now')-julianday(started_at))*1440 END))),0) minutes FROM work_logs WHERE strftime('%Y-%m',started_at)=strftime('%Y-%m','now','localtime')`).get().minutes
   const status=db.prepare("SELECT status,COUNT(*) c FROM orders WHERE archived_at IS NULL AND status!='WYDANE' GROUP BY status").all()
   const recent=db.prepare(`${orderSelect} WHERE o.archived_at IS NULL AND o.status!='WYDANE' ORDER BY o.opened_at DESC LIMIT 8`).all()
   const sources=db.prepare(`SELECT source, COUNT(*) c FROM orders WHERE strftime('%Y-%m',opened_at)=strftime('%Y-%m','now','localtime') GROUP BY source ORDER BY c DESC`).all()
@@ -387,26 +393,26 @@ ipcMain.handle('dashboard:get',()=>{
     db.prepare("SELECT COUNT(*) c FROM communications WHERE needs_reply=1 AND resolved=0").get().c +
     db.prepare("SELECT COUNT(*) c FROM job_part_orders WHERE expected_at IS NOT NULL AND datetime(expected_at)<datetime('now') AND status NOT IN ('ODEBRANE','ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE')").get().c +
     db.prepare("SELECT COUNT(*) c FROM vehicle_findings f JOIN vehicles v ON v.id=f.vehicle_id WHERE f.deleted_at IS NULL AND f.status!='RESOLVED' AND (f.severity IN ('CRITICAL','HIGH') OR (f.due_date IS NOT NULL AND date(f.due_date)<=date('now','+14 days')) OR (f.due_mileage IS NOT NULL AND v.mileage>=f.due_mileage))").get().c
-  return {open,today,month:{...month,actualHours:Number(actual)/60},status,recent,sources,reminders,next,active,notificationCount}
+  return {open,today,month:{...month,productiveRevenue:Number(productive||0),actualHours:Number(actual)/60},status,recent,sources,reminders,next,active,notificationCount}
 })
 
 
 ipcMain.handle('finance:analytics',()=>{
   const db=getDb()
-  const current=db.prepare(`SELECT COUNT(*) orders,COALESCE(SUM(${ORDER_TOTAL_SQL}),0) revenue,COALESCE(AVG(${ORDER_TOTAL_SQL}),0) avg_ticket,COALESCE(SUM(parts_sale),0) parts_sale,COALESCE(SUM(parts_cost),0) parts_cost,COALESCE(SUM(labor_hours*labor_rate),0) legacy_labor FROM orders o WHERE strftime('%Y-%m',opened_at)=strftime('%Y-%m','now','localtime')`).get()
+  const current=db.prepare(`SELECT COUNT(*) orders,COALESCE(SUM(${ORDER_TOTAL_SQL}),0) revenue,COALESCE(AVG(${ORDER_TOTAL_SQL}),0) avg_ticket,COALESCE(SUM(parts_sale),0) parts_sale,COALESCE(SUM(parts_cost),0) parts_cost,COALESCE(SUM(CASE WHEN NOT EXISTS(SELECT 1 FROM order_items labor WHERE labor.order_id=o.id AND labor.kind='ROBOCIZNA') THEN labor_hours*labor_rate ELSE 0 END),0) legacy_labor FROM orders o WHERE strftime('%Y-%m',opened_at)=strftime('%Y-%m','now','localtime')`).get()
   const itemLabor=db.prepare(`SELECT COALESCE(SUM(i.qty*i.unit_price),0) v FROM order_items i JOIN orders o ON o.id=i.order_id WHERE i.kind='ROBOCIZNA' AND strftime('%Y-%m',o.opened_at)=strftime('%Y-%m','now','localtime')`).get().v
   const daily=db.prepare(`WITH RECURSIVE days(d) AS (SELECT date('now','localtime','-29 days') UNION ALL SELECT date(d,'+1 day') FROM days WHERE d<date('now','localtime')) SELECT d day,COALESCE(SUM(${ORDER_TOTAL_SQL}),0) revenue,COUNT(o.id) orders FROM days LEFT JOIN orders o ON date(o.opened_at,'localtime')=d GROUP BY d ORDER BY d`).all()
   const mix=db.prepare(`SELECT CASE WHEN diagnosis_fee>0 AND parts_sale=0 AND other_sale=0 AND labor_hours=0 THEN 'Diagnostyka' WHEN parts_sale>0 AND (other_sale>0 OR labor_hours>0) THEN 'Naprawa + części' WHEN parts_sale>0 THEN 'Części' ELSE 'Robocizna / usługa' END category,COUNT(*) count,COALESCE(SUM(${ORDER_TOTAL_SQL}),0) revenue FROM orders o WHERE strftime('%Y-%m',opened_at)=strftime('%Y-%m','now','localtime') GROUP BY category ORDER BY revenue DESC`).all()
-  const actualMinutes=db.prepare(`SELECT COALESCE(SUM(CASE WHEN duration_minutes IS NOT NULL THEN duration_minutes ELSE (julianday('now')-julianday(started_at))*1440 END),0) m FROM work_logs WHERE strftime('%Y-%m',started_at)=strftime('%Y-%m','now','localtime')`).get().m
+  const actualMinutes=db.prepare(`SELECT COALESCE(SUM(MIN(960,MAX(0,CASE WHEN duration_minutes IS NOT NULL THEN duration_minutes ELSE (julianday('now')-julianday(started_at))*1440 END))),0) m FROM work_logs WHERE strftime('%Y-%m',started_at)=strftime('%Y-%m','now','localtime')`).get().m
   const paid=db.prepare(`SELECT COALESCE(SUM(amount),0) value FROM payments WHERE strftime('%Y-%m',paid_at)=strftime('%Y-%m','now','localtime')`).get().value
   const receivables=db.prepare(`SELECT COALESCE(SUM(MAX(0,total-paid)),0) value FROM (SELECT ${ORDER_TOTAL_SQL} total,COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.order_id=o.id),0) paid FROM orders o WHERE strftime('%Y-%m',opened_at)=strftime('%Y-%m','now','localtime'))`).get().value
   const previousRevenue=db.prepare(`SELECT COALESCE(SUM(${ORDER_TOTAL_SQL}),0) value FROM orders o WHERE strftime('%Y-%m',opened_at)=strftime('%Y-%m','now','localtime','-1 month')`).get().value
   const details=db.prepare(`SELECT o.id,o.title,o.opened_at,v.plate,v.make,v.model,c.name customer,
     ROUND(${ORDER_TOTAL_SQL},2) total,ROUND(${ORDER_COST_SQL},2) cost,
     ROUND(COALESCE(o.parts_sale,0),2) parts_sale,ROUND(COALESCE(o.parts_cost,0),2) parts_cost,
-    ROUND(COALESCE(o.labor_hours,0)*COALESCE(o.labor_rate,0),2) legacy_labor,
+    ROUND(CASE WHEN NOT EXISTS(SELECT 1 FROM order_items labor WHERE labor.order_id=o.id AND labor.kind='ROBOCIZNA') THEN COALESCE(o.labor_hours,0)*COALESCE(o.labor_rate,0) ELSE 0 END,2) legacy_labor,
     ROUND(COALESCE((SELECT SUM(i.qty*i.unit_price) FROM order_items i WHERE i.order_id=o.id AND i.kind='ROBOCIZNA'),0),2) item_labor,
-    ROUND(COALESCE(o.other_sale,0),2) service_sale,ROUND(COALESCE(o.other_cost,0),2) service_cost,
+    ROUND(COALESCE((SELECT SUM(i.qty*i.unit_price) FROM order_items i WHERE i.order_id=o.id AND i.kind='USLUGA_ZEW'),0),2) service_sale,ROUND(COALESCE((SELECT SUM(i.qty*i.unit_cost) FROM order_items i WHERE i.order_id=o.id AND i.kind='USLUGA_ZEW'),0),2) service_cost,
     ROUND(COALESCE(o.diagnosis_fee,0),2) diagnosis_sale,ROUND(COALESCE(o.discount,0),2) discount
     FROM orders o JOIN vehicles v ON v.id=o.vehicle_id LEFT JOIN customers c ON c.id=v.customer_id
     WHERE strftime('%Y-%m',o.opened_at)=strftime('%Y-%m','now','localtime') ORDER BY total DESC,o.opened_at DESC`).all()

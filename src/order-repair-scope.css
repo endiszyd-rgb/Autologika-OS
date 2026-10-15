@@ -36,3 +36,10 @@
 /* Repair estimate editor and complete inventory lifecycle */
 .repairOperationList article.editing{align-items:flex-start;border-color:#5c7548}.repairOperationList article>div:last-child{display:grid;justify-items:end;gap:4px}.repairOperationList article>div:last-child button{margin-top:5px}.repairEstimateEditor{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:9px;margin-top:14px;padding:13px;border:1px solid var(--line);border-radius:12px;background:#111815}.repairEstimateEditor label{display:grid;gap:5px;color:var(--muted);font-size:10px}.repairEstimateEditor input{min-width:0}.repairEstimateEditor .actionrow{grid-column:1/-1;justify-content:flex-end;margin-top:2px}.repairPartRows>div{grid-template-columns:auto minmax(0,1fr) auto minmax(135px,auto)}.repairPartStatus.installed{background:#183b20;color:#a9f2a9}.repairPartStatus.cancelled{background:#382326;color:#e9a0a8}.repairPartActions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}.repairPartActions button{padding:6px 8px;font-size:9px}
 @media(max-width:900px){.repairEstimateEditor{grid-template-columns:1fr 1fr}.repairPartRows>div>strong,.repairPartActions{grid-column:2}.repairPartActions{justify-content:flex-start}}
+
+.catalogModalBack{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(2,5,4,.92)}
+.catalogModal{contain:layout paint;box-shadow:0 22px 58px rgba(0,0,0,.68)}
+.workCatalogSearch>label>i{width:14px;height:14px;border:2px solid #52644a;border-top-color:#aee76f;border-radius:50%;animation:catalogSearchSpin .55s linear infinite}
+.workCatalogSearchResults[aria-busy="true"]{opacity:.72}
+@keyframes catalogSearchSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.workCatalogSearch>label>i{animation:none}}
