@@ -371,6 +371,153 @@ code{background:#0d0a0c;border:1px solid #382a30;color:#e9dfe2}
 .partsWorkspace .stockCard{border-color:#443239!important;background:linear-gradient(150deg,#1d1619,#120e10)!important}
 .partsWorkspace .stockCard.selected{border-color:var(--mobile-red-bright)!important;box-shadow:0 0 0 2px rgba(255,70,81,.1)!important}
 
+/* Work catalogue and procedure library. */
+.procedureTemplates .ptHero{
+  border-color:#593941!important;
+  background:radial-gradient(circle at 80% -20%,rgba(255,70,81,.13),transparent 34%),linear-gradient(135deg,#201418,#120e10)!important;
+}
+.procedureTemplates .ptHero:after{border-color:rgba(255,105,114,.1)!important}
+.procedureTemplates .ptHero small,
+.procedureTemplates .ptPreviewHead small,
+.procedureTemplates .ptScope small,
+.procedureTemplates .ptCatalogCard>header span,
+.procedureTemplates .ptCustomCard>header span{color:var(--mobile-red-bright)!important}
+.procedureTemplates .ptStats>div{
+  border-color:#49353d!important;
+  background:rgba(17,11,14,.78)!important;
+}
+.procedureTemplates .ptMode>button{
+  border-color:#413138!important;
+  background:#151013!important;
+  border-radius:14px!important;
+}
+.procedureTemplates .ptMode>button>span{border-color:#49353d!important;color:#9f7a82!important}
+.procedureTemplates .ptMode>button:hover{border-color:#744650!important;background:#24171b!important}
+.procedureTemplates .ptMode>button.active{
+  border-color:#914852!important;
+  background:linear-gradient(90deg,rgba(255,70,81,.15),#171114)!important;
+  box-shadow:inset 3px 0 0 var(--mobile-red)!important;
+}
+.procedureTemplates .ptMode>button.active>span{border-color:#914852!important;color:#ff9da4!important;background:rgba(255,70,81,.08)!important}
+.procedureTemplates .ptToolbar>div{border-color:#47353d!important;background:#100c0e!important;border-radius:12px!important}
+.procedureTemplates .ptToolbar>div>span{color:var(--mobile-red-bright)!important}
+.procedureTemplates .ptCatalogCard,
+.procedureTemplates .ptCustomCard{
+  border-color:#443239!important;
+  background:linear-gradient(145deg,#1d1619,#120e10)!important;
+  border-radius:17px!important;
+}
+.procedureTemplates .ptCatalogCard:hover,
+.procedureTemplates .ptCustomCard:hover{border-color:#7a4852!important;box-shadow:0 15px 34px rgba(0,0,0,.28)!important}
+.procedureTemplates .ptCounts span{border-color:#3f3036!important;color:#a899a0!important;background:#130f11!important}
+.procedureTemplates .ptScope{border-left-color:var(--mobile-red)!important;background:#1b1216!important}
+.procedureTemplates .ptPreviewList{border-color:#423139!important;background:#120e10!important}
+.procedureTemplates .ptPreviewList h4{border-bottom-color:#382a30!important}
+.procedureTemplates .ptPreviewList p{border-bottom-color:#302329!important}
+.procedureTemplates .ptPreviewList p i{color:var(--mobile-red-bright)!important}
+.procedureTemplates .ptPreviewList.qc p i{color:#76d69a!important}
+
+/* Technical documentation: keep the document canvas neutral, unify the shell. */
+.manualModule .manualHero{
+  border-color:#593941!important;
+  background:radial-gradient(circle at 88% 0,rgba(255,70,81,.13),transparent 35%),linear-gradient(135deg,#201418,#120e10 74%)!important;
+}
+.manualModule .manualHero:after{border-color:rgba(255,105,114,.09)!important}
+.manualModule .manualHero small,
+.manualModule .manualDataPanel header small,
+.manualModule .manualSteps header small,
+.manualModule .manualSourceStrip small{color:var(--mobile-red-bright)!important}
+.manualModule .manualHeroStats div{border-color:#49353d!important;background:#151013!important}
+.manualModule .manualSearch{border-color:#47353d!important;background:#100c0e!important}
+.manualModule .manualSearch span{color:var(--mobile-red-bright)!important}
+.manualModule .manualWorkspace{border-color:#49363e!important;background:#100c0e!important}
+.manualModule .manualTree{border-right-color:#3e2e35!important;background:#100c0e!important}
+.manualModule .manualTreeHead{border-bottom-color:#3e2e35!important;background:#151013!important}
+.manualModule .manualTreeHead span{background:#29171d!important;color:#ff9da4!important}
+.manualModule .manualBranch{border-top-color:#33262c!important}
+.manualModule .manualBranchHead span{color:#dc8189!important}
+.manualModule .manualBranchHead:hover,
+.manualModule .manualLeaf:hover,
+.manualModule .manualVehicleLeaf:hover{background:#25171c!important}
+.manualModule .manualLeaf.active,
+.manualModule .manualVehicleLeaf.active{
+  background:linear-gradient(90deg,rgba(255,70,81,.18),rgba(255,70,81,.05))!important;
+  box-shadow:inset 3px 0 var(--mobile-red)!important;
+}
+.manualModule .manualLeaf>span,
+.manualModule .manualVehicleLeaf>span{color:#ff9da4!important;border-color:rgba(255,105,114,.36)!important}
+.manualModule .manualCanvasArea{background:radial-gradient(circle at 55% 10%,#25191e,#151013 48%,#0d0a0c)!important}
+.manualModule .manualViewTools{border-color:#403038!important;background:#171115!important}
+.manualModule .manualViewTools button.active{border-color:#a64e59!important;color:#ffb3b8!important;background:rgba(255,70,81,.11)!important}
+.manualModule .manualViewTools input[type="range"]{accent-color:var(--mobile-red)}
+.manualModule .manualDataPanel,
+.manualModule .manualSteps,
+.manualModule .manualLinkedTech,
+.manualModule .manualSourceStrip{border-color:#403038!important;background:#120e10!important}
+.manualModule .manualDataPanel>header,
+.manualModule .manualSteps>header,
+.manualModule .manualLinkedTech>header{border-bottom-color:#35272d!important}
+.manualModule .manualDataPanel>article,
+.manualModule .manualSteps>article{border-bottom-color:#302329!important}
+.manualModule .manualDataPanel>article:hover{background:#24171c!important}
+.manualModule .manualDataPanel>article>span,
+.manualModule .manualSteps article>span{background:#321920!important;color:#ff9da4!important}
+.manualModule .manualLinkedTech header small{color:var(--mobile-red-bright)!important}
+.manualModule .manualLinkPreview{
+  border-color:rgba(255,105,114,.28)!important;
+  background:radial-gradient(circle at 50% 0,rgba(255,70,81,.12),transparent 55%),rgba(18,10,13,.9)!important;
+}
+.manualModule .manualLinkPreview>span{border-color:rgba(255,105,114,.34)!important;background:rgba(255,70,81,.1)!important;color:#ffabb1!important}
+.manualModule .manualLinkPreview small{color:#dc8189!important}
+
+/* Settings and system health use red brand surfaces, while health states stay semantic. */
+.updateHero{
+  border-color:#4b373f!important;
+  background:radial-gradient(circle at 12% 50%,rgba(255,70,81,.08),transparent 32%),#151013!important;
+  border-radius:17px!important;
+}
+.updateHero .brandMark{background:linear-gradient(145deg,#ff727b,#e62e3a)!important;color:#21070a!important}
+.updateChannel select{border-color:#65414a!important;background:#160f12!important}
+.updateMeta>div,.archivePath,.mobileFeatureGrid>div,.databaseMetrics>div,.databaseRecords>span{
+  border-color:#433139!important;
+  background:#130f11!important;
+  border-radius:13px!important;
+}
+.updateMessage{border-left-color:var(--mobile-red)!important;background:#1b1115!important}
+.updateProgress>div{background:#2f2026!important}.updateProgress i{background:linear-gradient(90deg,#d92f3d,var(--mobile-red-bright))!important}
+.releaseNotes{border-color:#4d343d!important;background:#130e11!important}
+.releaseNotes small{color:var(--mobile-red-bright)!important}
+.workshopBaySettings label{border-color:#443239!important;background:#130f11!important}
+.workshopBaySettings label>span{color:#ff9da4!important}
+.targetPresets button.primary{color:#21070a!important}
+.syncHealth,.databaseHealth,.serverState{
+  border-color:#49353d!important;
+  background:linear-gradient(145deg,#1b1417,#110d0f)!important;
+}
+.syncHealthHead small,.databaseHealth small{color:#d6868d!important}
+.syncGroups span,.syncQueue,.backupTimeline,.serverAccess,.pinCard,.urlCard{
+  border-color:#403038!important;
+  background:#120e10!important;
+}
+.syncQueue>div{border-bottom-color:#35272d!important}
+
+/* Financial values retain positive/negative semantics; containers match mobile. */
+.financeDashboard .financeHero,
+.financeDashboard .financePanel,
+.financeDashboard .financeKpi{
+  border-color:#443239!important;
+  background:linear-gradient(145deg,#1d1619,#120e10)!important;
+}
+.financeDashboard .financeHero{background:radial-gradient(circle at 85% 0,rgba(255,70,81,.11),transparent 35%),linear-gradient(145deg,#211419,#120e10)!important}
+.financeDashboard .financeHeroMain>small,
+.financeDashboard .financePanel header small{color:var(--mobile-red-bright)!important}
+.financeDashboard .targetTrack,.financeDashboard .financeKpiMeter,.financeDashboard .mixTrack{background:#35262c!important}
+.financeDashboard .targetTrack i{background:linear-gradient(90deg,#cf2e3b,#ff6972)!important}
+.financeDashboard .financeKpi:hover{border-color:#7a4852!important;box-shadow:0 14px 34px rgba(0,0,0,.26)!important}
+.financeBreakdownSummary{border-color:#49353d!important;background:#171115!important}
+.financeBreakdownSummary small{color:var(--mobile-red-bright)!important}
+.financeBreakdownTable{border-color:#403038!important}
+
 .empty,.actionableEmpty{color:#9c9096}
 .actionableEmpty{border-color:#44333a;background:#120e10;border-radius:16px}
 .statusTag{border-color:#5c3a43;background:#27161b;color:#ffc0c4}
