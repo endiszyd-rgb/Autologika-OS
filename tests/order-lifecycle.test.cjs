@@ -7,6 +7,7 @@ function database(){
  const db=new DatabaseSync(':memory:')
  db.exec(`CREATE TABLE orders(id INTEGER PRIMARY KEY,status TEXT,wait_state TEXT,closed_at TEXT,archived_at TEXT);
  CREATE TABLE order_events(id INTEGER PRIMARY KEY,order_id INTEGER,event_type TEXT,title TEXT,details TEXT);
+ CREATE TABLE work_logs(id INTEGER PRIMARY KEY,order_id INTEGER,started_at TEXT,ended_at TEXT,duration_minutes INTEGER);
  INSERT INTO orders VALUES(1,'NAPRAWA','CZESCI',NULL,NULL),(2,'WYDANE','BRAK','2026-09-20 10:00:00',NULL),(3,'GOTOWE','BRAK',NULL,NULL);`)
  db.transaction=fn=>()=>{db.exec('BEGIN');try{const result=fn();db.exec('COMMIT');return result}catch(error){db.exec('ROLLBACK');throw error}}
  return db
@@ -66,4 +67,15 @@ test('zamknięcie nie wymaga uzupełnienia opcjonalnej checklisty',()=>{
  assert.ok(order.closed_at)
  assert.match(db.prepare("SELECT details FROM order_events WHERE event_type='ORDER_RELEASED'").get().details,/0\/7/)
  assert.throws(()=>releaseOrder(db,1,{completed:7,total:7}),/już zamknięte/i)
+})
+
+test('wydanie automatycznie kończy aktywne liczniki czasu tego zlecenia',()=>{
+ const db=database()
+ db.exec("INSERT INTO work_logs(id,order_id,started_at) VALUES(7,1,'2026-10-15 10:00:00'),(8,3,'2026-10-15 10:00:00')")
+ releaseOrder(db,1,{now:Date.parse('2026-10-15T10:35:00Z')})
+ const stopped=db.prepare('SELECT ended_at,duration_minutes FROM work_logs WHERE id=7').get()
+ assert.equal(stopped.duration_minutes,35)
+ assert.equal(stopped.ended_at,'2026-10-15 10:35:00')
+ assert.equal(db.prepare('SELECT ended_at FROM work_logs WHERE id=8').get().ended_at,null)
+ assert.match(db.prepare("SELECT details FROM order_events WHERE event_type='ORDER_RELEASED'").get().details,/1 \(35 min\)/)
 })

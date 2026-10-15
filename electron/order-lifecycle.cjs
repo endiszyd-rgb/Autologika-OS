@@ -1,5 +1,6 @@
 const STATUSES=['PRZYJETE','DIAGNOZA','AKCEPTACJA','NAPRAWA','GOTOWE','WYDANE']
 const WAIT_STATES=['BRAK','KLIENT','CZESCI','DECYZJA']
+const {stopActiveWorkLogs}=require('./work-time.cjs')
 
 function getOrder(db,id){
   const orderId=Number(id)
@@ -41,15 +42,17 @@ function requireOrderReadyForRelease(db,id){
   return order
 }
 
-function releaseOrder(db,id,{completed=0,total=0}={}){
+function releaseOrder(db,id,{completed=0,total=0,now=Date.now()}={}){
   const order=requireOrderReadyForRelease(db,id)
   return db.transaction(()=>{
+    const stopped=stopActiveWorkLogs(db,order.id,now)
     const changed=db.prepare(`UPDATE orders SET status='WYDANE',wait_state='BRAK',closed_at=COALESCE(closed_at,CURRENT_TIMESTAMP) WHERE id=? AND status!='WYDANE' AND archived_at IS NULL`).run(order.id)
     if(!changed.changes)throw new Error('Zlecenie jest już zamknięte lub nie istnieje.')
     const checklistTotal=Math.max(0,Number(total)||0),checklistCompleted=Math.min(checklistTotal,Math.max(0,Number(completed)||0))
-    const details=checklistTotal
+    let details=checklistTotal
       ?`Zlecenie zamknięte ręcznie · opcjonalna checklista: ${checklistCompleted}/${checklistTotal}`
       :'Zlecenie zamknięte ręcznie'
+    if(stopped.count)details+=` · zakończono aktywne timery: ${stopped.count} (${stopped.minutes} min)`
     db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(order.id,'ORDER_RELEASED','Pojazd wydany',details)
     return{ok:true,id:order.id,status:'WYDANE'}
   })()

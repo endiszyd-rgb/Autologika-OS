@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {blockingPartCount,reconcileOrderPartWait}=require('../electron/job-part-workflow.cjs')
+const {blockingPartCount,reconcileOrderPartWait,validateJobPartStatus}=require('../electron/job-part-workflow.cjs')
 
 function setup(t,waitState='BRAK'){
  const db=new DatabaseSync(':memory:');t.after(()=>db.close())
@@ -23,4 +23,11 @@ test('parts reconciliation preserves a client decision blocker',t=>{
  const db=setup(t,'DECYZJA')
  db.exec("INSERT INTO job_part_orders(order_id,status) VALUES(1,'ZAMOWIONE')")
  assert.deepEqual(reconcileOrderPartWait(db,1),{changed:false,blocking:1,waitState:'DECYZJA'})
+})
+
+test('status części jest normalizowany i nie przyjmuje wartości spoza procesu',()=>{
+ assert.equal(validateJobPartStatus(' odebrane '),'ODEBRANE')
+ assert.equal(validateJobPartStatus('zamontowane'),'ZAMONTOWANE')
+ assert.throws(()=>validateJobPartStatus('GOTOWE'),/Nieprawidłowy status części/)
+ assert.throws(()=>validateJobPartStatus(''),/Nieprawidłowy status części/)
 })

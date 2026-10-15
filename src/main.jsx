@@ -37,6 +37,7 @@ import {QuotePartLookup} from './quote-part-lookup.jsx'
 import {QuoteItemEditor} from './quote-item-editor.jsx'
 import {useDebouncedValue} from './performance.js'
 import {filterOrderRows,orderFilterOptions} from './order-list-model.mjs'
+import {workLogMinutes,workLogTimestamp} from './workshop-metrics.mjs'
 
 const api=window.autologika
 const lazyNamed=(loader,name)=>React.lazy(()=>loader().then(module=>({default:module[name]})))
@@ -236,7 +237,7 @@ function OrderDetail({id,changed}){
  const load=()=>Promise.all([api.orders.get(id).then(setO),api.items.list(id).then(setItems),api.worklog.list(id).then(setLogs),api.attachments.list(id).then(setPhotos),api.orders.notesGet(id).then(setNotes),api.procedures.list(id).then(setProcedures),api.employees.list().then(es=>{setEmployees(es.filter(e=>e.active));setEmployeeId(current=>current||String(es.find(e=>e.active)?.id||''))})])
  useEffect(()=>{load()},[id])
  if(!o)return <Loading/>
- const active=logs.filter(item=>!item.ended_at),actualMinutes=logs.reduce((sum,item)=>sum+Number(item.duration_minutes||(!item.ended_at?(Date.now()-new Date(item.started_at))/60000:0)),0),parts=items.filter(item=>item.kind!=='ROBOCIZNA')
+ const active=logs.filter(item=>!item.ended_at),actualMinutes=logs.reduce((sum,item)=>sum+workLogMinutes(item),0),parts=items.filter(item=>item.kind!=='ROBOCIZNA')
  const refresh=async()=>{await load();await changed?.()}
  const startWork=async()=>{const result=employeeId?await api.worklog.startAs(o.id,Number(employeeId)):await api.worklog.start(o.id);if(!result.ok)notifyFeedback('Nie udało się uruchomić timera',result.error,'error');else notifyFeedback('Timer pracy uruchomiony',o.plate||`Zlecenie #${o.id}`);await refresh()}
  return <div className="detail orderRepairDetail">
@@ -708,7 +709,7 @@ function OrderCenter({changed,refreshToken,initialId,openManual,openIntake}){
  if(!orders.length)return <section className="orderCenterPage"><Panel title="Centrum zlecenia"><Empty title="Brak aktywnych zleceń" detail="Przyjmij pojazd, wybierz klienta i zapisz pierwsze zlecenie. Po utworzeniu wrócisz tutaj do prowadzenia naprawy." action={openIntake} actionLabel="Rozpocznij szybkie przyjęcie"/></Panel></section>
  if(!o)return <Loading/>
  const locked=Boolean(o.archived_at)||o.status==='WYDANE'
- const actualMinutes=logs.reduce((s,x)=>s+Number(x.duration_minutes||(!x.ended_at?(Date.now()-new Date(x.started_at))/60000:0)),0)
+ const actualMinutes=logs.reduce((sum,entry)=>sum+workLogMinutes(entry),0)
  const active=logs.filter(x=>!x.ended_at)
  const partsOpen=parts.filter(x=>!['ZAMONTOWANE','ZWROT_ZAKONCZONY','ANULOWANE'].includes(x.status))
  const paidTotal=payments.reduce((sum,payment)=>sum+Number(payment.amount||0),0),balanceTotal=Math.max(0,Number(o.total||0)-paidTotal)
@@ -767,7 +768,7 @@ function OrderCenter({changed,refreshToken,initialId,openManual,openIntake}){
 
    {tab==='dvi'&&<DviPanel order={o} inspections={dvi} repairs={repairs} locked={locked} reload={reload}/>}
 
-   {tab==='time'&&<div className="centerGrid"><Panel title="Rejestracja czasu"><div className="actionrow"><select className="workerSelect" value={employeeId} onChange={e=>setEmployeeId(e.target.value)}>{employees.map(e=><option key={e.id} value={e.id}>{e.name} — {e.role}</option>)}</select><button className="start" disabled={locked} title={locked?'Najpierw otwórz zlecenie do korekty':''} onClick={async()=>{const r=await api.worklog.startAs(o.id,Number(employeeId));if(!r.ok)notifyFeedback('Nie udało się uruchomić timera',r.error,'error');else notifyFeedback('Timer pracy uruchomiony',o.plate||`Zlecenie #${o.id}`);reload()}}>▶ START</button>{active.map(a=><button className="stop" key={a.id} onClick={()=>api.worklog.stop(a.id).then(reload)}>■ STOP {a.worker}</button>)}</div><div className="bigTime">{durText(actualMinutes)}<span>łączny realny czas pracy</span></div></Panel><Panel title="Historia czasu">{logs.length?logs.map(l=><div className="logLine" key={l.id}><b>{l.worker}</b><span>{new Date(l.started_at).toLocaleString('pl-PL')}</span><strong>{l.ended_at?durText(l.duration_minutes):'W TRAKCIE'}</strong></div>):<Empty/>}</Panel></div>}
+   {tab==='time'&&<div className="centerGrid"><Panel title="Rejestracja czasu"><div className="actionrow"><select className="workerSelect" value={employeeId} onChange={e=>setEmployeeId(e.target.value)}>{employees.map(e=><option key={e.id} value={e.id}>{e.name} — {e.role}</option>)}</select><button className="start" disabled={locked} title={locked?'Najpierw otwórz zlecenie do korekty':''} onClick={async()=>{const r=await api.worklog.startAs(o.id,Number(employeeId));if(!r.ok)notifyFeedback('Nie udało się uruchomić timera',r.error,'error');else notifyFeedback('Timer pracy uruchomiony',o.plate||`Zlecenie #${o.id}`);reload()}}>▶ START</button>{active.map(a=><button className="stop" key={a.id} onClick={()=>api.worklog.stop(a.id).then(reload)}>■ STOP {a.worker}</button>)}</div><div className="bigTime">{durText(actualMinutes)}<span>łączny realny czas pracy</span></div></Panel><Panel title="Historia czasu">{logs.length?logs.map(l=><div className="logLine" key={l.id}><b>{l.worker}</b><span>{new Date(workLogTimestamp(l.started_at)).toLocaleString('pl-PL')}</span><strong>{l.ended_at?durText(l.duration_minutes):'W TRAKCIE'}</strong></div>):<Empty/>}</Panel></div>}
 
    {tab==='docs'&&<Panel title="Dokumentacja zlecenia" action={<div className="actionrow"><button disabled={docsSyncing} onClick={()=>syncDocumentation()}>{docsSyncing?'Synchronizuję…':'↻ Pobierz z telefonu'}</button><button className="primary" onClick={()=>api.attachments.pick(o.id,mediaCategory).then(reload)}>+ Dodaj pliki</button></div>}><div className="steps mediaCategories">{[['PRZYJECIE','Przyjęcie'],['DIAGNOZA','Diagnoza'],['NAPRAWA','Naprawa'],['WYDANIE','Wydanie']].map(([v,l])=><button key={v} className={mediaCategory===v?'sel':''} onClick={()=>setMediaCategory(v)}>{l}</button>)}</div><p className="muted">Ta sama dokumentacja jest dostępna na Androidzie i PC. Zdjęcia z telefonu są pobierane automatycznie po wejściu do tej zakładki.</p>{docsSyncMessage&&<div className={docsSyncMessage.startsWith('Nie udało')||docsSyncMessage.startsWith('Synchronizacja:')?'warnbox':'okbox'}>{docsSyncMessage}</div>}<div className="fileGrid">{files.filter(f=>(f.category||'PRZYJECIE')===mediaCategory).map(f=><div className="fileCard" key={f.id}><b>{f.name}</b><span>{new Date(f.created_at).toLocaleString('pl-PL')}</span><small>{f.category||'PRZYJECIE'} · {f.storage_path?'CHMURA':'LOKALNIE'}</small><div><button onClick={()=>api.attachments.open(f.id).catch(error=>notifyFeedback('Nie udało się otworzyć pliku',errorText(error),'error'))}>Otwórz</button><button className="danger" onClick={()=>confirm(`Usunąć ${f.name}?`)&&api.attachments.remove(f.id).then(reload)}>×</button></div></div>)}</div>{!files.filter(f=>(f.category||'PRZYJECIE')===mediaCategory).length&&<Empty text="Brak dokumentacji w tym etapie."/ >}</Panel>}
 

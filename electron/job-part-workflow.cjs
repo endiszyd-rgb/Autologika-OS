@@ -1,4 +1,11 @@
 const BLOCKING_PART_STATUSES=['DO_ZAMOWIENIA','ZAMOWIONE','W_DRODZE']
+const JOB_PART_STATUSES=['DO_ZAMOWIENIA','ZAMOWIONE','W_DRODZE','ODEBRANE','ZAMONTOWANE','DO_ZWROTU','ZWROT_ZAKONCZONY','ANULOWANE']
+
+function validateJobPartStatus(value){
+  const status=String(value||'').trim().toUpperCase()
+  if(!JOB_PART_STATUSES.includes(status))throw new Error('Nieprawidłowy status części.')
+  return status
+}
 
 function blockingPartCount(db,orderId){
   const placeholders=BLOCKING_PART_STATUSES.map(()=>'?').join(',')
@@ -22,4 +29,4 @@ function reconcileOrderPartWait(db,orderId){
   return{changed:true,blocking,waitState:next}
 }
 
-module.exports={BLOCKING_PART_STATUSES,blockingPartCount,reconcileOrderPartWait}
+module.exports={BLOCKING_PART_STATUSES,JOB_PART_STATUSES,blockingPartCount,reconcileOrderPartWait,validateJobPartStatus}
