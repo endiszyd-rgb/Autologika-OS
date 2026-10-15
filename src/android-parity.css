@@ -523,6 +523,165 @@ code{background:#0d0a0c;border:1px solid #382a30;color:#e9dfe2}
 .statusTag{border-color:#5c3a43;background:#27161b;color:#ffc0c4}
 .appFeedbackToast,.remoteDecisionToast,.globalScanToast{border-color:#70444e;background:#201418;color:#fff1f2}
 
+/* Daily service workspaces: one visual language shared with the mobile app. */
+.orderFilterBar,
+.intakeRecordPicker,
+.attentionToolbar,
+.careToolbar label{
+  border-color:#49363e!important;
+  background:linear-gradient(125deg,#1b1317,#100c0e)!important;
+  box-shadow:0 12px 34px rgba(0,0,0,.2)!important;
+}
+.orderFilterBar label,
+.attentionToolbar>label,
+.careToolbar label{
+  border-color:#4b373f!important;
+  background:#0f0b0d!important;
+}
+.orderFilterBar label:focus-within,
+.attentionToolbar>label:focus-within,
+.careToolbar label:focus-within{
+  border-color:#a64e59!important;
+  box-shadow:0 0 0 3px rgba(255,70,81,.11)!important;
+}
+.orderFilterBar>span b,
+.intakeRecordPicker small,
+.attentionMeta b{color:#ff9da4!important}
+.orderViewSwitch,
+.ownerMode{border-color:#48343c!important;background:#110d0f!important}
+.orderViewSwitch button.active,
+.ownerMode button.active{
+  border-color:#a84d58!important;
+  background:linear-gradient(135deg,#5a2029,#34151c)!important;
+  color:#fff2f3!important;
+  box-shadow:0 7px 20px rgba(159,35,49,.2)!important;
+}
+.ordersPage .panel,
+.ordersPage .orderrow,
+.orderPreviewFacts>div,
+.orderPreviewGrid>section,
+.orderManagement{
+  border-color:#403038!important;
+  background:#130f11!important;
+}
+.ordersPage .orderrow:hover,
+.ordersPage .orderrow.selected{
+  border-color:#79444e!important;
+  background:#24161b!important;
+}
+.orderPreviewHero{
+  border-color:#5c3a43!important;
+  background:radial-gradient(circle at 88% 0,rgba(255,70,81,.16),transparent 43%),linear-gradient(130deg,#24151b,#110d0f)!important;
+}
+.orderPreviewHero small,
+.orderPreviewComplaint small,
+.orderPreviewGrid header span{color:#ff9da4!important}
+.readOnlyNotice{
+  border-color:#583942!important;
+  background:linear-gradient(110deg,#211419,#151014)!important;
+}
+.readOnlyNotice>span{background:#ff6972!important;color:#24070b!important;box-shadow:0 0 18px rgba(255,70,81,.25)}
+.orderPreviewComplaint{border-left-color:var(--mobile-red)!important;background:#191114!important}
+.orderPreviewGrid header{border-bottom-color:#382930!important}
+.orderPreviewGrid header b{color:#ffb3b8!important}
+.orderManagement summary,.orderManagement>div{border-color:#382930!important}
+
+.intakeRecordPicker{border-radius:15px!important}
+.intakeRecordState b{color:#ffb3b8!important}
+.intakeRecordState i{background:var(--mobile-red-bright)!important;box-shadow:0 0 11px rgba(255,70,81,.55)!important}
+.intakeSelectedHint{
+  border-color:#65404a!important;
+  background:#211419!important;
+  color:#b9abb1!important;
+}
+.intakeSelectedHint b{color:#ffd4d7!important}
+.intakeDuplicateWarning{border-radius:15px!important}
+
+.customerProfileHero{
+  border-color:#5b3b44!important;
+  background:radial-gradient(circle at 88% 18%,rgba(255,70,81,.15),transparent 40%),linear-gradient(130deg,#26161c,#110d0f 72%)!important;
+  box-shadow:0 18px 44px rgba(0,0,0,.24)!important;
+}
+.customerProfileHero:after{border-color:rgba(255,105,114,.11)!important}
+.customerProfileHero small,.vehicleHistoryList small{color:#ff9da4!important}
+.customerContact button,.customerContact span{
+  border-color:#4e3740!important;
+  background:#171013!important;
+  color:#e8dce0!important;
+}
+.customerContact button:hover{border-color:#96505b!important;background:#2b181e!important}
+.customerPulse{border-left-color:#543740!important}
+.customerPulse small{color:#e09ba1!important}
+.customerVehicleCard,.customerPaymentList button,.customerOrderHistory button,.vehicleHistoryList article{border-color:#35272d!important}
+.customerVehicleCard:hover,.customerPaymentList button:hover,.customerOrderHistory button:hover{border-color:#563640!important;background:#211519!important}
+.customerVehicleCard>span{color:#d57780!important}
+.customerProfileNotes{border-left-color:var(--mobile-red)!important;background:#1c1216!important;color:#c9bbc0!important}
+.customerProfileNotes small{color:#e2868e!important}
+.customerVehicleCard>div:nth-child(3) strong,
+.customerPaymentList strong,
+.vehicleHistoryList strong{color:#ffb3b8!important}
+
+.attentionHero{
+  border-color:#523942!important;
+  background:radial-gradient(circle at 88% 20%,rgba(255,70,81,.12),transparent 31%),linear-gradient(135deg,#211419,#0f0c0e)!important;
+  box-shadow:0 18px 45px rgba(0,0,0,.22)!important;
+}
+.attentionHero::after{border-color:rgba(255,105,114,.12)!important}
+.attentionHero small{color:#ff9da4!important}
+.attentionHeroStats>div{border-color:#443139!important;background:#151013!important}
+.attentionHeroStats .critical{border-color:#8b4049!important;background:#2b1218!important}
+.attentionFilters button.active{
+  border-color:#a64e59!important;
+  background:#35171e!important;
+  color:#ffd8da!important;
+}
+.attentionFilters button.active i{background:#5b232c!important;color:#ffdadd!important}
+.attentionItem{
+  border-color:#403038!important;
+  background:linear-gradient(100deg,#171114,#110d0f)!important;
+}
+.attentionItem:hover{border-color:#68404a!important;background:#211419!important}
+.attentionItem.critical{border-color:#743841!important;background:linear-gradient(90deg,#2b1218,#151013 31%)!important}
+.attentionItem.positive{border-color:#355143!important}
+.attentionIdentity small{color:#d9868d!important}
+.attentionEmpty{border-color:#4b363e!important;background:#110d0f!important}
+.attentionEmpty span{border-color:#496749!important;background:#142016!important;color:#9bd07b!important}
+
+.careHero{
+  border-color:#553943!important;
+  background:radial-gradient(circle at 88% 0,rgba(255,70,81,.14),transparent 37%),linear-gradient(135deg,#211419,#100c0e)!important;
+}
+.careHero:after{border-color:rgba(255,105,114,.14)!important;box-shadow:0 0 0 24px rgba(255,70,81,.04),0 0 0 48px rgba(255,70,81,.025)!important}
+.careHero h2 span{color:#ff6972!important}
+.careStats>button{
+  border-color:#403038!important;
+  background:#151013!important;
+}
+.careStats>button:hover{border-color:#70444e!important;background:#201418!important}
+.careStats>button.active{border-color:#a64e59!important;background:#2b151c!important;box-shadow:inset 0 0 0 1px rgba(255,70,81,.18)!important}
+.careStats>button.overdue{border-color:#964750!important;background:#2a1418!important}
+.careStats>button.soon{border-color:#8c6936!important;background:#211910!important}
+.careCard{
+  border-color:#403038!important;
+  background:linear-gradient(100deg,#171114,#110d0f)!important;
+}
+.careCard:hover{border-color:#67404a!important;background:#211419!important}
+.careCard:before{background:#9b515a!important}
+.careVehicle button,.careOrder{color:#ff9da4!important}
+.careDone{border-color:#5a3a43!important;background:#1b1215!important}
+
+.debtSummary>div{
+  border-color:#4b343d!important;
+  background:linear-gradient(145deg,#211419,#120e10)!important;
+}
+.debtSummary span{color:#bdadb3!important}
+.debtSummary b{color:#ffb3b8!important}
+.debtorsTable{border-color:#403038!important;background:#120e10!important}
+.debtorsTable th{background:#1c1316!important;color:#d4868d!important}
+.debtorsTable td{border-color:#35272d!important}
+.debtorsTable tbody tr:hover{background:#211519!important}
+.debtorsTable .debt{color:#f0b85e!important}
+
 @keyframes androidDesktopPageIn{
   from{opacity:.45;transform:translateY(7px) scale(.997)}
   to{opacity:1;transform:none}
