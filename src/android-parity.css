@@ -682,6 +682,154 @@ code{background:#0d0a0c;border:1px solid #382a30;color:#e9dfe2}
 .debtorsTable tbody tr:hover{background:#211519!important}
 .debtorsTable .debt{color:#f0b85e!important}
 
+/* Planner: retain collision colours, harmonize all neutral and selected surfaces. */
+.plannerStats>div,
+.plannerDay,
+.plannerModal,
+.plannerOrderChoices,
+.plannerResourceWorkspace>section,
+.plannerNewResource{
+  border-color:#443139!important;
+  background:linear-gradient(145deg,#1a1316,#100d0f)!important;
+}
+.plannerStats>div{box-shadow:0 12px 30px rgba(0,0,0,.18)!important}
+.plannerHeading h2 span,.planner .sectionEyebrow{color:var(--mobile-red-bright)!important}
+.plannerDay.today{
+  border-color:#8d4651!important;
+  box-shadow:inset 0 3px var(--mobile-red),0 12px 30px rgba(0,0,0,.18)!important;
+}
+.plannerDay.dragOver{box-shadow:inset 0 0 0 2px var(--mobile-red-bright)!important}
+.plannerDayHead{border-bottom-color:#3b2c32!important;background:#171114!important}
+.plannerVisit{
+  border-color:#47343c!important;
+  background:linear-gradient(145deg,#24171c,#171114)!important;
+  box-shadow:0 7px 19px rgba(0,0,0,.18)!important;
+}
+.plannerVisit:hover,.plannerVisit:focus-visible{
+  border-color:#9f4c57!important;
+  box-shadow:0 0 0 2px rgba(255,70,81,.1),0 10px 24px rgba(0,0,0,.24)!important;
+}
+.plannerVisit.collision{border-color:#c45c59!important;background:#281518!important}
+.plannerVisitScope{border-left-color:var(--mobile-red)!important;background:rgba(255,70,81,.055)!important}
+.plannerVisitScope small{color:#ff8f97!important}
+.plannerOrderLink{border-color:#70414b!important;color:#ffc4c8!important;background:#28161c!important}
+.plannerModalShade{background:rgba(4,2,3,.88)!important;backdrop-filter:blur(11px)}
+.plannerModal{border-color:#5b3b44!important;box-shadow:0 32px 100px rgba(0,0,0,.78)!important}
+.plannerOrderChoicesHead label{
+  border-color:#49343c!important;
+  background:#100c0e!important;
+}
+.plannerOrderChoicesHead label:focus-within{border-color:#9f4c57!important;box-shadow:0 0 0 3px rgba(255,70,81,.1)!important}
+.plannerOrderChoiceList>button,
+.plannerResourceWorkspace>nav button,
+.plannerWeekdays label,
+.plannerBlocks>div{
+  border-color:#403038!important;
+  background:#130f11!important;
+}
+.plannerOrderChoiceList>button:hover{border-color:#77454f!important;background:#211519!important}
+.plannerOrderChoiceList>button:focus-visible{border-color:#b95864!important;box-shadow:0 0 0 3px rgba(255,70,81,.12)!important}
+.plannerOrderChoiceList>button.selected,
+.plannerResourceWorkspace>nav button.active{
+  border-color:#a64e59!important;
+  background:linear-gradient(145deg,#32171f,#1c1115)!important;
+  box-shadow:inset 3px 0 var(--mobile-red),0 10px 24px rgba(0,0,0,.28)!important;
+}
+.plannerOrderChoiceList>button.selected:after,
+.plannerOrderChoiceList strong,
+.plannerResourceWorkspace>nav span{color:#ff9da4!important}
+.plannerResources{border-color:#49343c!important;background:#130f11!important}
+.plannerResources label{border-color:#3f2f35!important;background:#1b1417!important}
+
+/* Parts workspace and stock dialogs now match the Android inventory palette. */
+.partsTabs{
+  border-color:#49353d!important;
+  background:#110d0f!important;
+  box-shadow:0 10px 28px rgba(0,0,0,.2)!important;
+}
+.partsTabs button.active{
+  border-color:#a64e59!important;
+  background:linear-gradient(135deg,#5a2029,#34151c)!important;
+  color:#fff0f1!important;
+}
+.stockHero{
+  border-color:#573a43!important;
+  background:radial-gradient(circle at 88% 20%,rgba(255,70,81,.13),transparent 35%),linear-gradient(120deg,#24151b,#100c0e)!important;
+  box-shadow:0 18px 44px rgba(0,0,0,.22)!important;
+}
+.stockHero h2 em{color:#ff6972!important}
+.stockScan{
+  border-color:#5a3a43!important;
+  background:#100c0e!important;
+}
+.stockScan:focus-within{border-color:#a64e59!important;box-shadow:0 0 0 3px rgba(255,70,81,.1)!important}
+.stockScan.partNumberScan{border-color:#5b4440!important;background:#171011!important}
+.stockScan.partNumberScan button{border-color:#754750!important;background:#28161c!important;color:#ffc0c5!important}
+.stockLookupMessage{
+  border-color:#67404a!important;
+  background:#211419!important;
+}
+.stockLookupMessage.online{border-color:#80662e!important;background:#2b2517!important}
+.stockLookupMessage.missing{border-color:#4e464b!important;background:#1b1719!important}
+.stockMetrics>div,.stockMetrics>button{
+  border-color:#443139!important;
+  background:#151013!important;
+}
+.stockMetrics>button:not(.scanDeliveryAction):hover{border-color:#74444e!important;background:#211519!important}
+.stockCard{
+  border-color:#443139!important;
+  background:linear-gradient(145deg,#1b1417,#110d0f)!important;
+}
+.stockCard:hover,.stockCard.selected{
+  border-color:#a64e59!important;
+  box-shadow:0 12px 30px rgba(0,0,0,.24)!important;
+}
+.stockCard.selected{box-shadow:inset 3px 0 var(--mobile-red),0 12px 30px rgba(0,0,0,.24)!important}
+.stockCardHead>span{color:#e08b92!important}
+.stockCardFoot{border-color:#382930!important}
+.stockActions .issueAction{
+  border-color:#754650!important;
+  background:#28161c!important;
+  color:#ffc4c8!important;
+}
+.stockModalShade{background:rgba(3,1,2,.9)!important}
+.stockModal{
+  border-color:#5d3d46!important;
+  background:linear-gradient(145deg,#1b1417,#100d0f)!important;
+  box-shadow:0 32px 100px rgba(0,0,0,.82)!important;
+}
+.stockModal>header{padding-bottom:15px;border-bottom:1px solid #3a2a30}
+.stockModal>header span{color:#ff9da4!important}
+.issuePartSummary,.issueBalance,.issueVehicleMatch{
+  border-color:#45323a!important;
+  background:#120e10!important;
+}
+.issuePartSummary strong{color:#ff9da4!important}
+.issueBalance b{color:#ffd4d7!important}
+.issueVehicleMatch .ok{color:#72d89a!important}
+.partAutofillBar{
+  border-color:#5e3b44!important;
+  background:#1c1216!important;
+}
+.partAutofillBar button,.stockLookupMessage .lookupRetry{border-color:#74454f!important;background:#28161c!important;color:#ffc4c8!important}
+
+/* Workflow actions use the brand accent while stage rails keep their meaning. */
+.workflowPage .kanCardBottom button{
+  border-color:#69404a!important;
+  background:#25161b!important;
+  color:#f5dadd!important;
+}
+.workflowPage .kanCardBottom button:hover{border-color:#a64e59!important;background:#381820!important;color:#fff!important}
+.workflowPage .kanCardBottom em{color:#ffb3b8!important}
+
+/* Workshop LIVE remains a distinct control-room view; its shell links it to the product. */
+.workshopLive{
+  border-color:#403139!important;
+  background:radial-gradient(circle at 8% 0,rgba(255,70,81,.045),transparent 26%),radial-gradient(circle at 92% 10%,rgba(88,200,216,.035),transparent 24%),#090b0d!important;
+}
+.wlFullscreen,.wlRefresh{border-color:#49343c!important;background:#171114!important;color:#cfc2c6!important}
+.wlFullscreen:hover,.wlRefresh:hover{border-color:#74444e!important;background:#24161b!important}
+
 @keyframes androidDesktopPageIn{
   from{opacity:.45;transform:translateY(7px) scale(.997)}
   to{opacity:1;transform:none}
