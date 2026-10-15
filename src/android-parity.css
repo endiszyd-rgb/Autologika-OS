@@ -951,6 +951,150 @@ code{background:#0d0a0c;border:1px solid #382a30;color:#e9dfe2}
 .docBody small{color:#df858d!important}
 .docBody code{border-color:#36282e!important;background:#0e0a0c!important}
 
+/* Order center: neutral work surfaces, red interaction and semantic state only. */
+.orderCenterPage .centerPicker{
+  border-color:#523842!important;
+  background:linear-gradient(145deg,#1b1317,#100c0e)!important;
+}
+.orderCenterPage .centerPicker>label{color:#bdadb3!important}
+.orderCenterPage .centerPicker select{border-color:#65404a!important;background:#0e0a0c!important}
+.orderCenterPage{--order-accent:var(--mobile-red)}
+.orderCenterPage .centerDocuments>summary{
+  border-color:#563b44!important;
+  background:#21161a!important;
+  color:#eee4e7!important;
+}
+.orderCenterPage .centerDocuments[open]>summary{border-color:#984b56!important;background:#381820!important;color:#ffd7da!important}
+.orderCenterPage .centerDocuments>div{border-color:#5d3d46!important;background:rgba(24,16,20,.98)!important}
+.orderCenterPage .centerDocuments>div button:hover{border-color:#70414b!important;background:#2b181e!important}
+.orderCenterPage .centerHero:before{background:linear-gradient(#ff7b84,#d92f3d)!important}
+.orderCenterPage .centerHero h2{margin-bottom:6px;font-size:29px;letter-spacing:-.55px}
+.orderCenterPage .centerHero h3{margin:0 0 10px;color:#ffadb3;font-size:13px;font-weight:720}
+.orderCenterPage .centerHero p{color:#a89aa0}
+.orderCenterPage .centerHero a,.orderCenterPage .phoneLink{color:#ffbdc1!important}
+.orderCenterPage .workflowAdvisor{
+  border-color:#553740!important;
+  border-left-color:var(--mobile-red)!important;
+  background:linear-gradient(100deg,#28161c,#120e10 76%)!important;
+}
+.orderCenterPage .workflowAdvisor small{color:#e7868e!important}
+.orderCenterPage .workflowAdvisor span{color:#a7989e!important}
+.orderCenterPage .centerManualProcess{border-color:#443139!important;background:#100c0e!important}
+.orderCenterPage .centerManualProcess>summary{color:#cabec2}
+.orderCenterPage .centerManualProcess>div{border-top-color:#3b2b31!important;background:#120e10!important}
+.orderCenterPage .centerTabs{border-color:#49363e!important;background:#130f11!important}
+.orderCenterPage .orderTabGroup{
+  border-color:#403038!important;
+  background:linear-gradient(145deg,#1c1518,#120e10)!important;
+}
+.orderCenterPage .orderTabGroup>small{color:#b07982!important}
+.orderCenterPage .orderTabGroup button{color:#b6a9ae!important}
+.orderCenterPage .orderTabGroup button:hover{border-color:#61404a!important;background:#28181d!important;color:#fff!important}
+.orderCenterPage .orderTabGroup button.active{
+  border-color:#914852!important;
+  background:linear-gradient(180deg,#461c24,#31171c)!important;
+  color:#fff3f4!important;
+}
+.orderCenterPage .panel,.orderCenterPage .workspaceCard{
+  border-color:#443239!important;
+  background:linear-gradient(150deg,#1b1518,#110d0f)!important;
+}
+.orderCenterPage .complaint,.orderCenterPage .centerFacts>div,
+.orderCenterPage .pendingbox,.orderCenterPage .centerPart{
+  border-color:#443139!important;
+  background:#120e10!important;
+}
+.orderCenterPage .complaint{border-left-color:var(--mobile-red)!important;color:#f2e9ec!important}
+.orderCenterPage .centerFacts span{color:#9f9197}
+.orderCenterPage .centerFacts b{color:#f7f0f2}
+.orderCenterPage .pendingbox{color:#b4a7ac}
+
+.orderCenterPage .repairScopeSection,.orderCenterPage .repairCascade,
+.orderCenterPage .repairScopePreview,.orderCenterPage .procedureRun,
+.orderCenterPage .procedureSection,.orderCenterPage .procedureTech,
+.orderCenterPage .repairOperationList article,.orderCenterPage .repairEstimateEditor,
+.orderCenterPage .repairPartsGroups>section{
+  border-color:#443139!important;
+  background:linear-gradient(145deg,#1c1518,#110d0f)!important;
+}
+.orderCenterPage .repairSectionTitle small,.orderCenterPage .repairCascadeHead small,
+.orderCenterPage .repairScopePreview small,.orderCenterPage .procedureRun>header small,
+.orderCenterPage .repairPartsGroups header small{color:#e88890!important}
+.orderCenterPage .repairCascadeSteps label>span{
+  border-color:#9a4c57!important;
+  background:#381820!important;
+  color:#ffc0c4!important;
+}
+.orderCenterPage .repairCascadeSteps select{border-color:#4e373f!important;background:#0e0a0c!important}
+.orderCenterPage .repairScopePreview span{color:#ffb3b8!important}
+.orderCenterPage .procedureRun:not(.complete)>header>b{color:#ff9da4!important}
+.orderCenterPage .procedureRun:not(.complete) .procedureProgress>span{background:linear-gradient(90deg,#c72f3b,#ff6972)!important}
+.orderCenterPage .procedureSection h4 span{color:#e88890!important}
+.orderCenterPage .procedureTech>b{color:#e6a2a8!important}
+.orderCenterPage .repairEstimateSummary>div{
+  border-color:#443139!important;
+  background:linear-gradient(145deg,#21171b,#130f11)!important;
+}
+.orderCenterPage .repairOperationList article>div:last-child>b{color:#ff9da4!important}
+.orderCenterPage .repairOperationList article.editing{border-color:#9b4b56!important}
+.orderCenterPage .repairPartsGroups>section>header{border-bottom-color:#3c2c32!important;background:#21171b!important}
+.orderCenterPage .repairPartRows>div{border-bottom-color:#382a30!important}
+.orderCenterPage .repairStockPicker{background:#100c0e}
+
+.orderCenterPage .quoteFlowSteps,.orderCenterPage .quoteSourceSummary>div,
+.orderCenterPage .quoteSnapshotTable,.orderCenterPage .quoteEmptySource{
+  border-color:#443139!important;
+  background:#100c0e!important;
+}
+.orderCenterPage .quoteFlowIntro small,.orderCenterPage .quoteSourceNotice small{color:#e88890!important}
+.orderCenterPage .quoteFlowSteps i{background:#3a1820!important;color:#ffb3b8!important}
+.orderCenterPage .quoteSourceNotice,.orderCenterPage .approvalHistoryIntro{
+  border-color:#6c3f49!important;
+  border-left-color:var(--mobile-red)!important;
+  background:linear-gradient(100deg,#28161c,#120e10)!important;
+}
+
+.orderCenterPage .settlementSummary>div,.orderCenterPage .paymentHero>div,
+.orderCenterPage .financeNote,.orderCenterPage .qcChecklist label,
+.orderCenterPage .closeoutChecks label{
+  border-color:#443139!important;
+  background:#171114!important;
+}
+.orderCenterPage .settlementSummary .due,.orderCenterPage .paymentHero .due{border-color:#76513d!important;background:#241912!important}
+.orderCenterPage .settlementSummary .paid,.orderCenterPage .paymentHero .paid,
+.orderCenterPage .closeoutChecks label.ok{border-color:#3e684d!important;background:#12251a!important}
+.orderCenterPage .settlementProgress,.orderCenterPage .closeoutProgress>div{background:#38272d!important}
+.orderCenterPage .settlementProgress i{background:linear-gradient(90deg,#ce3340,#ff6972)!important}
+.orderCenterPage .financeNote{border-left-color:var(--mobile-red)!important;color:#b8a9ae!important}
+.orderCenterPage .closeoutProgress{border-color:#4b343c!important;background:#181114!important}
+.orderCenterPage .closeoutProgress>b{color:#ff9da4!important}
+.orderCenterPage .closeoutProgress i{background:linear-gradient(90deg,#cc313e,#ff6972)!important}
+.orderCenterPage input[type=checkbox]{accent-color:var(--mobile-red)}
+
+.orderCenterPage .advancedDiagnosis{
+  border-color:#443139!important;
+  background:#100c0e!important;
+}
+.orderCenterPage .advancedDiagnosis>summary:hover,.orderCenterPage .advancedDiagnosis[open]>summary{background:#211419!important}
+.orderCenterPage .advancedDiagnosisIcon{border-color:#914852!important;background:#35171e!important;color:#ffb3b8!important}
+.orderCenterPage .advancedDiagnosisBody{border-top-color:#3b2b31!important}
+.orderCenterPage .diagform.diagnosisAdvancedFields label{border-color:#403038!important;background:#120e10!important}
+
+.orderCenterPage .vehicleHealthScore{
+  border-color:#4b363e!important;
+  background:radial-gradient(circle at 3% 15%,rgba(255,70,81,.07),transparent 27%),linear-gradient(140deg,#1b1317,#0e0b0d)!important;
+}
+.orderCenterPage .healthSubsystem,.orderCenterPage .healthActions>div{
+  border-color:#403038!important;
+  background:#100c0e!important;
+}
+.orderCenterPage .healthActions{border-top-color:#3b2b31!important}
+.orderCenterPage .healthRing:before{border-color:#4c373f!important;background:radial-gradient(circle,#21161a,#0a0809 72%)!important}
+
+@media(max-width:900px){
+  .orderCenterPage .centerHero h2{font-size:24px}
+}
+
 @media(max-width:850px){
   .diagnosticsOrderPicker{grid-template-columns:1fr}
 }
