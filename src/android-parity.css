@@ -830,6 +830,131 @@ code{background:#0d0a0c;border:1px solid #382a30;color:#e9dfe2}
 .wlFullscreen,.wlRefresh{border-color:#49343c!important;background:#171114!important;color:#cfc2c6!important}
 .wlFullscreen:hover,.wlRefresh:hover{border-color:#74444e!important;background:#24161b!important}
 
+/* Diagnostics and knowledge: clear vehicle context, focused working surface. */
+.diagnosticsPage,.knowledgePage,.assistantPage,.employeesPage,.documentsPage{display:grid;gap:18px}
+.diagnosticsOrderPicker{
+  display:grid;
+  grid-template-columns:minmax(220px,.42fr) minmax(420px,1fr);
+  align-items:center;
+  gap:18px;
+  padding:15px 17px;
+  border:1px solid #503841;
+  border-radius:15px;
+  background:linear-gradient(135deg,#211419,#110d0f);
+  box-shadow:0 12px 32px rgba(0,0,0,.2);
+}
+.diagnosticsOrderPicker>div{display:grid;gap:4px}
+.diagnosticsOrderPicker small{color:#ff8f97;font-size:8px;font-weight:900;letter-spacing:.14em}
+.diagnosticsOrderPicker b{font-size:14px}
+.diagnosticsOrderPicker select{min-height:44px;border-color:#59404a;background:#0f0b0d}
+.diagnosticsOrderPicker select:focus{border-color:#a64e59;box-shadow:0 0 0 3px rgba(255,70,81,.11)}
+.diagnosticsPage>.panel{border-color:#45323a!important;background:linear-gradient(145deg,#191316,#100d0f)!important}
+.diagnosisIntro{
+  border-color:#5d3d46!important;
+  background:linear-gradient(135deg,#28161c,#171114)!important;
+}
+.diagnosisIntroIcon{
+  border-color:#ae5360!important;
+  background:#3a1820!important;
+  color:#ffb5ba!important;
+  box-shadow:0 0 22px rgba(255,70,81,.18)!important;
+}
+.diagnosisIntro small{color:#ff9da4!important}
+.diagform.diagnosisBasic label{border-color:#403038!important;background:#120e10!important}
+.diagnosticCopilot{
+  border-color:#5c3c45!important;
+  background:radial-gradient(circle at 8% 0,rgba(255,70,81,.14),transparent 30%),linear-gradient(145deg,#191114,#0e0b0d 64%)!important;
+}
+.diagnosticCopilot:before{background:linear-gradient(110deg,transparent 15%,rgba(255,105,114,.04) 42%,transparent 65%)!important}
+.diagnosticCopilotHead{border-bottom-color:#3d2c33!important;background:rgba(28,18,22,.84)!important}
+.diagnosticCopilotHead small{color:#ff9da4!important}
+.copilotOrb{
+  border-color:#b4525e!important;
+  background:radial-gradient(circle,rgba(255,105,114,.18) 0 19%,#171013 21% 45%,rgba(255,70,81,.16) 47% 49%,#100c0e 51%)!important;
+  box-shadow:0 0 30px rgba(255,70,81,.22)!important;
+}
+.copilotOrb:after{border-top-color:#ff8f97!important}
+.copilotOrb i{background:linear-gradient(90deg,#ff8f97,transparent)!important}
+.copilotOrb span{color:#ffd1d4!important}
+.copilotVehicle{border-color:#4e363f!important;background:#0e0a0c!important}
+.copilotVehicle span{color:#ff9da4!important}
+
+.knowledgeToolbar{
+  margin:0!important;
+  padding:12px;
+  border:1px solid #49353d;
+  border-radius:14px;
+  background:linear-gradient(125deg,#1b1317,#100c0e);
+}
+.knowledgeToolbar .search{flex:1;max-width:none;min-height:42px}
+.knowledgeToolbar>span{color:#a99ba0;font-size:10px;white-space:nowrap}
+.knowledgePage .case{
+  border-color:#443139!important;
+  background:linear-gradient(145deg,#1b1417,#110d0f)!important;
+  box-shadow:0 10px 26px rgba(0,0,0,.18)!important;
+}
+.knowledgePage .case:hover{border-color:#74444e!important;transform:translateY(-2px)}
+.knowledgePage .case>small,.knowledgePage .case>em{color:#df858d!important}
+.assistantPage>.panel,.assistantPage>.grid2>.panel{border-color:#443139!important;background:linear-gradient(145deg,#1b1417,#110d0f)!important}
+.assistantPage .askrow{padding:12px;border:1px solid #443039;border-radius:13px;background:#100c0e}
+.assistantPage .caseResult{border-bottom-color:#382930!important}
+.assistantPage .caseResult em{color:#ff9da4!important}
+.assistantPage .hint{border-bottom-color:#382930!important}
+.assistantPage .hint::first-letter{color:#72d89a}
+
+/* Scanner: brand shell while hardware readiness remains green. */
+.scannerHero{
+  border-color:#573a43!important;
+  background:radial-gradient(circle at 85% 20%,rgba(255,70,81,.14),transparent 36%),linear-gradient(135deg,#211419,#100c0e)!important;
+  box-shadow:0 16px 42px rgba(0,0,0,.22)!important;
+}
+.globalHidStatus{border-color:#5e3c45!important;background:#26161b!important;color:#ffc0c4!important}
+.zebraScannerPage>.panel,.scannerGrid>.panel{border-color:#443139!important;background:linear-gradient(145deg,#191316,#100d0f)!important}
+.scanResult>span{background:#3a1820!important;color:#ffb3b8!important}
+.sdkMeta,.scanSaved{border-color:#403038!important;background:#120e10!important}
+.registrationDecoded>div{border-color:#49343c!important;background:#120e10!important}
+.registrationDecoded small{color:#df858d!important}
+.scannerInfo{border-color:#5d3c45!important;background:#211419!important}
+.scannerInfo b{color:#ff9da4!important}
+.scanHistory>div{border-bottom-color:#382930!important}
+.checkPlan>span{border-color:#784650!important;background:#2b171d!important;color:#ffb3b8!important}
+
+/* Team and document library use the same premium card system. */
+.employeesPage .metric,.employeesPage>.panel{
+  border-color:#443139!important;
+  background:linear-gradient(145deg,#1b1417,#110d0f)!important;
+}
+.employeeCard{
+  border-color:#443139!important;
+  background:linear-gradient(145deg,#21171b,#130f11)!important;
+  box-shadow:0 10px 26px rgba(0,0,0,.18)!important;
+}
+.employeeCard:hover{border-color:#74444e!important;transform:translateY(-2px)}
+.employeeCard>strong{color:#ffb3b8!important}
+.employeeCard .progress{background:#38272d!important}
+.employeeCard .progress i{background:linear-gradient(90deg,#cf2e3b,#ff6972)!important}
+.documentHero{
+  border-color:#573a43!important;
+  background:radial-gradient(circle at 88% 20%,rgba(255,70,81,.13),transparent 35%),linear-gradient(135deg,#211419,#100c0e)!important;
+  box-shadow:0 16px 42px rgba(0,0,0,.22)!important;
+}
+.docCount{border-color:#70434d!important;background:#2a161c!important}
+.docCount strong{color:#ff6972!important}
+.docGroupTitle span{color:#d9838b!important}
+.docGroupTitle i{background:#3e2e34!important}
+.documentCard{
+  border-color:#443139!important;
+  background:linear-gradient(145deg,#1b1417,#110d0f)!important;
+}
+.documentCard:hover{border-color:#774650!important;box-shadow:0 12px 30px rgba(0,0,0,.24)!important}
+.docIcon{border-color:#944852!important;background:#35171e!important;color:#ffb3b8!important}
+.docBody small{color:#df858d!important}
+.docBody code{border-color:#36282e!important;background:#0e0a0c!important}
+
+@media(max-width:850px){
+  .diagnosticsOrderPicker{grid-template-columns:1fr}
+}
+
 @keyframes androidDesktopPageIn{
   from{opacity:.45;transform:translateY(7px) scale(.997)}
   to{opacity:1;transform:none}
