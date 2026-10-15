@@ -186,10 +186,11 @@ tbody tr{transition:background-color .16s ease}
 .workflowPage .kanCard{position:relative;margin-bottom:10px;padding:14px;border-color:#465449;background:linear-gradient(155deg,#1a221c,#141a16);box-shadow:0 9px 24px #0003}
 .workflowPage .kanCard:before{content:"";position:absolute;inset:12px auto 12px 0;width:2px;border-radius:99px;background:var(--stage)}
 .workflowPage .kanCardTop,.workflowPage .kanCardBottom{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.workflowPage .kanCardTop>b{font-size:15px;letter-spacing:.02em}
+.workflowPage .kanCardTop>b{overflow:hidden;max-width:72%;font-size:14px;line-height:1.25;letter-spacing:.01em;text-overflow:ellipsis;white-space:nowrap}
 .workflowPage .kanCardTop .tag{font-size:8px}
 .workflowPage .kanCard h3{margin:9px 0 5px;color:#edf2eb;font-size:12px;line-height:1.4}
 .workflowPage .kanCard>small{display:block;color:#9aa69c;font-size:10px}
+.workflowPage .kanCard>.kanVehicleMeta{overflow:hidden;margin-top:4px;color:#b5868c;text-overflow:ellipsis;white-space:nowrap}
 .workflowPage .kanCardBottom{margin-top:13px;padding-top:10px;border-top:1px solid #354138}
 .workflowPage .kanCardBottom em{margin:0;color:#ccec9f;font-size:12px;font-weight:800}
 .workflowPage .kanCardBottom button{min-height:30px;padding:5px 9px;border-color:#4c5b4f;background:#202a22;font-size:9.5px}
