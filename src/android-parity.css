@@ -1,0 +1,399 @@
+/*
+ * Desktop visual parity with AutoLogika Mobile.
+ * Kept as the final cascade layer so feature styles stay independent while
+ * the shell, controls and shared workspaces use one visual language.
+ */
+:root{
+  --mobile-bg:#09080a;
+  --mobile-bg-soft:#0f0c0f;
+  --mobile-surface:#171216;
+  --mobile-surface-strong:#1b1115;
+  --mobile-surface-raised:#21171b;
+  --mobile-line:#40343b;
+  --mobile-line-strong:#56363e;
+  --mobile-red:#ff4651;
+  --mobile-red-bright:#ff6972;
+  --mobile-red-soft:#ffb3b8;
+  --mobile-text:#f7f2f4;
+  --mobile-muted:#aaa0a5;
+  --mobile-dim:#756c71;
+  --mobile-radius:16px;
+  --mobile-radius-lg:22px;
+  --bg:var(--mobile-bg);
+  --bg2:var(--mobile-bg-soft);
+  --panel:var(--mobile-surface);
+  --panel-raised:var(--mobile-surface-raised);
+  --panel2:#20181c;
+  --line:var(--mobile-line);
+  --line-strong:var(--mobile-line-strong);
+  --text:var(--mobile-text);
+  --text2:var(--mobile-muted);
+  --muted:var(--mobile-dim);
+  --gold:var(--mobile-red);
+  --gold2:var(--mobile-red-bright);
+  --red:var(--mobile-red);
+  accent-color:var(--mobile-red);
+}
+
+html,body{background:var(--mobile-bg);color:var(--mobile-text)}
+body{
+  background:
+    radial-gradient(circle at 80% -15%,rgba(255,70,81,.08),transparent 31%),
+    radial-gradient(circle at 18% 105%,rgba(116,34,45,.11),transparent 33%),
+    var(--mobile-bg);
+}
+::selection{background:rgba(255,70,81,.3);color:#fff}
+*{scrollbar-color:#634049 #100d0f}
+*::-webkit-scrollbar-thumb{background:#634049;border:2px solid #100d0f;border-radius:99px}
+*::-webkit-scrollbar-track{background:#100d0f}
+
+.shell{grid-template-columns:268px minmax(0,1fr)}
+aside{
+  background:linear-gradient(180deg,rgba(19,14,18,.99),rgba(10,8,10,.99));
+  border-right-color:#34282e;
+  box-shadow:18px 0 48px rgba(0,0,0,.22);
+}
+.brand{border-bottom-color:#34282e;padding-bottom:20px}
+.brandLogo{filter:drop-shadow(0 8px 18px rgba(255,42,55,.14))}
+.brand span{color:#9b8b92;letter-spacing:1.55px}
+.navSection>small{color:#77666e;letter-spacing:1.55px}
+.navSection button{color:#b6aab0;border-radius:12px;min-height:42px}
+.navSection button span{color:#8d7c84}
+.navSection button:hover{
+  background:#20171b;
+  border-color:#453039;
+  color:#fff5f6;
+}
+.navSection button.active{
+  color:#fff5f6;
+  background:linear-gradient(90deg,#3a171d 0%,#281419 74%,#191116 100%);
+  border-color:#70414a;
+  box-shadow:inset 3px 0 0 var(--mobile-red),0 8px 24px rgba(0,0,0,.19);
+}
+.navSection button.active span{color:var(--mobile-red-bright)}
+.navSection button.active:after{background:var(--mobile-red);box-shadow:0 0 12px rgba(255,70,81,.5)}
+.navCount{background:var(--mobile-red)!important;color:#21070a!important}
+.sidefoot{
+  width:267px;
+  background:linear-gradient(0deg,#0b080a 78%,transparent);
+  color:#95878d;
+}
+.sidefoot .statusDot{background:#79d998;box-shadow:0 0 12px rgba(121,217,152,.45)}
+
+main{max-width:1880px;padding-inline:34px}
+main>header{height:112px;border-bottom-color:#362a30}
+.titleBlock .eyebrow{color:var(--mobile-red-bright);letter-spacing:1.75px}
+.titleBlock h1{color:#fff8f8;font-size:28px;font-weight:780}
+.titleBlock p{color:#9e9298;font-size:11.5px}
+.topStatus{gap:8px}
+.dateChip,.live,.commandLauncher,.attentionLauncher{
+  background:rgba(24,18,22,.92);
+  border-color:#46343c;
+  color:#c8bcc1;
+  border-radius:11px;
+}
+.commandLauncher:hover,.attentionLauncher:hover{background:#2b181e;border-color:#854651;color:#fff}
+.attentionLauncher.hasAttention{background:#3a171d;border-color:#8f4650;color:#ffb3b8}
+.commandLauncher kbd{background:#100c0f;border-color:#4d3841;color:#ad9fa5}
+.pageBody{animation:androidDesktopPageIn .24s cubic-bezier(.2,.8,.2,1)}
+
+.metric,.panel,.case,.kanCol,
+.card,.workspaceCard,.stockCard,.deliveryHistoryCard{
+  background:linear-gradient(155deg,rgba(31,23,27,.98),rgba(20,15,18,.98));
+  border-color:var(--mobile-line);
+  box-shadow:0 14px 38px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.025);
+}
+.metric,.panel,.case,.card,.workspaceCard{border-radius:var(--mobile-radius)}
+.metric{min-height:116px}
+.metric:before{background:#65414a}
+.metric:hover,.panel:hover{border-color:#58414a}
+.clickableMetric:before{background:var(--mobile-red)}
+.clickableMetric:hover{
+  border-color:#8f4650;
+  background:linear-gradient(155deg,#28171c,#171114);
+  box-shadow:0 16px 40px rgba(0,0,0,.25),0 0 0 1px rgba(255,70,81,.05);
+}
+.metric small,.metric span{color:#a3979d}
+.metric strong{color:#fff7f7}
+.panelhead{padding-bottom:11px;border-bottom:1px solid #382b31}
+.panel h2,.panelhead h2{color:#f9f2f4;font-size:13px}
+.panelhead h2:after{background:linear-gradient(90deg,var(--mobile-red),rgba(255,70,81,.15));width:34px}
+
+button{
+  min-height:38px;
+  border-color:#4b3941;
+  background:linear-gradient(180deg,#251c20,#1c1518);
+  color:#eee5e8;
+  border-radius:11px;
+  font-weight:680;
+}
+button:hover{
+  background:linear-gradient(180deg,#342127,#27181d);
+  border-color:#76505a;
+  color:#fff;
+  box-shadow:0 8px 20px rgba(0,0,0,.2);
+}
+button:active{filter:brightness(.95);transform:translateY(0) scale(.99)}
+button:focus-visible,a:focus-visible,[role="button"]:focus-visible{
+  outline:2px solid var(--mobile-red-bright);
+  outline-offset:2px;
+}
+button.primary,.primary{
+  color:#21070a;
+  background:linear-gradient(145deg,#ff727b,#ff4651 60%,#e62e3a);
+  border-color:#ff737b;
+  box-shadow:0 8px 22px rgba(255,50,65,.18),inset 0 1px rgba(255,255,255,.3);
+}
+button.primary:hover,.primary:hover{
+  color:#160406;
+  background:linear-gradient(145deg,#ff8a91,#ff5963 62%,#ee3541);
+  border-color:#ff979d;
+  box-shadow:0 10px 28px rgba(255,50,65,.25);
+}
+button.danger,.danger{color:#ffabb0;border-color:#6e3c43;background:#2a171b}
+button.danger:hover,.danger:hover{color:#fff0f1;border-color:#a34f59;background:#401b22}
+button:disabled{filter:saturate(.45);opacity:.48;box-shadow:none}
+
+input,select,textarea{
+  min-height:40px;
+  color:#f8f2f4;
+  background:#0e0b0d;
+  border-color:#493840;
+  border-radius:11px;
+}
+input:hover,select:hover,textarea:hover{border-color:#674851}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--mobile-red-bright);
+  background:#130d10;
+  box-shadow:0 0 0 3px rgba(255,70,81,.12),0 8px 24px rgba(0,0,0,.16);
+}
+input::placeholder,textarea::placeholder{color:#70646a}
+.formgrid label,.diagform label,.notes3 label{color:#aa9da3}
+select option{background:#171216;color:#f7f2f4}
+
+.modalback{
+  background:rgba(3,2,3,.78);
+  backdrop-filter:blur(10px) saturate(.75);
+}
+.modal{
+  background:linear-gradient(150deg,#21161b,#130f12 72%);
+  border-color:#65434c;
+  border-radius:22px;
+  box-shadow:0 34px 90px rgba(0,0,0,.58),inset 0 1px rgba(255,255,255,.04);
+}
+.modalhead{border-bottom-color:#49343c}
+.modalTitle small{color:var(--mobile-red-bright)}
+.modalHeadActions kbd{background:#100b0d;border-color:#4b363e;color:#a99aa0}
+.modalHeadActions button{background:#28191e;border-color:#553a43;color:#f7e8eb}
+
+table{border-color:#3f3036}
+td,th{border-bottom-color:#382b31}
+th{color:#a899a0;background:#161014}
+tbody tr:hover{background:#24171c}
+.orderrow{border-bottom-color:#392c32;border-radius:11px}
+.orderrow:hover{background:#24171c}
+.tag{border-color:rgba(255,255,255,.06)}
+.tag.akceptacja{background:#502027;color:#ffb4b9}
+.tag.naprawa{background:#432235;color:#e4b4db}
+.tag.gotowe{background:#193c2b;color:#94e0ae}
+.warnbox,.notice{background:#261d10;border-color:#71562b;color:#f0ca78}
+code{background:#0d0a0c;border:1px solid #382a30;color:#e9dfe2}
+
+/* Shared workspace navigation follows the mobile segmented controls. */
+.workspaceNav,.orderTabDock,.partsTabs,.scheduleViewTabs{
+  background:rgba(24,18,22,.96);
+  border-color:#47353d;
+  border-radius:18px;
+  box-shadow:0 12px 30px rgba(0,0,0,.22);
+}
+.workspaceNav button,.orderTabGroup button,.partsTabs button,.scheduleViewTabs button{
+  color:#b5a8ae;
+  border-radius:11px;
+}
+.workspaceNav button.active,.orderTabGroup button.active,.partsTabs button.active,.scheduleViewTabs button.active{
+  color:#fff1f2;
+  border-color:#8f4650;
+  background:linear-gradient(180deg,#451c23,#32171d);
+  box-shadow:inset 0 1px rgba(255,255,255,.06),0 7px 18px rgba(0,0,0,.24);
+}
+.orderTabGroup button.active:after{background:var(--mobile-red);box-shadow:0 0 9px rgba(255,70,81,.48)}
+.orderTabGroup button i{background:var(--mobile-red);color:#210609}
+
+/* Order center mirrors the mobile vehicle hero and progressive workflow. */
+.orderCenterPage .centerHero,.centerHero{
+  border-color:#593840;
+  border-radius:var(--mobile-radius-lg);
+  background:
+    radial-gradient(circle at 88% 8%,rgba(255,70,81,.12),transparent 30%),
+    linear-gradient(145deg,#211217,#140e11 74%);
+  box-shadow:0 18px 46px rgba(0,0,0,.27),inset 0 1px rgba(255,255,255,.035);
+}
+.orderCenterPage .centerHero h2,.centerHero h2{color:#fff5f5}
+.centerHero .eyebrow,.centerHero small{color:#d29aa0}
+.centerHero strong,.centerHero .amount{color:var(--mobile-red-bright)}
+.orderProgress,.centerProcess,.processRail{
+  border-color:#4b333b;
+  background:#140f12;
+  border-radius:16px;
+}
+.orderProgress i,.centerProcess i,.processRail i{background:linear-gradient(90deg,#d92f3d,var(--mobile-red-bright))}
+.centerStep.active,.processStep.active{border-color:#a64e59;background:#3a171d;color:#fff2f3}
+.centerPart,.repairCard,.scopeCard{
+  border-color:#46353c!important;
+  background:linear-gradient(145deg,#1d1619,#141013)!important;
+  border-radius:15px!important;
+}
+.centerPart:hover,.repairCard:hover,.scopeCard:hover{border-color:#754851!important;background:#23171b!important}
+.centerManualProcess{background:#130f11;border-color:#45343b}
+.centerManualProcess>summary:before{color:var(--mobile-red-bright)}
+.centerManualProcess>div{border-top-color:#3a2b31}
+
+/* Dashboard and live views keep their information colours, with a red brand core. */
+.dashboardHero,.workshopHero,.workflowSummary,.partsHero,.pricingHero,.deliveryHistoryHero{
+  border-color:#593941!important;
+  background:
+    radial-gradient(circle at 88% 0,rgba(255,70,81,.13),transparent 35%),
+    linear-gradient(135deg,#201418,#120e10 74%)!important;
+  box-shadow:0 18px 46px rgba(0,0,0,.25)!important;
+}
+.dashboardHero .eyebrow,.workshopHero .eyebrow,.workflowSummary small,.partsHero .eyebrow,.pricingHero .eyebrow,.sectionEyebrow{color:var(--mobile-red-bright)!important}
+.dashboardHero h2,.workshopHero h2,.workflowSummary h2,.partsHero h2,.pricingHero h2{color:#fff7f7}
+.radarCore,.radarSweep{filter:hue-rotate(286deg) saturate(1.45)}
+.workflowLegend button{border-color:#49373e;background:linear-gradient(145deg,#1b1518,#100d0f)}
+.workflowLegend button:hover,.workflowLegend button:focus-visible{background:#28171c}
+.workflowPage .kanCol{border-color:#46363d;background:#120e10}
+.workflowPage .kanCard{border-color:#49373f;background:linear-gradient(155deg,#21181c,#151013)}
+
+/* Dashboard uses the same burgundy glass surfaces as mobile. */
+.studioHeading h2 span{color:#bdadb3}
+.studioHeading p{color:#978b91}
+.studioDocumentScan{
+  border-color:#70414a;
+  background:linear-gradient(145deg,#2c191f,#181014);
+  color:#ffb3b8;
+}
+.studioDocumentScan:hover{border-color:#a64e59;background:#3a171d;color:#fff0f1}
+.studioRadarPanel{
+  border-color:#49363e;
+  background:radial-gradient(ellipse at 72% 44%,rgba(111,28,40,.2),transparent 65%),#110d0f;
+}
+.studioRadarPanel:before{background-image:linear-gradient(rgba(255,105,114,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,105,114,.035) 1px,transparent 1px)}
+.radarIntro .sectionEyebrow,.radarIntro p{color:#c09198}
+.studioLiveDot{background:var(--mobile-red-bright);box-shadow:0 0 11px rgba(255,70,81,.52)}
+.studioTextButton{color:#ff9da4}
+.studioTextButton:hover{color:#ffd4d7}
+.radarLegend{color:#a49399}.radarLegend i{background:var(--mobile-red-bright)}
+.studioRing{border-color:rgba(255,105,114,.13)}
+.studioRing.outer{border-color:rgba(255,105,114,.2)}
+.studioRing.inner{background:rgba(81,27,36,.2)}
+.radarCross{background:rgba(255,105,114,.08)}
+.studioSweep{background:conic-gradient(from 0deg,transparent 0deg,transparent 285deg,rgba(255,70,81,.015) 310deg,rgba(255,70,81,.14) 357deg,rgba(255,105,114,.6) 360deg)}
+.radarBearing{color:#88515b}
+.studioRadarCore{color:#d99ca2}.studioRadarCore strong{color:#fff0f1}.studioRadarCore span{color:#b27179}
+.studioBlip{color:#ffc1c5}.studioBlip>i{background:#ff6972;box-shadow:0 0 10px rgba(255,70,81,.65)}
+.studioBlip>i:after{border-color:rgba(255,105,114,.42)}
+.studioBlip>span{background:rgba(22,9,13,.9);border-color:rgba(255,105,114,.22)}
+.radarTooltip{background:#25161b;border-color:#78444e}.radarTooltip small{color:#c49ba1}
+.radarPanelFooter{border-top-color:rgba(255,105,114,.16);color:#99757c;background:rgba(17,10,13,.82)}
+.studioGoal,.studioKpi,.studioPanel{
+  border-color:#403239;
+  background:linear-gradient(145deg,#1c1518,#120e10);
+}
+.studioGoal{background:radial-gradient(circle at 50% 58%,rgba(255,70,81,.06),transparent 45%),linear-gradient(145deg,#201519,#120e10)}
+.studioPanelTitle,.goalCaption,.goalVisual span,.goalTarget{color:#aa9198}
+.goalArcTrack{stroke:#38272d}.goalArcValue{stroke:var(--mobile-red-bright)}
+.goalVisual strong small{color:#df9aa1}.goalTarget b{color:#eadde1}
+.goalBottom{color:#ffb2b7;border-top-color:rgba(255,105,114,.15);background:rgba(255,70,81,.035)}
+.studioKpi:hover{background:#25171c;border-color:#75464f}
+.kpiTop{color:#b1a4a9}.kpiTop svg,.kpiBottom svg{color:#9a6871}.kpiBottom{color:#87777e}
+.studioFilters{border-bottom-color:#382b30}
+.studioFilters button{color:#a19197}
+.studioFilters button.active{background:#3a171d;color:#fff0f1;border-color:#7d414b}
+.studioFilters button:hover{background:#28181d;color:#f7e8eb}
+.studioOrderLabels{color:#8f7d84;background:#100c0e}
+.studioOrder{border-top-color:#35282e}.studioOrder:hover{background:#24171b;border-color:#35282e}
+.vehicleMonogram{background:#29191e;border-color:#4a343c;color:#e4bec2}
+.studioVehicle b span,.studioVehicle small{color:#9f8c93}.studioOrder>svg{color:#a06a74}
+.studioTableFoot{border-top-color:#382a30;color:#8e777f}
+.studioStages button{background:#1b1417;border-color:#3d2e34}
+.studioStages button:hover,.studioStages button.selected{background:#35181e;border-color:#914852}
+.studioStages small{color:#94656d}.studioStages button>span{color:#ae979e}
+.studioFullButton{border-color:#4a353d;background:#21161a;color:#dfc8cd}
+.studioAppointment,.studioAttention,.studioTimer{border-top-color:#392b31}
+.studioAppointment:hover,.studioAttention:hover,.studioTimer:hover{background:#25171c}
+.appointmentTime{border-right-color:#503740}.appointmentTime b{color:#ffb2b7}
+.studioSourceTrack{background:#35252b}.studioSourceTrack i{background:linear-gradient(90deg,#b52d3a,#ff6972)}
+.studioFooter{border-top-color:#35282e;color:#806d74}.studioFooter b{color:#c28189}
+
+/* Inventory, schedule and technical workspaces share the same card depth. */
+.partsWorkspace,.schedulePage,.manualWorkspace,.financePage,.settingsPage{color:var(--mobile-text)}
+.stockToolbar,.plannerToolbar,.scheduleToolbar{
+  background:#171216;
+  border-color:#44333a;
+  border-radius:14px;
+}
+.stockCard,.deliveryHistoryCard{
+  border-color:#443239;
+  border-radius:17px;
+  background:linear-gradient(150deg,#1d1619,#120e10);
+}
+.stockCard:hover,.deliveryHistoryCard:hover{border-color:#70454e;box-shadow:0 14px 34px rgba(0,0,0,.26)}
+.stockCard.selected{border-color:var(--mobile-red-bright);box-shadow:0 0 0 2px rgba(255,70,81,.1)}
+.timeline,.scheduleTimeline,.plannerTimeline{border-color:#45343b;background:#100c0e;border-radius:16px}
+.slot,.scheduleEvent,.plannerEvent{border-color:#7b3d48;background:linear-gradient(145deg,#49212a,#301820)}
+.slot:hover,.scheduleEvent:hover,.plannerEvent:hover{border-color:#ff6972;box-shadow:0 10px 24px rgba(0,0,0,.25)}
+
+/* Lazy workspace styles load after the application bundle; stronger scoped
+   rules keep their shared controls aligned with the main visual system. */
+.partsWorkspace .partsTabs{
+  border-color:#47353d!important;
+  background:rgba(24,18,22,.96)!important;
+}
+.partsWorkspace .partsTabs button{color:#b5a8ae!important;background:transparent!important;border-color:transparent!important}
+.partsWorkspace .partsTabs button:hover{color:#fff0f1!important;background:#28181d!important}
+.partsWorkspace .partsTabs button.active{
+  color:#fff1f2!important;
+  border-color:#8f4650!important;
+  background:linear-gradient(180deg,#451c23,#32171d)!important;
+  box-shadow:0 7px 18px rgba(0,0,0,.24)!important;
+}
+.partsWorkspace .stockHero{
+  border-color:#593941!important;
+  background:radial-gradient(circle at 88% 0,rgba(255,70,81,.12),transparent 34%),linear-gradient(135deg,#201418,#120e10 74%)!important;
+}
+.partsWorkspace .stockHero h2 em{color:var(--mobile-red-bright)!important}
+.partsWorkspace .stockScan,.partsWorkspace .stockToolbar,.partsWorkspace .stockMetrics>div{
+  border-color:#44333a!important;
+  background:#151013!important;
+}
+.partsWorkspace .stockMetrics>button:not(.primary){border-color:#5f3b43!important;background:#25171c!important;color:#f0b2b7!important}
+.partsWorkspace .stockLookupMessage:not(.error){border-color:#584049!important;background:#1c1518!important}
+.partsWorkspace .stockCard{border-color:#443239!important;background:linear-gradient(150deg,#1d1619,#120e10)!important}
+.partsWorkspace .stockCard.selected{border-color:var(--mobile-red-bright)!important;box-shadow:0 0 0 2px rgba(255,70,81,.1)!important}
+
+.empty,.actionableEmpty{color:#9c9096}
+.actionableEmpty{border-color:#44333a;background:#120e10;border-radius:16px}
+.statusTag{border-color:#5c3a43;background:#27161b;color:#ffc0c4}
+.appFeedbackToast,.remoteDecisionToast,.globalScanToast{border-color:#70444e;background:#201418;color:#fff1f2}
+
+@keyframes androidDesktopPageIn{
+  from{opacity:.45;transform:translateY(7px) scale(.997)}
+  to{opacity:1;transform:none}
+}
+
+@media(max-width:1100px){
+  .shell{grid-template-columns:230px minmax(0,1fr)}
+  .sidefoot{width:229px}
+  main{padding-inline:22px}
+}
+@media(max-width:850px){
+  .shell{grid-template-columns:82px minmax(0,1fr)}
+  aside{padding-inline:9px}
+  .sidefoot{width:81px}
+  main{padding-inline:16px}
+  .titleBlock p{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .pageBody{animation:none}
+  button,.metric,.panel,.stockCard,.deliveryHistoryCard{transition:none!important}
+}
