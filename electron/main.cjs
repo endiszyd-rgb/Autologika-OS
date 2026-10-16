@@ -35,6 +35,7 @@ const { searchTechnicalManuals } = require('./manual-source-scraper.cjs')
 const { getWorkshopLayout, setWorkshopLayout } = require('./workshop-settings.cjs')
 const { recognizeDeliveryDocument, importDeliveryDocument, documentHash } = require('./delivery-document.cjs')
 const { wholePartQuantity } = require('./part-quantity.cjs')
+const { approvalDecision, approvalEntry, assertApprovalPending, paymentEntry } = require('./financial-entry.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -525,6 +526,7 @@ ipcMain.handle('orders:updateFinancials',(_,{id,data})=>{const db=getDb();return
 ipcMain.handle('orders:updateFinalPrice',(_,{id,price,note})=>{
   const db=getDb(),order=db.prepare('SELECT final_price FROM orders WHERE id=?').get(id)
   if(!order)throw new Error('Zlecenie nie istnieje.')
+  requireEditableOrder(db,id)
   const change=finalPriceChange({previous:order.final_price,next:price,note})
   db.transaction(()=>{
     db.prepare('UPDATE orders SET final_price=?,final_price_note=?,final_price_updated_at=CURRENT_TIMESTAMP WHERE id=?').run(change.after,change.after===null?'':change.note,id)
@@ -871,20 +873,25 @@ ipcMain.handle('communications:resolve',(_,id)=>{
 
 ipcMain.handle('payments:list',(_,orderId)=>getDb().prepare(`SELECT * FROM payments WHERE order_id=? ORDER BY paid_at DESC,id DESC`).all(orderId))
 ipcMain.handle('payments:add',(_,{orderId,data})=>{
-  const db=getDb()
-  const r=db.prepare(`INSERT INTO payments(order_id,amount,method,reference,note) VALUES (?,?,?,?,?)`)
-    .run(orderId,+data.amount||0,data.method||'GOTOWKA',data.reference||'',data.note||'')
-  db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
-    .run(orderId,'PAYMENT','Płatność',`${Number(data.amount||0).toFixed(2)} zł · ${data.method||'GOTOWKA'}`)
+  const db=getDb(),entry=paymentEntry(data)
+  const r=db.transaction(()=>{
+    const saved=db.prepare(`INSERT INTO payments(order_id,amount,method,reference,note) VALUES (?,?,?,?,?)`)
+      .run(orderId,entry.amount,entry.method,entry.reference,entry.note)
+    db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
+      .run(orderId,'PAYMENT','Płatność',`${entry.amount.toFixed(2)} zł · ${entry.method}`)
+    return saved
+  })()
   syncCloseoutAutomation(orderId)
   return {id:r.lastInsertRowid}
 })
 ipcMain.handle('payments:remove',(_,id)=>{
   const db=getDb(); const row=db.prepare(`SELECT * FROM payments WHERE id=?`).get(id)
   if(!row)return false
-  db.prepare(`DELETE FROM payments WHERE id=?`).run(id)
-  db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
-    .run(row.order_id,'PAYMENT','Usunięto płatność',`${Number(row.amount||0).toFixed(2)} zł`)
+  db.transaction(()=>{
+    db.prepare(`DELETE FROM payments WHERE id=?`).run(id)
+    db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
+      .run(row.order_id,'PAYMENT','Usunięto płatność',`${Number(row.amount||0).toFixed(2)} zł`)
+  })()
   syncCloseoutAutomation(row.order_id)
   return true
 })
@@ -945,23 +952,29 @@ ipcMain.handle('templates:list',()=>getDb().prepare(`SELECT * FROM message_templ
 
 ipcMain.handle('approvals:list',(_,orderId)=>getDb().prepare(`SELECT * FROM approvals WHERE order_id=? ORDER BY created_at DESC,id DESC`).all(orderId).map(row=>{const localPdfState=approvalArchiveState(row),localEvidenceState=approvalEvidenceState(row);return{...row,local_pdf_state:localPdfState,local_pdf_exists:localPdfState==='VALID',local_evidence_state:localEvidenceState,local_evidence_complete:localEvidenceState==='COMPLETE'}}))
 ipcMain.handle('approvals:add',(_,{orderId,data})=>{
-  const db=getDb()
+  const db=getDb(),entry=approvalEntry(data)
   requireEditableOrder(db,orderId)
-  const status=data.status||'PENDING'
-  const r=db.prepare(`INSERT INTO approvals(order_id,status,amount,scope,channel,note,decided_at) VALUES (?,?,?,?,?,?,CASE WHEN ?='PENDING' THEN NULL ELSE CURRENT_TIMESTAMP END)`)
-    .run(orderId,status,+data.amount||0,data.scope||'',data.channel||'TELEFON',data.note||'',status)
-  db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
-    .run(orderId,'APPROVAL',status==='APPROVED'?'Klient zaakceptował koszt':status==='DECLINED'?'Klient odrzucił koszt':'Oczekiwanie na akceptację',`${Number(data.amount||0).toFixed(2)} zł · ${data.scope||''}`)
+  const r=db.transaction(()=>{
+    const saved=db.prepare(`INSERT INTO approvals(order_id,status,amount,scope,channel,note,decided_at) VALUES (?,?,?,?,?,?,CASE WHEN ?='PENDING' THEN NULL ELSE CURRENT_TIMESTAMP END)`)
+      .run(orderId,entry.status,entry.amount,entry.scope,entry.channel,entry.note,entry.status)
+    db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
+      .run(orderId,'APPROVAL',entry.status==='APPROVED'?'Klient zaakceptował koszt':entry.status==='DECLINED'?'Klient odrzucił koszt':'Oczekiwanie na akceptację',`${entry.amount.toFixed(2)} zł · ${entry.scope}`)
+    return saved
+  })()
   syncCloseoutAutomation(orderId)
   return {id:r.lastInsertRowid}
 })
 ipcMain.handle('approvals:decide',(_,{id,status,note})=>{
-  const db=getDb(); const row=db.prepare('SELECT * FROM approvals WHERE id=?').get(id)
+  const decision=approvalDecision(status),db=getDb(); const row=db.prepare('SELECT * FROM approvals WHERE id=?').get(id)
   if(!row)return false
   requireEditableOrder(db,row.order_id)
-  db.prepare(`UPDATE approvals SET status=?,note=CASE WHEN ?!='' THEN ? ELSE note END,decided_at=CURRENT_TIMESTAMP WHERE id=?`).run(status,note||'',note||'',id)
-  db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
-    .run(row.order_id,'APPROVAL',status==='APPROVED'?'Klient zaakceptował koszt':'Klient odrzucił koszt',`${Number(row.amount||0).toFixed(2)} zł · ${row.scope||''}`)
+  assertApprovalPending(row.status)
+  const decisionNote=String(note||'').trim()
+  db.transaction(()=>{
+    db.prepare(`UPDATE approvals SET status=?,note=CASE WHEN ?!='' THEN ? ELSE note END,decided_at=CURRENT_TIMESTAMP WHERE id=?`).run(decision,decisionNote,decisionNote,id)
+    db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
+      .run(row.order_id,'APPROVAL',decision==='APPROVED'?'Klient zaakceptował koszt':'Klient odrzucił koszt',`${Number(row.amount||0).toFixed(2)} zł · ${row.scope||''}`)
+  })()
   syncCloseoutAutomation(row.order_id)
   return true
 })

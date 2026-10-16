@@ -1047,7 +1047,8 @@ app.on('browser-window-created', (_, win) => {
       const lockedOrderId=database.prepare("SELECT o.id FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE v.plate='PO 3WN90'").get().id
       assert.equal(await win.webContents.executeJavaScript(`window.autologika.worklog.start(${lockedOrderId}).then(x=>x.ok===false&&x.error.includes('zamknięte'))`),true)
       assert.equal(await win.webContents.executeJavaScript(`window.autologika.diagnostics.save(${lockedOrderId},{}).then(()=>false).catch(x=>String(x).includes('zamknięte'))`),true)
-      console.log('ORDER_READ_ONLY_GUARD','closed order disables workflow controls and backend rejects timer and diagnosis mutations')
+      assert.equal(await win.webContents.executeJavaScript(`window.autologika.orders.updateFinalPrice(${lockedOrderId},999,'Korekta testowa').then(()=>false).catch(x=>String(x).includes('zamknięte'))`),true)
+      console.log('ORDER_READ_ONLY_GUARD','closed order disables workflow controls and backend rejects timer, diagnosis and final-price mutations')
       await win.webContents.executeJavaScript(`document.querySelector('.commandLauncher').click()`)
       await delay(200)
       await win.webContents.executeJavaScript(`{const input=document.querySelector('.commandPalette input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'Skoda');input.dispatchEvent(new Event('input',{bubbles:true}))}`)
