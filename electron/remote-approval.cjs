@@ -13,6 +13,23 @@ function sha256(value){return crypto.createHash('sha256').update(value).digest('
 function quoteIdFromScope(scope){return Number(String(scope||'').match(/^Wycena #(\d+)(?:\s*·|$)/)?.[1]||0)}
 const number=value=>Math.round((Number(value)||0)*100)/100
 
+function approvalTimestamp(value){
+  const text=String(value||'').trim()
+  const normalized=/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(text)?`${text.replace(' ','T')}Z`:text
+  const parsed=Date.parse(normalized)
+  return Number.isFinite(parsed)?parsed:0
+}
+
+function approvalProgress(db,approval){
+  const hasCreatedAt=db.prepare('PRAGMA table_info(approvals)').all().some(column=>column.name==='created_at')
+  const createdColumn=hasCreatedAt?'created_at':'NULL created_at'
+  const rows=db.prepare(`SELECT id,status,amount,${createdColumn} FROM approvals WHERE order_id=?`).all(approval.order_id)
+    .sort((left,right)=>approvalTimestamp(left.created_at)-approvalTimestamp(right.created_at)||Number(left.id)-Number(right.id))
+  const index=rows.findIndex(row=>Number(row.id)===Number(approval.id))
+  const earlier=index<0?[]:rows.slice(0,index)
+  return {sequence:index<0?1:index+1,previouslyApprovedTotal:number(earlier.filter(row=>row.status==='APPROVED').reduce((sum,row)=>sum+Number(row.amount||0),0))}
+}
+
 function buildApprovalSnapshot(db,approvalId){
   const approval=db.prepare('SELECT * FROM approvals WHERE id=?').get(Number(approvalId))
   if(!approval)throw new Error('Akceptacja nie istnieje.')
@@ -26,8 +43,7 @@ function buildApprovalSnapshot(db,approvalId){
   if(!order)throw new Error('Nie znaleziono pojazdu dla akceptacji.')
   const rows=db.prepare('SELECT * FROM quote_items WHERE quote_id=? ORDER BY id').all(quoteId)
   if(!rows.length)throw new Error('Nie można udostępnić pustego kosztorysu.')
-  const sequence=Number(db.prepare('SELECT COUNT(*) count FROM approvals WHERE order_id=? AND id<=?').get(approval.order_id,approval.id)?.count||1)
-  const previouslyApprovedTotal=number(db.prepare("SELECT COALESCE(SUM(amount),0) total FROM approvals WHERE order_id=? AND id<? AND status='APPROVED'").get(approval.order_id,approval.id)?.total)
+  const {sequence,previouslyApprovedTotal}=approvalProgress(db,approval)
   const items=rows.map((item,index)=>{
     const quantity=item.kind==='ROBOCIZNA'?number(item.labor_hours||1):number(item.qty||1)
     const unitPrice=item.kind==='ROBOCIZNA'?number(item.labor_rate):number(item.unit_price)
@@ -50,4 +66,4 @@ function buildApprovalSnapshot(db,approvalId){
   return {approval,quote,order,snapshot,canonical,snapshotHash:sha256(canonical),hashAlgorithm:'SHA-256',sequence,quoteId,total,previouslyApprovedTotal}
 }
 
-module.exports={TERMS_VERSION,TERMS_TEXT,stableValue,canonicalJson,sha256,quoteIdFromScope,buildApprovalSnapshot}
+module.exports={TERMS_VERSION,TERMS_TEXT,stableValue,canonicalJson,sha256,quoteIdFromScope,approvalProgress,buildApprovalSnapshot}

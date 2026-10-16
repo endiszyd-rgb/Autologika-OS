@@ -4,7 +4,7 @@ const path=require('path')
 const fs=require('fs')
 const os=require('os')
 const {DatabaseSync}=require('node:sqlite')
-const {canonicalJson,sha256,quoteIdFromScope,buildApprovalSnapshot,TERMS_VERSION}=require('../electron/remote-approval.cjs')
+const {canonicalJson,sha256,quoteIdFromScope,approvalProgress,buildApprovalSnapshot,TERMS_VERSION}=require('../electron/remote-approval.cjs')
 const {safeSegment,ensureInside,approvalFileName,vehicleArchiveFolder,approvalArchiveState,approvalEvidencePaths,writeApprovalManifest,approvalEvidenceInspection,approvalEvidenceState,fileHash}=require('../electron/approval-archive.cjs')
 
 test('canonical JSON and SHA-256 are deterministic',()=>{
@@ -16,6 +16,24 @@ test('quote scope requires the complete exact identifier',()=>{
  assert.equal(quoteIdFromScope('Wycena #12 · Hamulce'),12)
  assert.equal(quoteIdFromScope('Inna Wycena #12'),0)
  assert.equal(quoteIdFromScope('Wycena #12x'),0)
+})
+
+test('approval sequence follows creation time across device-local ids',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE approvals(id INTEGER PRIMARY KEY,order_id INTEGER,status TEXT,amount REAL,created_at TEXT);
+  INSERT INTO approvals VALUES(40,1,'APPROVED',900,'2026-10-15T12:00:00Z');
+  INSERT INTO approvals VALUES(3,1,'PENDING',680,'2026-10-16 12:00:00');`)
+ assert.deepEqual(approvalProgress(db,{id:3,order_id:1}),{sequence:2,previouslyApprovedTotal:900})
+ db.close()
+})
+
+test('approval sequence remains compatible with legacy tables without timestamps',()=>{
+ const db=new DatabaseSync(':memory:')
+ db.exec(`CREATE TABLE approvals(id INTEGER PRIMARY KEY,order_id INTEGER,status TEXT,amount REAL);
+  INSERT INTO approvals VALUES(1,1,'APPROVED',100);
+  INSERT INTO approvals VALUES(2,1,'PENDING',50);`)
+ assert.deepEqual(approvalProgress(db,{id:2,order_id:1}),{sequence:2,previouslyApprovedTotal:100})
+ db.close()
 })
 
 test('snapshot freezes vehicle, customer, items, terms and an additional scope',()=>{
