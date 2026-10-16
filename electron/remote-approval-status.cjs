@@ -11,11 +11,21 @@ function latestRemoteApprovals(rows = []) {
   })
   const seen = new Set()
   return sorted.filter(row => {
-    const key = String(row.approval_local_id ?? '')
+    const cloudId = String(row.approval_cloud_id || '').trim()
+    const localId = String(row.approval_local_id ?? '').trim()
+    const key = cloudId ? `cloud:${cloudId}` : localId ? `local:${localId}` : row.id ? `remote:${row.id}` : ''
     if (!key || seen.has(key)) return false
     seen.add(key)
     return true
   })
+}
+
+function remoteApprovalLookupFilter(approval = {}) {
+  const cloudId = String(approval.cloud_id || '').trim()
+  if (cloudId) return `approval_cloud_id=eq.${encodeURIComponent(cloudId)}`
+  const localId = Number(approval.id)
+  if (!Number.isInteger(localId) || localId <= 0) throw new Error('Nieprawidłowy identyfikator akceptacji.')
+  return `approval_local_id=eq.${localId}`
 }
 
 function effectiveRemoteApproval(row, now = Date.now()) {
@@ -34,4 +44,4 @@ function remoteApprovalOutcome(status) {
   return { status: 'PENDING', terminal: false, eventTitle: 'Oczekiwanie na decyzję online', toastTitle: 'Oczekiwanie na decyzję klienta', tone: 'pending', icon: '…' }
 }
 
-module.exports = { TERMINAL_REMOTE_STATUSES, latestRemoteApprovals, effectiveRemoteApproval, remoteApprovalOutcome }
+module.exports = { TERMINAL_REMOTE_STATUSES, latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, remoteApprovalOutcome }

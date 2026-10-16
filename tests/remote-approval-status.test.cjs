@@ -1,6 +1,6 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { latestRemoteApprovals, effectiveRemoteApproval, remoteApprovalOutcome } = require('../electron/remote-approval-status.cjs')
+const { latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, remoteApprovalOutcome } = require('../electron/remote-approval-status.cjs')
 
 test('latest link wins even when an older link is already superseded', () => {
   const rows = [
@@ -10,6 +10,20 @@ test('latest link wins even when an older link is already superseded', () => {
   ]
   const latest = latestRemoteApprovals(rows)
   assert.deepEqual(latest.map(row => [row.approval_local_id, row.status]), [[12, 'PENDING'], [13, 'APPROVED']])
+})
+
+test('one cloud approval is grouped across different device-local ids', () => {
+  const rows = [
+    { id:'new',approval_local_id:9001,approval_cloud_id:'approval-shared',status:'APPROVED',created_at:'2026-10-16T12:00:00Z' },
+    { id:'old',approval_local_id:12,approval_cloud_id:'approval-shared',status:'SUPERSEDED',created_at:'2026-10-15T12:00:00Z' }
+  ]
+  assert.deepEqual(latestRemoteApprovals(rows).map(row=>row.id),['new'])
+})
+
+test('remote lookup prefers the synchronized cloud id and falls back to a local id', () => {
+  assert.equal(remoteApprovalLookupFilter({id:12,cloud_id:'shared/id'}),'approval_cloud_id=eq.shared%2Fid')
+  assert.equal(remoteApprovalLookupFilter({id:12,cloud_id:''}),'approval_local_id=eq.12')
+  assert.throws(()=>remoteApprovalLookupFilter({}),/identyfikator/)
 })
 
 test('remote statuses have distinct workflow messages', () => {

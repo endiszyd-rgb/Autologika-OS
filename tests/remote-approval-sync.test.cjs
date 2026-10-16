@@ -133,3 +133,21 @@ test('desktop matches an Android remote approval by its synchronized cloud id', 
   assert.equal(result[0].approvalId, 12)
   assert.equal(db.prepare('SELECT status FROM approvals WHERE id=12').get().status, 'DECLINED')
 })
+
+test('newest cloud link wins across different device-local approval ids', async t => {
+  const db = setup(t)
+  db.prepare("UPDATE approvals SET cloud_id='approval-shared' WHERE id=12").run()
+  const newest = remoteRow('APPROVED', {
+    id:'remote-new',approval_local_id:9001,approval_cloud_id:'approval-shared',created_at:'2026-10-16T12:00:00Z'
+  })
+  const older = remoteRow('SUPERSEDED', {
+    id:'remote-old',approval_local_id:12,approval_cloud_id:'approval-shared',created_at:'2026-10-15T12:00:00Z'
+  })
+  const result = await scanRemoteApprovals(
+    {workshopId:'workshop-1'},db,
+    {requestRows:async()=>[older,newest],archivePdf:async()=>({ok:true}),emitApproval:()=>{}}
+  )
+  assert.equal(result.length,1)
+  assert.equal(result[0].status,'APPROVED')
+  assert.deepEqual({...db.prepare('SELECT status,remote_id FROM approvals WHERE id=12').get()},{status:'APPROVED',remote_id:'remote-new'})
+})

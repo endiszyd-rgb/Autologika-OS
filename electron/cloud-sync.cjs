@@ -8,7 +8,7 @@ const { getDb } = require('./db.cjs')
 const { buildApprovalSnapshot, sha256 } = require('./remote-approval.cjs')
 const { materializeApprovedQuote } = require('./quote-approval.cjs')
 const { archiveBasePath, vehicleArchiveFolder, approvalFileName, fileHash, approvalArchiveState, approvalEvidencePaths, writeApprovalManifest, approvalEvidenceState, chooseDestination } = require('./approval-archive.cjs')
-const { latestRemoteApprovals, effectiveRemoteApproval, remoteApprovalOutcome } = require('./remote-approval-status.cjs')
+const { latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, remoteApprovalOutcome } = require('./remote-approval-status.cjs')
 const { roundedPartQuantity } = require('./part-quantity.cjs')
 const { reconcileCloseoutAutomation } = require('./closeout-automation.cjs')
 
@@ -270,10 +270,11 @@ async function createRemoteApproval(input){
 }
 async function pullRemoteApproval(approvalId){
   let c=loadConfig(); const workshopId=c.workshopId||c.user?.id; if(!workshopId)throw new Error('Brak ID warsztatu.');
-  const rows=await request(c,`/rest/v1/customer_approval_links?select=${remoteApprovalFields()}&approval_local_id=eq.${Number(approvalId)}&workshop_id=eq.${encodeURIComponent(workshopId)}&order=created_at.desc&limit=1`,{method:'GET'})||[];
+  const db=getDb(),approval=db.prepare('SELECT id,cloud_id FROM approvals WHERE id=?').get(Number(approvalId));if(!approval)return{ok:false,reason:'LOCAL_NOT_FOUND'}
+  const rows=await request(c,`/rest/v1/customer_approval_links?select=${remoteApprovalFields()}&${remoteApprovalLookupFilter(approval)}&workshop_id=eq.${encodeURIComponent(workshopId)}&order=created_at.desc&limit=1`,{method:'GET'})||[];
   if(!rows[0])return {ok:false,reason:'NOT_FOUND'}; const r=effectiveRemoteApproval(rows[0]);
-  if(r.status!=='PENDING')await scanRemoteApprovals(c,getDb());
-  const local=getDb().prepare('SELECT status,note,decided_at FROM approvals WHERE id=?').get(Number(approvalId));
+  if(r.status!=='PENDING')await scanRemoteApprovals(c,db);
+  const local=db.prepare('SELECT status,note,decided_at FROM approvals WHERE id=?').get(Number(approvalId));
   return {ok:true,...r,status:local?.status||r.status,customer_note:local?.note||r.customer_note||'',decided_at:local?.decided_at||r.decided_at};
 }
 
