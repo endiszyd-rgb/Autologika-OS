@@ -1,7 +1,11 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {archiveOrder,reopenOrder,releaseOrder,requireOrderReadyForRelease,updateOrderStatus,updateOrderWait}=require('../electron/order-lifecycle.cjs')
+const {STATUSES,archiveOrder,reopenOrder,releaseOrder,requireOrderReadyForRelease,updateOrderStatus,updateOrderWait}=require('../electron/order-lifecycle.cjs')
+
+test('desktop obsługuje pełny przebieg zgodny z aplikacją Android',()=>{
+ assert.deepEqual(STATUSES,['PRZYJETE','DIAGNOZA','WYCENA','AKCEPTACJA','NAPRAWA','QC_NAPRAWY','QC_WYDANIA','PLATNOSC','GOTOWE','WYDANE'])
+})
 
 function database(){
  const db=new DatabaseSync(':memory:')

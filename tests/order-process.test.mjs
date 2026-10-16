@@ -11,10 +11,16 @@ test('diagnoza wymaga zakresu wyceny przed przejściem do akceptacji',()=>{
  assert.match(advice.title,/zakres wyceny/i)
 })
 
-test('zapisany zakres pozwala przejść z diagnozy do akceptacji',()=>{
+test('zapisany zakres pozwala przejść z diagnozy do wyceny',()=>{
  const advice=deriveOrderAdvice({...base,order:{status:'DIAGNOZA',total:300},approvals:[]})
- assert.equal(advice.status,'AKCEPTACJA')
+ assert.equal(advice.status,'WYCENA')
  assert.equal(advice.tab,'quote')
+})
+
+test('gotowa wycena prowadzi do akceptacji klienta',()=>{
+ const advice=deriveOrderAdvice({...base,order:{status:'WYCENA',total:300},approvals:[]})
+ assert.equal(advice.status,'AKCEPTACJA')
+ assert.equal(advice.wait,'DECYZJA')
 })
 
 test('akceptacja bez zakresu wraca do przygotowania wyceny',()=>{
@@ -36,17 +42,24 @@ test('naprawa wymaga czasu pracy przed kontrolą jakości',()=>{
  assert.match(advice.title,/czas pracy/i)
 })
 
-test('kontrola jakości pojawia się po zakończonym wpisie czasu',()=>{
+test('po wykonaniu pracy zlecenie przechodzi do QC naprawy',()=>{
  const advice=deriveOrderAdvice({...base,logs:[{ended_at:'2026-09-22 10:00:00',duration_minutes:45}]})
+ assert.equal(advice.status,'QC_NAPRAWY')
  assert.equal(advice.tab,'release')
- assert.match(advice.title,/kontrolę jakości/i)
+ assert.match(advice.title,/QC/i)
 })
 
-test('po kontroli jakości zlecenie przechodzi do gotowych',()=>{
+test('po QC naprawy zlecenie przechodzi do QC przed wydaniem',()=>{
  const qcRows=Array.from({length:8},(_,index)=>({check_key:String(index),checked:1}))
- const advice=deriveOrderAdvice({...base,logs:[{ended_at:'2026-09-22 10:00:00'}],qcRows})
+ const advice=deriveOrderAdvice({...base,order:{status:'QC_NAPRAWY',total:1000},logs:[{ended_at:'2026-09-22 10:00:00'}],qcRows})
+ assert.equal(advice.status,'QC_WYDANIA')
+ assert.equal(advice.tab,'release')
+})
+
+test('rozliczona płatność pozwala oznaczyć auto jako gotowe',()=>{
+ const advice=deriveOrderAdvice({...base,order:{status:'PLATNOSC',total:1000},payments:[{amount:1000}]})
  assert.equal(advice.status,'GOTOWE')
- assert.equal(advice.tab,'settlement')
+ assert.equal(advice.tab,'release')
 })
 
 test('najnowsza decyzja klienta zastępuje wcześniejszą akceptację',()=>{

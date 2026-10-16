@@ -2661,5 +2661,18 @@ export const searchCatalogRows=(query,limit=60)=>{
     return {group:row.group,job:row.job,variant:row.variant,score}
   }).filter(Boolean).sort((a,b)=>b.score-a.score||a.job.name.localeCompare(b.job.name,'pl')||a.variant.name.localeCompare(b.variant.name,'pl')).slice(0,Math.max(1,Number(limit)||60))
 }
+export const searchCustomWorkTemplates=(templates,query,limit=30)=>{
+  const tokens=searchKey(query).split(/\s+/).filter(Boolean)
+  if(!tokens.length)return []
+  return (templates||[]).map(template=>{
+    const group=searchKey(template.group_name||'Moje szablony'),name=searchKey(template.name),variant=searchKey(template.variant),scope=searchKey(template.scope)
+    const content=`${group} ${name} ${variant} ${scope}`
+    if(!tokens.every(token=>tokenHit(content,token)))return null
+    const phrase=tokens.join(' ')
+    const tokenScore=tokens.reduce((sum,token)=>sum+(name===token?45:name.startsWith(token)?35:name.includes(token)?25:tokenHit(name,token)?16:0)+(variant===token?24:variant.startsWith(token)?18:variant.includes(token)?12:tokenHit(variant,token)?8:0)+(tokenHit(group,token)?7:0),0)
+    const score=tokenScore+(name===phrase?100:name.startsWith(phrase)?80:name.includes(phrase)?60:0)+(variant===phrase?50:variant.startsWith(phrase)?40:variant.includes(phrase)?30:0)+(group.includes(phrase)?20:0)
+    return {template,score}
+  }).filter(Boolean).sort((a,b)=>b.score-a.score||String(a.template.name||'').localeCompare(String(b.template.name||''),'pl')).slice(0,Math.max(1,Number(limit)||30))
+}
 export const workGroups=()=>WORK_CATALOG.map(x=>x.group)
 export const jobsForGroup=group=>WORK_CATALOG.find(x=>x.group===group)?.jobs||[]

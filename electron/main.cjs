@@ -292,7 +292,7 @@ function createMobileServer(port=8787){
         return sendJson(res,200,{order,notes,diag,parts,payments})
       }
       if(orderMatch&&req.method==='PATCH'){
-        const id=Number(orderMatch[1]),d=await readJson(req),db=getDb(),allowedStatus=['PRZYJETE','DIAGNOZA','AKCEPTACJA','NAPRAWA','GOTOWE','WYDANE'],allowedWait=['BRAK','KLIENT','CZESCI','DECYZJA']
+        const id=Number(orderMatch[1]),d=await readJson(req),db=getDb(),allowedStatus=['PRZYJETE','DIAGNOZA','WYCENA','AKCEPTACJA','NAPRAWA','QC_NAPRAWY','QC_WYDANIA','PLATNOSC','GOTOWE','WYDANE'],allowedWait=['BRAK','KLIENT','CZESCI','DECYZJA']
         if(d.status&&allowedStatus.includes(d.status))updateOrderStatus(db,id,d.status)
         if(d.wait_state&&allowedWait.includes(d.wait_state))updateOrderWait(db,id,d.wait_state)
         db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(id,'MOBILE_UPDATE','Zmiana z tabletu',JSON.stringify({status:d.status||null,wait_state:d.wait_state||null}))

@@ -40,7 +40,7 @@ export function LoadingState({label='Wczytuję dane',detail='To potrwa tylko chw
  </div>
 }
 
-const statusTones={PRZYJETE:'info',PLAN:'info',DIAGNOZA:'warning',AKCEPTACJA:'violet',POTWIERDZONY:'violet',NAPRAWA:'active',W_TRAKCIE:'active',GOTOWE:'success',ZAKONCZONY:'success',APPROVED:'success',WYDANE:'neutral',ANULOWANY:'danger',DECLINED:'danger',EXPIRED:'warning'}
+const statusTones={PRZYJETE:'info',PLAN:'info',DIAGNOZA:'warning',WYCENA:'warning',AKCEPTACJA:'violet',POTWIERDZONY:'violet',NAPRAWA:'active',W_TRAKCIE:'active',QC_NAPRAWY:'active',QC_WYDANIA:'active',PLATNOSC:'info',GOTOWE:'success',ZAKONCZONY:'success',APPROVED:'success',WYDANE:'neutral',ANULOWANY:'danger',DECLINED:'danger',EXPIRED:'warning'}
 export function StatusBadge({status,label}){
  const key=String(status||'BRAK').toUpperCase(),tone=statusTones[key]||'neutral'
  return <span className={'statusBadge '+tone} data-status={key}><i aria-hidden="true"/>{label||String(status||'Brak statusu')}</span>

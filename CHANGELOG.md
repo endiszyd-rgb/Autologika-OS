@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.77 — 2026-10-16
+
+### Interfejs warsztatowy i pełny przebieg zlecenia
+
+- Uproszczono nawigację do najczęściej używanych modułów i dodano przełącznik pełnego zestawu ekranów.
+- Dodano tryb warsztatowy o wyższym kontraście oraz większych elementach dotykowych.
+- Centrum zlecenia grupuje funkcje w obszary Podgląd, Praca, Części, Dokumenty i Rozliczenie.
+- Proces zlecenia rozdziela wycenę, akceptację, naprawę, oba etapy QC, płatność i wydanie.
+- Zakres napraw jest czytelniejszy, a wspólna wyszukiwarka katalogu prac działa we wszystkich kategoriach.
+- Zachowano ręczne, opcjonalne wydanie pojazdu oraz wszystkie dotychczasowe dane i integracje.
+- Rozszerzono automatyczny test Electron o nową nawigację, tryb warsztatowy i pełny przepływ zlecenia.
+
 ## 1.0.56 — 2026-09-22
 
 ### Czytelniejsze i bezpieczniejsze Centrum zlecenia

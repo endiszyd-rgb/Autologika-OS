@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {WORK_CATALOG,catalogRows,jobsForGroup,variantFor,searchCatalogRows} from '../src/work-catalog.js'
+import {WORK_CATALOG,catalogRows,jobsForGroup,variantFor,searchCatalogRows,searchCustomWorkTemplates} from '../src/work-catalog.js'
 import {CATALOG_DIAGNOSTIC_ADDITIONS} from '../src/work-catalog-diagnostics.js'
 import {CATALOG_SPECIALIST_ADDITIONS} from '../src/work-catalog-specialist.js'
 import {procedureFor} from '../src/work-procedures.js'
@@ -106,4 +106,14 @@ test('catalog reuses its flattened search source between keystrokes',()=>{
  assert.strictEqual(catalogRows(),catalogRows())
  assert.ok(searchCatalogRows('hamulce',32).length<=32)
  assert.ok(searchCatalogRows('hamulce tarcze',32).every(row=>row.group&&row.job?.id&&row.variant?.id))
+})
+
+test('shared work search finds user templates across all fields',()=>{
+ const templates=[
+  {id:1,group_name:'Hamulce',name:'Wymiana klocków',variant:'Przód',scope:'Kontrola tarcz i prowadnic'},
+  {id:2,group_name:'Silnik',name:'Serwis olejowy',variant:'Standard',scope:'Wymiana oleju i filtra'}
+ ]
+ assert.equal(searchCustomWorkTemplates(templates,'klockow przod')[0]?.template.id,1)
+ assert.equal(searchCustomWorkTemplates(templates,'silnik oleju')[0]?.template.id,2)
+ assert.deepEqual(searchCustomWorkTemplates(templates,''),[])
 })

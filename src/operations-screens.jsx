@@ -17,7 +17,7 @@ export function WorkshopLive({openOrder,api,labels,refresh}){
  const visibleOrders=[...data.orders].filter(order=>!stageFilter||order.status===stageFilter).sort((a,b)=>Number(Boolean(activeFor(b.id)))-Number(Boolean(activeFor(a.id)))||Number(Boolean(b.wait_state&&b.wait_state!=='BRAK'))-Number(Boolean(a.wait_state&&a.wait_state!=='BRAK'))||Number(a.id)-Number(b.id))
  const waitText=state=>state==='CZESCI'?'Części':state==='KLIENT'?'Klient':state==='DECYZJA'?'Decyzja':'Blokada'
  const elapsed=start=>{const mins=Math.max(0,Math.floor((now-new Date(start))/60000));return mins<60?`${mins} min`:`${Math.floor(mins/60)} h ${String(mins%60).padStart(2,'0')} min`}
- const stages=[['PRZYJETE','Przyjęte'],['DIAGNOZA','Diagnoza'],['AKCEPTACJA','Akceptacja'],['NAPRAWA','Naprawa'],['GOTOWE','Gotowe']]
+ const stages=[['PRZYJETE','Przyjęte'],['DIAGNOZA','Diagnoza'],['WYCENA','Wycena'],['AKCEPTACJA','Akceptacja'],['NAPRAWA','Naprawa'],['QC_NAPRAWY','QC naprawy'],['QC_WYDANIA','QC wydania'],['PLATNOSC','Płatność'],['GOTOWE','Gotowe']]
  const statusIndex=status=>Math.max(0,stages.findIndex(([key])=>key===status))
  const loadPct=Math.min(100,Math.round(data.orders.length/8*100))
  const radarPositions=[[50,14],[77,30],[83,60],[65,82],[34,82],[17,59],[22,29],[50,90]]

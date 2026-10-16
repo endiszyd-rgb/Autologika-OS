@@ -35,7 +35,9 @@ export function deriveOrderAdvice({order={},diagnosis,items=[],parts=[],approval
   if(order.status==='PRZYJETE')return {title:'Przenieś do diagnozy',detail:'Auto jest przyjęte. Rozpocznij właściwy tok diagnostyczny.',status:'DIAGNOZA',wait:'BRAK'}
   if(order.status==='DIAGNOZA'&&!hasBasicDiagnosis(diagnosis))return {title:'Uzupełnij opis usterki',detail:'Krótki opis rozpoznanej usterki wystarczy, aby zamknąć podstawową diagnozę.',tab:'diagnosis'}
   if(order.status==='DIAGNOZA'&&!hasWorkScope)return {title:'Dodaj zakres wyceny',detail:'Diagnoza jest zapisana. Dodaj co najmniej jedną naprawę lub pozycję, zanim poprosisz klienta o akceptację.',tab:'works'}
-  if(order.status==='DIAGNOZA')return {title:'Przejdź do akceptacji',detail:'Diagnoza jest zapisana. Przygotuj zakres i uzyskaj decyzję klienta.',status:'AKCEPTACJA',wait:'DECYZJA',tab:'quote'}
+  if(order.status==='DIAGNOZA')return {title:'Przygotuj wycenę',detail:'Diagnoza i zakres są zapisane. Sprawdź ceny przed wysłaniem klientowi.',status:'WYCENA',wait:'BRAK',tab:'quote'}
+  if(order.status==='WYCENA'&&!hasWorkScope)return {title:'Uzupełnij zakres wyceny',detail:'Brakuje prac lub części, które mają trafić do kosztorysu.',tab:'works'}
+  if(order.status==='WYCENA')return {title:'Poproś o akceptację',detail:'Wycena jest gotowa. Wyślij zakres klientowi lub zapisz jego decyzję.',status:'AKCEPTACJA',wait:'DECYZJA',tab:'quote'}
   if(order.status==='AKCEPTACJA'&&!hasWorkScope)return {title:'Uzupełnij zakres wyceny',detail:'Brakuje prac lub pozycji, które klient ma zaakceptować.',tab:'works'}
   if(order.status==='AKCEPTACJA'&&!approved)return {title:pending?'Sprawdź decyzję klienta':'Zarejestruj akceptację klienta',detail:pending?'Akceptacja została wysłana i nadal jest oczekująca.':'Brak zatwierdzonego zakresu prac.',wait:'DECYZJA',tab:'quote'}
   if(order.status==='AKCEPTACJA'&&blockingParts.length)return {title:'Sprawdź zamówione części',detail:`Akceptacja jest zapisana. ${blockingParts.length} pozycji nadal wymaga dostawy.`,wait:'CZESCI',tab:'parts'}
@@ -44,9 +46,13 @@ export function deriveOrderAdvice({order={},diagnosis,items=[],parts=[],approval
   if(order.status==='NAPRAWA'&&!hasWorkScope)return {title:'Dodaj zakres wykonanych prac',detail:'Zapisz co zostało wykonane, zanim przejdziesz do czasu pracy i kontroli jakości.',tab:'works'}
   if(order.status==='NAPRAWA'&&incompleteProcedures.length)return {title:'Dokończ procedurę naprawy',detail:`Pozostało ${remainingProcedureSteps} punktów w ${incompleteProcedures.length} ${incompleteProcedures.length===1?'procedurze':'procedurach'}.`,tab:'works'}
   if(order.status==='NAPRAWA'&&!workLogged)return {title:'Zarejestruj czas pracy',detail:'Zakres jest zapisany. Dodaj zakończony wpis czasu pracy.',tab:'time'}
-  if(order.status==='NAPRAWA'&&!qcDone)return {title:'Wykonaj kontrolę jakości',detail:'Przed oznaczeniem auta jako gotowe potwierdź wszystkie punkty QC.',tab:'release'}
-  if(order.status==='NAPRAWA')return {title:'Oznacz jako gotowe',detail:'Kontrola jakości jest zapisana. Auto może przejść do rozliczenia i wydania.',status:'GOTOWE',wait:'BRAK',tab:'settlement'}
-  if(order.status==='GOTOWE'&&due>0.01)return {title:'Rozlicz zlecenie',detail:`Pozostało do zapłaty ${due.toLocaleString('pl-PL',{style:'currency',currency:'PLN',maximumFractionDigits:0})}.`,tab:'settlement'}
-  if(order.status==='GOTOWE')return {title:'Uzupełnij wydanie pojazdu',detail:'Rozliczenie zamknięte. Sprawdź checklistę i zalecenia dla klienta.',tab:'release'}
+  if(order.status==='NAPRAWA')return {title:'QC wykonanej naprawy',detail:'Prace i czas są zapisane. Sprawdź efekt każdej wykonanej naprawy.',status:'QC_NAPRAWY',wait:'BRAK',tab:'release'}
+  if(order.status==='QC_NAPRAWY'&&!qcDone)return {title:'Wykonaj kontrolę naprawy',detail:'Potwierdź punkty kontroli jakości wykonanych prac.',tab:'release'}
+  if(order.status==='QC_NAPRAWY')return {title:'QC przed wydaniem',detail:'Naprawa przeszła kontrolę. Wykonaj końcową kontrolę pojazdu.',status:'QC_WYDANIA',wait:'BRAK',tab:'release'}
+  if(order.status==='QC_WYDANIA'&&!qcDone)return {title:'Dokończ kontrolę końcową',detail:'Sprawdź pojazd przed rozliczeniem i wydaniem.',tab:'release'}
+  if(order.status==='QC_WYDANIA')return {title:'Przejdź do płatności',detail:'Kontrola końcowa jest zapisana. Rozlicz zlecenie.',status:'PLATNOSC',wait:'BRAK',tab:'settlement'}
+  if(order.status==='PLATNOSC'&&due>0.01)return {title:'Rozlicz zlecenie',detail:`Pozostało do zapłaty ${due.toLocaleString('pl-PL',{style:'currency',currency:'PLN',maximumFractionDigits:0})}.`,tab:'settlement'}
+  if(order.status==='PLATNOSC')return {title:'Oznacz jako gotowe',detail:'Płatność została rozliczona. Auto jest gotowe do wydania.',status:'GOTOWE',wait:'BRAK',tab:'release'}
+  if(order.status==='GOTOWE')return {title:'Wydaj pojazd',detail:'Zlecenie jest rozliczone. Wydanie pozostaje świadomą, ręczną decyzją.',tab:'release'}
   return {title:'Otwórz historię zlecenia',detail:'Zlecenie jest zakończone i dostępne do wglądu.',tab:'timeline'}
 }
