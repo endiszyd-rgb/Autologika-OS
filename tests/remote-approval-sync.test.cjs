@@ -49,6 +49,14 @@ function setup(t) {
       VALUES(2,7,'CZESC','Klocki hamulcowe',1,120,190,'13.0460-7184.2','5Q0698451','ATE');
     INSERT INTO approvals(id,cloud_id,order_id,status,amount,scope) VALUES(12,'desktop-12',1,'PENDING',520,'Wycena #7 · hamulce');
   `)
+  db.exec(`
+    CREATE TABLE sync_meta(key TEXT PRIMARY KEY,value TEXT);
+    CREATE TABLE sync_queue(id INTEGER PRIMARY KEY,entity_type TEXT,row_id INTEGER,cloud_id TEXT,operation TEXT);
+    INSERT INTO sync_meta(key,value) VALUES('applying_remote','0');
+    CREATE TRIGGER capture_approval_sync AFTER UPDATE ON approvals
+    WHEN COALESCE((SELECT value FROM sync_meta WHERE key='applying_remote'),'0')!='1'
+    BEGIN INSERT INTO sync_queue(entity_type,row_id,cloud_id,operation) VALUES('approvals',NEW.id,NEW.cloud_id,'UPSERT'); END;
+  `)
   db.transaction = fn => (...args) => {
     db.exec('BEGIN')
     try { const result = fn(...args); db.exec('COMMIT'); return result }
@@ -116,6 +124,22 @@ test('remote rejection keeps the quote editable scope unmaterialized and waits f
   assert.equal(db.prepare('SELECT COUNT(*) count FROM job_part_orders').get().count, 0)
   assert.equal(archived.length, 0)
   assert.equal(emitted.length, 1)
+})
+
+test('polling a pending remote link does not enqueue the same approval again', async t => {
+  const db = setup(t)
+  const result = await scanRemoteApprovals(
+    { workshopId: 'workshop-1' }, db,
+    {
+      requestRows: async () => [remoteRow('PENDING', { expires_at: '2099-10-10T09:00:00.000Z' })],
+      archivePdf: async () => ({ ok: true }),
+      emitApproval: () => {}
+    }
+  )
+
+  assert.deepEqual(result, [])
+  assert.equal(db.prepare('SELECT remote_id FROM approvals WHERE id=12').get().remote_id, 'remote-12')
+  assert.equal(db.prepare("SELECT COUNT(*) count FROM sync_queue WHERE entity_type='approvals'").get().count, 0)
 })
 
 test('desktop matches an Android remote approval by its synchronized cloud id', async t => {
