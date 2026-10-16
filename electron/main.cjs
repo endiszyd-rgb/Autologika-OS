@@ -647,7 +647,7 @@ ipcMain.handle('quotes:accept',(_,id)=>{
   const approval=findQuoteApproval(db,quote.order_id,id)
   if(!approval||approval.status!=='APPROVED')return{ok:false,reason:'APPROVAL_REQUIRED'}
   assertApprovalQuoteAmount(db,approval)
-  const result=db.transaction(()=>{const value=materializeApprovedQuote(db,id);if(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='repair_estimate_snapshots'").get())db.prepare("UPDATE repair_estimate_snapshots SET status='ACCEPTED' WHERE quote_id=? AND status='SENT'").run(id);return value})()
+  const result=db.transaction(()=>materializeApprovedQuote(db,id))()
   return result
 })
 ipcMain.handle('attachments:list',(_,orderId)=>getDb().prepare("SELECT id,order_id,name,file_path,mime,storage_path,size_bytes,sha256,category,cloud_id,updated_at,created_at FROM attachments WHERE order_id=? AND deleted_at IS NULL ORDER BY created_at DESC").all(orderId))

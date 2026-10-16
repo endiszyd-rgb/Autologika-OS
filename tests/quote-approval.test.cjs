@@ -90,6 +90,7 @@ test('draft item can be edited and its totals and part identity are recalculated
 
 test('accepted catalog labor keeps its snapshot in the order', t => {
   const { db, call } = setup(t)
+  db.exec("CREATE TABLE repair_estimate_snapshots(id INTEGER PRIMARY KEY,quote_id INTEGER,status TEXT); INSERT INTO repair_estimate_snapshots VALUES(1,10,'SENT')")
   call('addItem', { orderId: 1, data: { kind:'ROBOCIZNA', name:'Wymiana klocków — tył EPB', labor_hours:1.2, labor_rate:300, catalog_work_id:'work_brakes', catalog_variant_id:'variant_rear_epb', work_name:'Wymiana klocków', variant_name:'tył EPB', customer_description:'Opis zapisany w kosztorysie.', hours_snapshot:1.2, price_snapshot:360 } })
   db.exec("INSERT INTO approvals(order_id,scope,status) VALUES (1,'Wycena #10 · Hamulce','APPROVED')")
   db.prepare('UPDATE approvals SET amount=360').run()
@@ -99,6 +100,7 @@ test('accepted catalog labor keeps its snapshot in the order', t => {
   assert.equal(item.customer_description,'Opis zapisany w kosztorysie.')
   assert.equal(item.hours_snapshot,1.2)
   assert.equal(item.price_snapshot,360)
+  assert.equal(db.prepare('SELECT status FROM repair_estimate_snapshots WHERE id=1').get().status,'ACCEPTED')
 })
 
 test('cloud approval uses the same complete and idempotent quote materialization', t => {

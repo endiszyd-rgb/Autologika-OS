@@ -42,6 +42,12 @@ function assertApprovalQuoteAmount(db,approval){
   return {linked:true,quoteId,total}
 }
 
+function markEstimateSnapshotsAccepted(db,quoteId){
+  const exists=db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='repair_estimate_snapshots'").get()
+  if(!exists)return 0
+  return db.prepare("UPDATE repair_estimate_snapshots SET status='ACCEPTED' WHERE quote_id=? AND status='SENT'").run(Number(quoteId)).changes
+}
+
 function replaceQuoteWithOrderSnapshot(db, quote) {
   ensureRepairColumns(db)
   assertQuoteEditable(db, quote)
@@ -101,12 +107,16 @@ function materializeApprovedQuote(db, approvalOrQuoteId) {
   if (!quoteId) return { prepared: false, parts: 0, quoteId: 0, reason: 'QUOTE_NOT_LINKED' }
   const quote = db.prepare('SELECT * FROM quotes WHERE id=?').get(quoteId)
   if (!quote) return { prepared: false, parts: 0, quoteId, reason: 'QUOTE_NOT_FOUND' }
-  if (quote.status === 'ZAAKCEPTOWANA') return { ok: true, prepared: false, parts: 0, quoteId, already: true }
+  if (quote.status === 'ZAAKCEPTOWANA') {
+    markEstimateSnapshotsAccepted(db,quoteId)
+    return { ok: true, prepared: false, parts: 0, quoteId, already: true }
+  }
 
   if (quote.source_type === 'ORDER_SNAPSHOT') {
     const openParts = Number(db.prepare(`SELECT COUNT(*) count FROM job_part_orders WHERE order_id=?
       AND status IN ('DO_ZAMOWIENIA','ZAMOWIONE','W_DRODZE')`).get(quote.order_id)?.count || 0)
     db.prepare("UPDATE quotes SET status='ZAAKCEPTOWANA',accepted_at=CURRENT_TIMESTAMP WHERE id=?").run(quoteId)
+    markEstimateSnapshotsAccepted(db,quoteId)
     db.prepare("UPDATE orders SET status='NAPRAWA',wait_state=? WHERE id=?").run(openParts ? 'CZESCI' : 'BRAK', quote.order_id)
     db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(
       quote.order_id,'QUOTE_APPROVED','Klient zaakceptował aktualny zakres zlecenia',`Kosztorys #${quoteId} · ${openParts ? 'oczekiwanie na części' : 'zakres gotowy do realizacji'}`
@@ -160,6 +170,7 @@ function materializeApprovedQuote(db, approvalOrQuoteId) {
   db.prepare("UPDATE orders SET parts_cost=?,parts_sale=?,other_cost=?,other_sale=?,status='NAPRAWA',wait_state=? WHERE id=?")
     .run(sums.pc, sums.ps, sums.oc, sums.os, parts ? 'CZESCI' : 'BRAK', quote.order_id)
   db.prepare("UPDATE quotes SET status='ZAAKCEPTOWANA',accepted_at=CURRENT_TIMESTAMP WHERE id=?").run(quoteId)
+  markEstimateSnapshotsAccepted(db,quoteId)
   db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(
     quote.order_id, 'QUOTE_PREPARED', parts ? 'Zakres zaakceptowany — części do zamówienia' : 'Zakres zaakceptowany — gotowe do naprawy',
     parts ? `${parts} pozycji części utworzono jako DO_ZAMOWIENIA` : 'Brak części blokujących rozpoczęcie naprawy'
@@ -167,4 +178,4 @@ function materializeApprovedQuote(db, approvalOrQuoteId) {
   return { ok: true, prepared: true, parts, partsPrepared: parts, quoteId, orderId: quote.order_id }
 }
 
-module.exports = { findQuoteApproval, assertQuoteEditable, quoteIdFromApproval, quoteTotal, assertApprovalQuoteAmount, replaceQuoteWithOrderSnapshot, materializeApprovedQuote }
+module.exports = { findQuoteApproval, assertQuoteEditable, quoteIdFromApproval, quoteTotal, assertApprovalQuoteAmount, markEstimateSnapshotsAccepted, replaceQuoteWithOrderSnapshot, materializeApprovedQuote }
