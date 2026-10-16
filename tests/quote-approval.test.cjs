@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const { DatabaseSync } = require('node:sqlite')
 const fs = require('node:fs')
 const vm = require('node:vm')
-const { findQuoteApproval, assertQuoteEditable, quoteIdFromApproval, replaceQuoteWithOrderSnapshot, materializeApprovedQuote } = require('../electron/quote-approval.cjs')
+const { findQuoteApproval, assertQuoteEditable, quoteIdFromApproval, quoteTotal, assertApprovalQuoteAmount, replaceQuoteWithOrderSnapshot, materializeApprovedQuote } = require('../electron/quote-approval.cjs')
 const { requireEditableOrder } = require('../electron/inventory-usage.cjs')
 const { wholePartQuantity } = require('../electron/part-quantity.cjs')
 
@@ -24,7 +24,7 @@ function setup(t) {
   const source = fs.readFileSync(require.resolve('../electron/main.cjs'), 'utf8')
   vm.runInNewContext(source.slice(source.indexOf("ipcMain.handle('quotes:get'"), source.indexOf("ipcMain.handle('attachments:list'")), {
     ipcMain: { handle: (name, callback) => { handlers[name] = callback } },
-    getDb: () => db, findQuoteApproval, assertQuoteEditable, replaceQuoteWithOrderSnapshot, materializeApprovedQuote, requireEditableOrder, wholePartQuantity, partMarkup: () => 0.2, normalizeBarcode:value=>String(value||''), syncOrderItemTotals: () => {},
+    getDb: () => db, findQuoteApproval, assertQuoteEditable, assertApprovalQuoteAmount, replaceQuoteWithOrderSnapshot, materializeApprovedQuote, requireEditableOrder, wholePartQuantity, partMarkup: () => 0.2, normalizeBarcode:value=>String(value||''), syncOrderItemTotals: () => {},
   })
   return { db, call: (name, arg) => handlers[`quotes:${name}`](null, arg) }
 }
@@ -92,6 +92,7 @@ test('accepted catalog labor keeps its snapshot in the order', t => {
   const { db, call } = setup(t)
   call('addItem', { orderId: 1, data: { kind:'ROBOCIZNA', name:'Wymiana klocków — tył EPB', labor_hours:1.2, labor_rate:300, catalog_work_id:'work_brakes', catalog_variant_id:'variant_rear_epb', work_name:'Wymiana klocków', variant_name:'tył EPB', customer_description:'Opis zapisany w kosztorysie.', hours_snapshot:1.2, price_snapshot:360 } })
   db.exec("INSERT INTO approvals(order_id,scope,status) VALUES (1,'Wycena #10 · Hamulce','APPROVED')")
+  db.prepare('UPDATE approvals SET amount=360').run()
   assert.equal(call('accept',10).ok,true)
   const item=db.prepare("SELECT * FROM order_items WHERE order_id=1 AND kind='ROBOCIZNA'").get()
   assert.equal(item.catalog_variant_id,'variant_rear_epb')
@@ -202,4 +203,13 @@ test('quote uses the newest decision time after cloud records receive local ids 
   db.prepare("INSERT INTO approvals(id,order_id,scope,status,created_at,decided_at) VALUES (?,?,?,?,?,?)").run(40,1,'Wycena #1','DECLINED','2026-10-15T12:00:00Z','2026-10-15T12:05:00Z')
   db.prepare("INSERT INTO approvals(id,order_id,scope,status,created_at,decided_at) VALUES (?,?,?,?,?,?)").run(3,1,'Wycena #1','APPROVED','2026-10-16 12:00:00','2026-10-16 12:05:00')
   assert.equal(findQuoteApproval(db,1,1).status,'APPROVED')
+})
+
+test('quote-linked approval must contain the exact frozen quote total', t => {
+  const { db } = setup(t)
+  db.prepare("INSERT INTO quote_items(quote_id,kind,name,qty,unit_price) VALUES (1,'CZESC','Filtr',2,50)").run()
+  assert.equal(quoteTotal(db,1),100)
+  assert.deepEqual(assertApprovalQuoteAmount(db,{order_id:1,scope:'Wycena #1',amount:100}),{linked:true,quoteId:1,total:100})
+  assert.throws(()=>assertApprovalQuoteAmount(db,{order_id:1,scope:'Wycena #1',amount:99}),/nie odpowiada wycenie/)
+  assert.deepEqual(assertApprovalQuoteAmount(db,{order_id:1,scope:'Zgoda na jazdę próbną',amount:0}),{linked:false,quoteId:0,total:null})
 })

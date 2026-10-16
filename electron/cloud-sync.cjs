@@ -6,7 +6,7 @@ const { app, net } = require('electron')
 const { EventEmitter } = require('events')
 const { getDb } = require('./db.cjs')
 const { buildApprovalSnapshot, sha256 } = require('./remote-approval.cjs')
-const { materializeApprovedQuote } = require('./quote-approval.cjs')
+const { assertApprovalQuoteAmount, materializeApprovedQuote } = require('./quote-approval.cjs')
 const { archiveBasePath, vehicleArchiveFolder, approvalFileName, fileHash, approvalArchiveState, approvalEvidencePaths, writeApprovalManifest, approvalEvidenceState, chooseDestination } = require('./approval-archive.cjs')
 const { latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, remoteApprovalOutcome } = require('./remote-approval-status.cjs')
 const { roundedPartQuantity } = require('./part-quantity.cjs')
@@ -188,7 +188,7 @@ async function scanRemoteApprovals(c=loadConfig(),db=getDb(),hooks={}){
     let prepared={prepared:false,parts:0};
     db.transaction(()=>{
       db.prepare(`UPDATE approvals SET status=?,note=CASE WHEN ?!='' THEN ? ELSE note END,decided_at=? WHERE id=?`).run(r.status,r.customer_note||'',r.customer_note||'',decidedAt,approval.id);
-      if(r.status==='APPROVED')prepared=materializeApprovedQuote(db,approval);else db.prepare(`UPDATE orders SET wait_state='DECYZJA' WHERE id=?`).run(approval.order_id);
+      if(r.status==='APPROVED'){assertApprovalQuoteAmount(db,approval);prepared=materializeApprovedQuote(db,approval)}else db.prepare(`UPDATE orders SET wait_state='DECYZJA' WHERE id=?`).run(approval.order_id);
       db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(approval.order_id,'REMOTE_APPROVAL',outcome.eventTitle,`${Number(approval.amount||0).toFixed(2)} zł${r.customer_note?` · ${r.customer_note}`:''}`);
     })();
     const item={approvalId:approval.id,orderId:approval.order_id,status:r.status,amount:Number(approval.amount||0),note:r.customer_note||'',decidedAt,customer:order.customer||'',plate:order.plate||'',vehicle:`${order.make||''} ${order.model||''}`.trim(),title:order.title||'',prepared:prepared.prepared,partsPrepared:prepared.parts||0,toastTitle:outcome.toastTitle,tone:outcome.tone,icon:outcome.icon};

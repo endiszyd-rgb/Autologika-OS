@@ -28,6 +28,20 @@ function quoteIdFromApproval(value) {
   return match ? Number(match[1]) : 0
 }
 
+function quoteTotal(db,quoteId){
+  return Math.round(db.prepare(`SELECT COALESCE(SUM(CASE WHEN kind='ROBOCIZNA' THEN COALESCE(labor_hours,0)*COALESCE(labor_rate,0) ELSE COALESCE(qty,0)*COALESCE(unit_price,0) END),0) total FROM quote_items WHERE quote_id=?`).get(Number(quoteId))?.total*100)/100
+}
+
+function assertApprovalQuoteAmount(db,approval){
+  const quoteId=quoteIdFromApproval(approval)
+  if(!quoteId)return {linked:false,quoteId:0,total:null}
+  const quote=db.prepare('SELECT id FROM quotes WHERE id=? AND order_id=?').get(quoteId,Number(approval?.order_id))
+  if(!quote)throw new Error('Akceptacja wskazuje kosztorys, który nie należy do tego zlecenia.')
+  const total=quoteTotal(db,quoteId),amount=Math.round(Number(approval?.amount)*100)/100
+  if(!Number.isFinite(amount)||Math.abs(amount-total)>0.01)throw new Error(`Kwota akceptacji (${Number.isFinite(amount)?amount.toFixed(2):'nieprawidłowa'} zł) nie odpowiada wycenie #${quoteId} (${total.toFixed(2)} zł).`)
+  return {linked:true,quoteId,total}
+}
+
 function replaceQuoteWithOrderSnapshot(db, quote) {
   ensureRepairColumns(db)
   assertQuoteEditable(db, quote)
@@ -153,4 +167,4 @@ function materializeApprovedQuote(db, approvalOrQuoteId) {
   return { ok: true, prepared: true, parts, partsPrepared: parts, quoteId, orderId: quote.order_id }
 }
 
-module.exports = { findQuoteApproval, assertQuoteEditable, quoteIdFromApproval, replaceQuoteWithOrderSnapshot, materializeApprovedQuote }
+module.exports = { findQuoteApproval, assertQuoteEditable, quoteIdFromApproval, quoteTotal, assertApprovalQuoteAmount, replaceQuoteWithOrderSnapshot, materializeApprovedQuote }

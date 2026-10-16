@@ -8,7 +8,7 @@ const { getDb, createVersionBackup, databasePath, backupDirectory, SCHEMA_VERSIO
 const { databaseHealth } = require('./database-health.cjs')
 const cloudSync = require('./cloud-sync.cjs')
 const updater = require('./updater.cjs')
-const { findQuoteApproval, assertQuoteEditable, replaceQuoteWithOrderSnapshot, materializeApprovedQuote } = require('./quote-approval.cjs')
+const { findQuoteApproval, assertQuoteEditable, assertApprovalQuoteAmount, replaceQuoteWithOrderSnapshot, materializeApprovedQuote } = require('./quote-approval.cjs')
 const { listAppointments, createAppointment, updateAppointment, removeAppointment, listResources, createResource, updateResource, listUnavailability, createUnavailability, removeUnavailability } = require('./appointments.cjs')
 const { createSmartJob, listRepairOperations, reserveInventoryPart, issueRepairPart, returnRepairPart, cancelRepairPartReservation, installRepairPart, updateRepairOperation, orderEstimate, snapshotEstimate, createDviInspection, addDviItem, listDvi, decideDviItem, convertDviItemToRepair, createDviToken, resolveDviToken, decideDviItemWithToken } = require('./repair-operations.cjs')
 const { deletionPreview, removeEntity } = require('./entity-deletion.cjs')
@@ -646,6 +646,7 @@ ipcMain.handle('quotes:accept',(_,id)=>{
   requireEditableOrder(db,quote.order_id)
   const approval=findQuoteApproval(db,quote.order_id,id)
   if(!approval||approval.status!=='APPROVED')return{ok:false,reason:'APPROVAL_REQUIRED'}
+  assertApprovalQuoteAmount(db,approval)
   const result=db.transaction(()=>{const value=materializeApprovedQuote(db,id);if(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='repair_estimate_snapshots'").get())db.prepare("UPDATE repair_estimate_snapshots SET status='ACCEPTED' WHERE quote_id=? AND status='SENT'").run(id);return value})()
   return result
 })
@@ -930,6 +931,7 @@ ipcMain.handle('approvals:list',(_,orderId)=>getDb().prepare(`SELECT * FROM appr
 ipcMain.handle('approvals:add',(_,{orderId,data})=>{
   const db=getDb(),entry=approvalEntry(data)
   requireEditableOrder(db,orderId)
+  if(entry.status==='APPROVED')assertApprovalQuoteAmount(db,{order_id:orderId,scope:entry.scope,amount:entry.amount})
   let prepared={prepared:false,parts:0}
   const r=db.transaction(()=>{
     const saved=db.prepare(`INSERT INTO approvals(order_id,status,amount,scope,channel,note,decided_at) VALUES (?,?,?,?,?,?,CASE WHEN ?='PENDING' THEN NULL ELSE CURRENT_TIMESTAMP END)`)
@@ -947,6 +949,7 @@ ipcMain.handle('approvals:decide',(_,{id,status,note})=>{
   if(!row)return false
   requireEditableOrder(db,row.order_id)
   assertApprovalPending(row.status)
+  if(decision==='APPROVED')assertApprovalQuoteAmount(db,row)
   const decisionNote=String(note||'').trim()
   let prepared={prepared:false,parts:0}
   db.transaction(()=>{
