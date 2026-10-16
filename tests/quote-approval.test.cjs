@@ -196,3 +196,10 @@ test('additional scope creates a new immutable quote while preserving both decis
   assert.equal(db.prepare('SELECT COUNT(*) n FROM order_items WHERE order_id=1').get().n,2)
   assert.equal(db.prepare("SELECT COUNT(*) n FROM order_events WHERE event_type='QUOTE_APPROVED'").get().n,2)
 })
+
+test('quote uses the newest decision time after cloud records receive local ids out of order', t => {
+  const { db } = setup(t)
+  db.prepare("INSERT INTO approvals(id,order_id,scope,status,created_at,decided_at) VALUES (?,?,?,?,?,?)").run(40,1,'Wycena #1','DECLINED','2026-10-15T12:00:00Z','2026-10-15T12:05:00Z')
+  db.prepare("INSERT INTO approvals(id,order_id,scope,status,created_at,decided_at) VALUES (?,?,?,?,?,?)").run(3,1,'Wycena #1','APPROVED','2026-10-16 12:00:00','2026-10-16 12:05:00')
+  assert.equal(findQuoteApproval(db,1,1).status,'APPROVED')
+})

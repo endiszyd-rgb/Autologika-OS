@@ -11,7 +11,7 @@ function ensureRepairColumns(db){
 function findQuoteApproval(db, orderId, quoteId) {
   const scope = `Wycena #${quoteId}`
   return db.prepare(`SELECT * FROM approvals WHERE order_id=?
-    AND (scope=? OR scope LIKE ?) ORDER BY id DESC LIMIT 1`)
+    AND (scope=? OR scope LIKE ?) ORDER BY julianday(COALESCE(decided_at,created_at)) DESC,id DESC LIMIT 1`)
     .get(orderId, scope, `${scope} · %`)
 }
 
