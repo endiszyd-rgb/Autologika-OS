@@ -4,6 +4,26 @@ import {deriveOrderAdvice,procedureProgress,summarizeProcedures} from '../src/or
 
 const base={order:{status:'NAPRAWA',total:1000},diagnosis:{conclusion:'Potwierdzona usterka'},items:[{id:1}],parts:[],approvals:[{status:'APPROVED'}],payments:[],qcRows:[],logs:[],procedures:[]}
 
+test('diagnoza wymaga zakresu wyceny przed przejściem do akceptacji',()=>{
+ const advice=deriveOrderAdvice({...base,order:{status:'DIAGNOZA',total:0},items:[],procedures:[],approvals:[]})
+ assert.equal(advice.tab,'works')
+ assert.equal(advice.status,undefined)
+ assert.match(advice.title,/zakres wyceny/i)
+})
+
+test('zapisany zakres pozwala przejść z diagnozy do akceptacji',()=>{
+ const advice=deriveOrderAdvice({...base,order:{status:'DIAGNOZA',total:300},approvals:[]})
+ assert.equal(advice.status,'AKCEPTACJA')
+ assert.equal(advice.tab,'quote')
+})
+
+test('akceptacja bez zakresu wraca do przygotowania wyceny',()=>{
+ const advice=deriveOrderAdvice({...base,order:{status:'AKCEPTACJA',total:0},items:[],procedures:[],approvals:[]})
+ assert.equal(advice.tab,'works')
+ assert.equal(advice.wait,undefined)
+ assert.match(advice.detail,/brakuje prac/i)
+})
+
 test('naprawa kieruje najpierw do zapisania zakresu prac',()=>{
  const advice=deriveOrderAdvice({...base,items:[]})
  assert.equal(advice.tab,'works')

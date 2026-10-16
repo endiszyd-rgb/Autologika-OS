@@ -156,7 +156,7 @@ function installRepairPart(db,{repairPartId,qty,eventKey}){
     if(amount>installable)throw new Error(`Do oznaczenia jako zamontowane pozostało ${installable} szt.`)
     const installed=Number(row.installed_qty)+amount,remaining=installable-amount,status=remaining>0?'ISSUED':'INSTALLED'
     db.prepare('UPDATE repair_parts SET installed_qty=?,status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(installed,status,row.id)
-    if(row.job_part_order_id)db.prepare("UPDATE job_part_orders SET status='ZAMONTOWANA' WHERE id=?").run(row.job_part_order_id)
+    if(row.job_part_order_id)db.prepare("UPDATE job_part_orders SET status='ZAMONTOWANE',installed_at=COALESCE(installed_at,CURRENT_TIMESTAMP),updated_at=CURRENT_TIMESTAMP WHERE id=?").run(row.job_part_order_id)
     db.prepare('INSERT INTO repair_part_events(repair_part_id,event_key,event_type,qty) VALUES (?,?,?,?)').run(row.id,key,'INSTALL',amount)
     return{repairPartId:row.id,installed:amount,totalInstalled:installed,existing:false}
   })()

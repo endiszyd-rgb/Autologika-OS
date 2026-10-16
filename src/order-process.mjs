@@ -34,7 +34,9 @@ export function deriveOrderAdvice({order={},diagnosis,items=[],parts=[],approval
 
   if(order.status==='PRZYJETE')return {title:'Przenieś do diagnozy',detail:'Auto jest przyjęte. Rozpocznij właściwy tok diagnostyczny.',status:'DIAGNOZA',wait:'BRAK'}
   if(order.status==='DIAGNOZA'&&!hasBasicDiagnosis(diagnosis))return {title:'Uzupełnij opis usterki',detail:'Krótki opis rozpoznanej usterki wystarczy, aby zamknąć podstawową diagnozę.',tab:'diagnosis'}
+  if(order.status==='DIAGNOZA'&&!hasWorkScope)return {title:'Dodaj zakres wyceny',detail:'Diagnoza jest zapisana. Dodaj co najmniej jedną naprawę lub pozycję, zanim poprosisz klienta o akceptację.',tab:'works'}
   if(order.status==='DIAGNOZA')return {title:'Przejdź do akceptacji',detail:'Diagnoza jest zapisana. Przygotuj zakres i uzyskaj decyzję klienta.',status:'AKCEPTACJA',wait:'DECYZJA',tab:'quote'}
+  if(order.status==='AKCEPTACJA'&&!hasWorkScope)return {title:'Uzupełnij zakres wyceny',detail:'Brakuje prac lub pozycji, które klient ma zaakceptować.',tab:'works'}
   if(order.status==='AKCEPTACJA'&&!approved)return {title:pending?'Sprawdź decyzję klienta':'Zarejestruj akceptację klienta',detail:pending?'Akceptacja została wysłana i nadal jest oczekująca.':'Brak zatwierdzonego zakresu prac.',wait:'DECYZJA',tab:'quote'}
   if(order.status==='AKCEPTACJA'&&blockingParts.length)return {title:'Sprawdź zamówione części',detail:`Akceptacja jest zapisana. ${blockingParts.length} pozycji nadal wymaga dostawy.`,wait:'CZESCI',tab:'parts'}
   if(order.status==='AKCEPTACJA')return {title:'Rozpocznij naprawę',detail:'Zakres zaakceptowany i brak blokady części.',status:'NAPRAWA',wait:'BRAK',tab:'works'}
