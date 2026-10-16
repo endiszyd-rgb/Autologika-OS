@@ -50,6 +50,12 @@ function shouldApplyRemoteDecision(localStatus, remoteStatus) {
   return ['PENDING', 'EXPIRED', 'SUPERSEDED'].includes(local)
 }
 
+function shouldReconcileRemoteApproval(localStatus, remoteStatus) {
+  const local = String(localStatus || '').toUpperCase()
+  const remote = String(remoteStatus || '').toUpperCase()
+  return remote !== 'PENDING' || ['EXPIRED', 'SUPERSEDED'].includes(local)
+}
+
 function remoteApprovalOutcome(status) {
   const value = String(status || '').toUpperCase()
   if (value === 'APPROVED') return { status: value, terminal: true, eventTitle: 'Klient zaakceptował kosztorys online', toastTitle: 'Klient zaakceptował kosztorys', tone: 'approved', icon: '✓' }
@@ -59,4 +65,4 @@ function remoteApprovalOutcome(status) {
   return { status: 'PENDING', terminal: false, eventTitle: 'Oczekiwanie na decyzję online', toastTitle: 'Oczekiwanie na decyzję klienta', tone: 'pending', icon: '…' }
 }
 
-module.exports = { TERMINAL_REMOTE_STATUSES, latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, assertRemoteApprovalLinkable, shouldApplyRemoteDecision, remoteApprovalOutcome }
+module.exports = { TERMINAL_REMOTE_STATUSES, latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, assertRemoteApprovalLinkable, shouldApplyRemoteDecision, shouldReconcileRemoteApproval, remoteApprovalOutcome }

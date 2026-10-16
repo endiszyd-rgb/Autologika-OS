@@ -1,6 +1,6 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, assertRemoteApprovalLinkable, shouldApplyRemoteDecision, remoteApprovalOutcome } = require('../electron/remote-approval-status.cjs')
+const { latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, assertRemoteApprovalLinkable, shouldApplyRemoteDecision, shouldReconcileRemoteApproval, remoteApprovalOutcome } = require('../electron/remote-approval-status.cjs')
 
 test('latest link wins even when an older link is already superseded', () => {
   const rows = [
@@ -56,4 +56,12 @@ test('an authoritative customer decision survives a local expiry race', () => {
   assert.equal(shouldApplyRemoteDecision('EXPIRED', 'EXPIRED'), false)
   assert.equal(shouldApplyRemoteDecision('APPROVED', 'DECLINED'), false)
   assert.equal(shouldApplyRemoteDecision('DECLINED', 'APPROVED'), false)
+})
+
+test('manual refresh reconciles a replacement link with stale local status', () => {
+  assert.equal(shouldReconcileRemoteApproval('EXPIRED', 'PENDING'), true)
+  assert.equal(shouldReconcileRemoteApproval('SUPERSEDED', 'PENDING'), true)
+  assert.equal(shouldReconcileRemoteApproval('PENDING', 'PENDING'), false)
+  assert.equal(shouldReconcileRemoteApproval('APPROVED', 'PENDING'), false)
+  assert.equal(shouldReconcileRemoteApproval('PENDING', 'APPROVED'), true)
 })

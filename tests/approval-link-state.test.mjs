@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {approvalEventMatches,approvalLinkState,latestApproval,latestQuoteApproval} from '../src/approval-link-state.mjs'
+import {approvalEventMatches,approvalLinkState,latestApproval,latestQuoteApproval,remoteApprovalCheckMessage} from '../src/approval-link-state.mjs'
 
 const now=Date.parse('2026-09-26T12:00:00Z')
 
@@ -42,4 +42,12 @@ test('latest decision follows its timestamp after cloud records receive new loca
   {id:3,status:'APPROVED',decided_at:'2026-09-26 12:00:00'}
  ]
  assert.equal(latestApproval(rows)?.id,3)
+})
+
+test('manual approval check explains missing and terminal links',()=>{
+ assert.match(remoteApprovalCheckMessage({ok:false,reason:'NOT_FOUND'}),/Wygeneruj nowy link/)
+ assert.match(remoteApprovalCheckMessage({ok:false,reason:'LOCAL_NOT_FOUND'}),/lokalnej akceptacji/)
+ assert.equal(remoteApprovalCheckMessage({ok:true,status:'APPROVED'}),'✓ Klient zaakceptował kosztorys.')
+ assert.match(remoteApprovalCheckMessage({ok:true,status:'SUPERSEDED'}),/zastąpiony/)
+ assert.equal(remoteApprovalCheckMessage({ok:true,status:'PENDING'}),'Decyzja jeszcze nie została podjęta.')
 })

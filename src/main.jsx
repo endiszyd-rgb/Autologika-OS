@@ -32,7 +32,7 @@ import {CatalogPricingV2,WorkCatalogModalV2,QuoteCatalogModalV2,WorkCatalogSearc
 import {matchingVehicleParts,oeNumbers,vehicleLabel} from './vehicle-part-match.js'
 import {ageLabel,attentionHeadline,attentionMeta,attentionStats,filterAttention} from './attention-center.mjs'
 import {deriveOrderAdvice,hasBasicDiagnosis,procedureProgress,summarizeProcedures} from './order-process.mjs'
-import {approvalEventMatches,approvalLinkState,latestQuoteApproval} from './approval-link-state.mjs'
+import {approvalEventMatches,approvalLinkState,latestQuoteApproval,remoteApprovalCheckMessage} from './approval-link-state.mjs'
 import {QuotePartLookup} from './quote-part-lookup.jsx'
 import {QuoteItemEditor} from './quote-item-editor.jsx'
 import {useDebouncedValue} from './performance.js'
@@ -273,7 +273,7 @@ function RemoteApprovalControls({approval,setCustomerView,setRemoteUrl,setMsg,re
  const[now,setNow]=useState(Date.now()),[busy,setBusy]=useState('');useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(timer)},[])
  const state=approvalLinkState(approval,now),act=async(key,fn)=>{setBusy(key);try{await fn()}catch(error){setMsg((key==='check'?'Sprawdzenie decyzji: ':'Zdalna akceptacja: ')+(error.message||error))}finally{setBusy('')}}
  const generate=()=>act('generate',async()=>{const result=await api.cloudSync.createRemoteApproval({approvalId:approval.id});setRemoteUrl(result.url);await api.system.copyText(result.url);setMsg(state.hasRemoteLink?'Nowy link zastąpił poprzedni i został skopiowany do schowka.':'Link zdalnej akceptacji skopiowany do schowka.');await reload()})
- const check=()=>act('check',async()=>{const result=await api.cloudSync.pullRemoteApproval(approval.id);setMsg(result.status==='APPROVED'?'✓ Klient zaakceptował kosztorys.':result.status==='DECLINED'?'× Klient odrzucił kosztorys.':result.status==='EXPIRED'?'Link akceptacyjny wygasł.':'Decyzja jeszcze nie została podjęta.');await reload()})
+ const check=()=>act('check',async()=>{const result=await api.cloudSync.pullRemoteApproval(approval.id);setMsg(remoteApprovalCheckMessage(result));await reload()})
  if(state.status==='PENDING')return <><div className={'quoteLinkState '+(state.expiringSoon?'warning':'active')}><i/><div><b>{state.hasRemoteLink?'Link zdalny aktywny':'Oczekiwanie na utworzenie linku'}</b><span>{state.relative||'Klient może zaakceptować kosztorys w trybie lokalnym.'}{state.expiresAt?` · ${new Date(state.expiresAt).toLocaleString('pl-PL')}`:''}</span></div></div><button disabled={!!busy} onClick={()=>setCustomerView(true)}>Tryb klienta</button><button disabled={!!busy} title={state.hasRemoteLink?'Poprzedni link zostanie unieważniony':''} onClick={generate}>{busy==='generate'?'Tworzę…':state.hasRemoteLink?'↻ Zastąp link':'🔗 Generuj link zdalny'}</button>{state.hasRemoteLink&&<button disabled={!!busy} onClick={check}>{busy==='check'?'Sprawdzam…':'↻ Sprawdź decyzję'}</button>}</>
  if(['EXPIRED','SUPERSEDED'].includes(state.status))return <><div className="quoteLinkState expired"><i/><div><b>{state.status==='EXPIRED'?'Link wygasł':'Poprzedni link został zastąpiony'}</b><span>{state.relative||'Wystaw nowy link dla tej samej wersji kosztorysu.'}</span></div></div><button disabled={!!busy} onClick={generate}>{busy==='generate'?'Tworzę…':'↻ Wygeneruj nowy link'}</button></>
  return null

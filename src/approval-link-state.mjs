@@ -30,3 +30,13 @@ export function latestApproval(rows=[]){
 export function latestQuoteApproval(rows=[]){
  return latestApproval(rows.filter(row=>/^Wycena #\d+(?:\s|$)/.test(String(row?.scope||''))))
 }
+
+export function remoteApprovalCheckMessage(result={}){
+ if(result.ok===false&&result.reason==='LOCAL_NOT_FOUND')return 'Nie znaleziono lokalnej akceptacji. Odśwież wycenę i spróbuj ponownie.'
+ if(result.ok===false&&result.reason==='NOT_FOUND')return 'Link nie istnieje już w chmurze. Wygeneruj nowy link dla tej wyceny.'
+ if(result.status==='APPROVED')return '✓ Klient zaakceptował kosztorys.'
+ if(result.status==='DECLINED')return '× Klient odrzucił kosztorys.'
+ if(result.status==='EXPIRED')return 'Link akceptacyjny wygasł.'
+ if(result.status==='SUPERSEDED')return 'Link został zastąpiony nowszą wersją.'
+ return 'Decyzja jeszcze nie została podjęta.'
+}
