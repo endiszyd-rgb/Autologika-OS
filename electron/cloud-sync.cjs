@@ -8,7 +8,7 @@ const { getDb } = require('./db.cjs')
 const { buildApprovalSnapshot, sha256 } = require('./remote-approval.cjs')
 const { assertApprovalQuoteAmount, materializeApprovedQuote } = require('./quote-approval.cjs')
 const { archiveBasePath, vehicleArchiveFolder, approvalFileName, fileHash, approvalArchiveState, approvalEvidencePaths, writeApprovalManifest, approvalEvidenceState, chooseDestination } = require('./approval-archive.cjs')
-const { latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, remoteApprovalOutcome } = require('./remote-approval-status.cjs')
+const { latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, assertRemoteApprovalLinkable, remoteApprovalOutcome } = require('./remote-approval-status.cjs')
 const { roundedPartQuantity } = require('./part-quantity.cjs')
 const { reconcileCloseoutAutomation } = require('./closeout-automation.cjs')
 
@@ -259,13 +259,16 @@ async function approvalDeploymentStatus(){
 }
 
 async function createRemoteApproval(input){
+  const db=getDb(),built=buildApprovalSnapshot(db,Number(input?.approvalId));assertRemoteApprovalLinkable(built.approval.status);assertApprovalQuoteAmount(db,built.approval)
   const deployment=await approvalDeploymentStatus();if(!deployment.ok)throw new Error(deployment.message)
   let c=loadConfig(); const t=await token(c); c=t.c; const workshopId=c.workshopId||c.user?.id; if(!workshopId)throw new Error('Brak ID warsztatu.');
-  const built=buildApprovalSnapshot(getDb(),Number(input?.approvalId)),tokenValue=crypto.randomBytes(32).toString('hex'),tokenHash=sha256(tokenValue)
+  const tokenValue=crypto.randomBytes(32).toString('hex'),tokenHash=sha256(tokenValue)
   const row={workshop_id:workshopId,token:tokenHash,token_hash:tokenHash,approval_local_id:built.approval.id,approval_cloud_id:built.approval.cloud_id||null,order_local_id:built.approval.order_id,order_cloud_id:built.order.cloud_id||null,snapshot:built.snapshot,snapshot_hash:built.snapshotHash,hash_algorithm:built.hashAlgorithm,terms_version:built.snapshot.terms.version,terms_text:built.snapshot.terms.text,document_no:built.snapshot.approvalDocumentNo,approval_sequence:built.sequence,previously_approved_total:built.previouslyApprovedTotal,expires_at:new Date(Date.now()+7*24*60*60*1000).toISOString()}
   const inserted=await request(c,'/rest/v1/customer_approval_links',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)}),remote=Array.isArray(inserted)?inserted[0]:inserted
-  if(['EXPIRED','SUPERSEDED'].includes(built.approval.status))getDb().prepare("UPDATE approvals SET status='PENDING',decided_at=NULL WHERE id=?").run(built.approval.id)
-  updateLocalEvidence(getDb(),built.approval.id,{...row,id:remote?.id||null})
+  db.transaction(()=>{
+    if(built.approval.status!=='PENDING')db.prepare("UPDATE approvals SET status='PENDING',decided_at=NULL WHERE id=?").run(built.approval.id)
+    updateLocalEvidence(db,built.approval.id,{...row,id:remote?.id||null})
+  })()
   return {ok:true,url:`https://endiszyd-rgb.github.io/Autologika-OS/approval/#t=${tokenValue}`,expiresAt:row.expires_at,snapshotHash:built.snapshotHash};
 }
 async function pullRemoteApproval(approvalId){

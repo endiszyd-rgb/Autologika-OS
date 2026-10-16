@@ -35,6 +35,14 @@ function effectiveRemoteApproval(row, now = Date.now()) {
   return { ...row, status: status || 'PENDING' }
 }
 
+function assertRemoteApprovalLinkable(status) {
+  const value = String(status || '').toUpperCase()
+  if (value === 'APPROVED') throw new Error('Zaakceptowana wycena nie może otrzymać nowego linku.')
+  if (value === 'DECLINED') throw new Error('Odrzucona wycena wymaga utworzenia nowej wersji przed wysłaniem linku.')
+  if (!['PENDING', 'EXPIRED', 'SUPERSEDED'].includes(value)) throw new Error('Akceptacja nie jest gotowa do wysłania klientowi.')
+  return value
+}
+
 function remoteApprovalOutcome(status) {
   const value = String(status || '').toUpperCase()
   if (value === 'APPROVED') return { status: value, terminal: true, eventTitle: 'Klient zaakceptował kosztorys online', toastTitle: 'Klient zaakceptował kosztorys', tone: 'approved', icon: '✓' }
@@ -44,4 +52,4 @@ function remoteApprovalOutcome(status) {
   return { status: 'PENDING', terminal: false, eventTitle: 'Oczekiwanie na decyzję online', toastTitle: 'Oczekiwanie na decyzję klienta', tone: 'pending', icon: '…' }
 }
 
-module.exports = { TERMINAL_REMOTE_STATUSES, latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, remoteApprovalOutcome }
+module.exports = { TERMINAL_REMOTE_STATUSES, latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, assertRemoteApprovalLinkable, remoteApprovalOutcome }

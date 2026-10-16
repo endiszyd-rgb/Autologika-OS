@@ -1,6 +1,6 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, remoteApprovalOutcome } = require('../electron/remote-approval-status.cjs')
+const { latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, assertRemoteApprovalLinkable, remoteApprovalOutcome } = require('../electron/remote-approval-status.cjs')
 
 test('latest link wins even when an older link is already superseded', () => {
   const rows = [
@@ -40,4 +40,11 @@ test('pending link becomes expired when its deadline passes', () => {
   assert.equal(effectiveRemoteApproval({ status: 'PENDING', expires_at: '2026-09-26T12:00:01Z' }, now).status, 'PENDING')
   assert.equal(effectiveRemoteApproval({ status: 'APPROVED', expires_at: '2026-09-20T12:00:00Z' }, now).status, 'APPROVED')
   assert.equal(effectiveRemoteApproval({ status: 'PENDING', expires_at: 'invalid' }, now).status, 'PENDING')
+})
+
+test('new links are limited to open or replaceable approvals', () => {
+  for (const status of ['PENDING', 'EXPIRED', 'SUPERSEDED']) assert.equal(assertRemoteApprovalLinkable(status), status)
+  assert.throws(() => assertRemoteApprovalLinkable('APPROVED'), /Zaakceptowana wycena/)
+  assert.throws(() => assertRemoteApprovalLinkable('DECLINED'), /nowej wersji/)
+  assert.throws(() => assertRemoteApprovalLinkable(''), /nie jest gotowa/)
 })
