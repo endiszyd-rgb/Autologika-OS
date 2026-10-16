@@ -142,6 +142,38 @@ test('polling a pending remote link does not enqueue the same approval again', a
   assert.equal(db.prepare("SELECT COUNT(*) count FROM sync_queue WHERE entity_type='approvals'").get().count, 0)
 })
 
+test('a replacement link created on another device reopens only an expired or superseded local link', async t => {
+  const db = setup(t)
+  db.prepare("UPDATE approvals SET status='SUPERSEDED',decided_at='2026-10-15T10:00:00Z'").run()
+  db.prepare('DELETE FROM sync_queue').run()
+
+  await scanRemoteApprovals(
+    { workshopId: 'workshop-1' }, db,
+    {
+      requestRows: async () => [remoteRow('PENDING', { id: 'replacement-link', expires_at: '2099-10-10T09:00:00.000Z' })],
+      archivePdf: async () => ({ ok: true }),
+      emitApproval: () => {}
+    }
+  )
+
+  assert.deepEqual({ ...db.prepare('SELECT status,decided_at,remote_id FROM approvals WHERE id=12').get() }, {
+    status: 'PENDING', decided_at: null, remote_id: 'replacement-link'
+  })
+  assert.equal(db.prepare("SELECT COUNT(*) count FROM sync_queue WHERE entity_type='approvals'").get().count, 0)
+
+  db.prepare("UPDATE approvals SET status='APPROVED',decided_at='2026-10-16T10:00:00Z'").run()
+  db.prepare('DELETE FROM sync_queue').run()
+  await scanRemoteApprovals(
+    { workshopId: 'workshop-1' }, db,
+    {
+      requestRows: async () => [remoteRow('PENDING', { id: 'invalid-reopen', expires_at: '2099-10-11T09:00:00.000Z' })],
+      archivePdf: async () => ({ ok: true }),
+      emitApproval: () => {}
+    }
+  )
+  assert.equal(db.prepare('SELECT status FROM approvals WHERE id=12').get().status, 'APPROVED')
+})
+
 test('desktop matches an Android remote approval by its synchronized cloud id', async t => {
   const db = setup(t)
   db.prepare("UPDATE approvals SET cloud_id='7b3b3c78-4b67-4f42-9b67-3f8c3b4c0d11' WHERE id=12").run()

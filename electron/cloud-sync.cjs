@@ -189,7 +189,10 @@ async function scanRemoteApprovals(c=loadConfig(),db=getDb(),hooks={}){
     if(!approval)continue;
     applyRemoteOnly(db,()=>updateLocalEvidence(db,approval.id,r))
     const outcome=remoteApprovalOutcome(r.status)
-    if(!outcome.terminal)continue
+    if(!outcome.terminal){
+      if(['EXPIRED','SUPERSEDED'].includes(approval.status))applyRemoteOnly(db,()=>db.prepare("UPDATE approvals SET status='PENDING',decided_at=NULL WHERE id=?").run(approval.id))
+      continue
+    }
     if(approval.status!=='PENDING'){if(r.status==='APPROVED'&&r.pdf_storage_path&&(!approval.local_pdf_path||!fs.existsSync(approval.local_pdf_path)))try{await archivePdf(approval.id,{c,db})}catch{};continue}
     const order=db.prepare(`SELECT o.id,o.title,v.plate,v.make,v.model,c.name customer FROM orders o JOIN vehicles v ON v.id=o.vehicle_id LEFT JOIN customers c ON c.id=v.customer_id WHERE o.id=?`).get(approval.order_id)||{};
     const decidedAt=r.decided_at||new Date().toISOString();
