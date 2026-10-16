@@ -8,7 +8,7 @@ const { getDb } = require('./db.cjs')
 const { buildApprovalSnapshot, sha256 } = require('./remote-approval.cjs')
 const { assertApprovalQuoteAmount, materializeApprovedQuote } = require('./quote-approval.cjs')
 const { archiveBasePath, vehicleArchiveFolder, approvalFileName, fileHash, approvalArchiveState, approvalEvidencePaths, writeApprovalManifest, approvalEvidenceState, chooseDestination } = require('./approval-archive.cjs')
-const { latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, assertRemoteApprovalLinkable, remoteApprovalOutcome } = require('./remote-approval-status.cjs')
+const { latestRemoteApprovals, remoteApprovalLookupFilter, effectiveRemoteApproval, assertRemoteApprovalLinkable, shouldApplyRemoteDecision, remoteApprovalOutcome } = require('./remote-approval-status.cjs')
 const { roundedPartQuantity } = require('./part-quantity.cjs')
 const { reconcileCloseoutAutomation } = require('./closeout-automation.cjs')
 
@@ -193,7 +193,7 @@ async function scanRemoteApprovals(c=loadConfig(),db=getDb(),hooks={}){
       if(['EXPIRED','SUPERSEDED'].includes(approval.status))applyRemoteOnly(db,()=>db.prepare("UPDATE approvals SET status='PENDING',decided_at=NULL WHERE id=?").run(approval.id))
       continue
     }
-    if(approval.status!=='PENDING'){if(r.status==='APPROVED'&&r.pdf_storage_path&&(!approval.local_pdf_path||!fs.existsSync(approval.local_pdf_path)))try{await archivePdf(approval.id,{c,db})}catch{};continue}
+    if(!shouldApplyRemoteDecision(approval.status,r.status)){if(r.status==='APPROVED'&&r.pdf_storage_path&&(!approval.local_pdf_path||!fs.existsSync(approval.local_pdf_path)))try{await archivePdf(approval.id,{c,db})}catch{};continue}
     const order=db.prepare(`SELECT o.id,o.title,v.plate,v.make,v.model,c.name customer FROM orders o JOIN vehicles v ON v.id=o.vehicle_id LEFT JOIN customers c ON c.id=v.customer_id WHERE o.id=?`).get(approval.order_id)||{};
     const decidedAt=r.decided_at||new Date().toISOString();
     let prepared={prepared:false,parts:0};

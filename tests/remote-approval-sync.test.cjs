@@ -126,6 +126,27 @@ test('remote rejection keeps the quote editable scope unmaterialized and waits f
   assert.equal(emitted.length, 1)
 })
 
+test('server approval wins when the desktop expired the link moments earlier', async t => {
+  const db = setup(t)
+  db.prepare("UPDATE approvals SET status='EXPIRED',decided_at='2026-10-03T09:59:59.000Z'").run()
+  db.prepare('DELETE FROM sync_queue').run()
+
+  const result = await scanRemoteApprovals(
+    { workshopId: 'workshop-1' }, db,
+    {
+      requestRows: async () => [remoteRow('APPROVED')],
+      archivePdf: async () => ({ ok: true }),
+      emitApproval: () => {}
+    }
+  )
+
+  assert.equal(result.length, 1)
+  assert.equal(result[0].status, 'APPROVED')
+  assert.equal(db.prepare('SELECT status FROM approvals WHERE id=12').get().status, 'APPROVED')
+  assert.equal(db.prepare('SELECT status FROM quotes WHERE id=7').get().status, 'ZAAKCEPTOWANA')
+  assert.equal(db.prepare("SELECT COUNT(*) count FROM order_items WHERE kind='ROBOCIZNA'").get().count, 1)
+})
+
 test('polling a pending remote link does not enqueue the same approval again', async t => {
   const db = setup(t)
   const result = await scanRemoteApprovals(
