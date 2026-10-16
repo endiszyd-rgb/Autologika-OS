@@ -930,15 +930,17 @@ ipcMain.handle('approvals:list',(_,orderId)=>getDb().prepare(`SELECT * FROM appr
 ipcMain.handle('approvals:add',(_,{orderId,data})=>{
   const db=getDb(),entry=approvalEntry(data)
   requireEditableOrder(db,orderId)
+  let prepared={prepared:false,parts:0}
   const r=db.transaction(()=>{
     const saved=db.prepare(`INSERT INTO approvals(order_id,status,amount,scope,channel,note,decided_at) VALUES (?,?,?,?,?,?,CASE WHEN ?='PENDING' THEN NULL ELSE CURRENT_TIMESTAMP END)`)
       .run(orderId,entry.status,entry.amount,entry.scope,entry.channel,entry.note,entry.status)
     db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
       .run(orderId,'APPROVAL',entry.status==='APPROVED'?'Klient zaakceptował koszt':entry.status==='DECLINED'?'Klient odrzucił koszt':'Oczekiwanie na akceptację',`${entry.amount.toFixed(2)} zł · ${entry.scope}`)
+    if(entry.status==='APPROVED')prepared=materializeApprovedQuote(db,{scope:entry.scope})
     return saved
   })()
   syncCloseoutAutomation(orderId)
-  return {id:r.lastInsertRowid}
+  return {id:r.lastInsertRowid,...prepared}
 })
 ipcMain.handle('approvals:decide',(_,{id,status,note})=>{
   const decision=approvalDecision(status),db=getDb(); const row=db.prepare('SELECT * FROM approvals WHERE id=?').get(id)
@@ -946,13 +948,15 @@ ipcMain.handle('approvals:decide',(_,{id,status,note})=>{
   requireEditableOrder(db,row.order_id)
   assertApprovalPending(row.status)
   const decisionNote=String(note||'').trim()
+  let prepared={prepared:false,parts:0}
   db.transaction(()=>{
     db.prepare(`UPDATE approvals SET status=?,note=CASE WHEN ?!='' THEN ? ELSE note END,decided_at=CURRENT_TIMESTAMP WHERE id=?`).run(decision,decisionNote,decisionNote,id)
     db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
       .run(row.order_id,'APPROVAL',decision==='APPROVED'?'Klient zaakceptował koszt':'Klient odrzucił koszt',`${Number(row.amount||0).toFixed(2)} zł · ${row.scope||''}`)
+    if(decision==='APPROVED')prepared=materializeApprovedQuote(db,row)
   })()
   syncCloseoutAutomation(row.order_id)
-  return true
+  return {ok:true,...prepared}
 })
 ipcMain.handle('approvals:openPdf',async(_,id)=>{const row=getDb().prepare('SELECT local_pdf_path,pdf_hash FROM approvals WHERE id=?').get(Number(id)),state=approvalArchiveState(row);if(state==='MISSING')throw new Error('Brak lokalnej kopii PDF. Pobierz dokument ponownie.');if(state==='CORRUPT')throw new Error('Lokalna kopia PDF ma niezgodną sumę kontrolną. Pobierz dokument ponownie.');const error=await shell.openPath(row.local_pdf_path);if(error)throw new Error(error);return true})
 ipcMain.handle('approvals:openFolder',async(_,id)=>{const db=getDb(),row=db.prepare('SELECT order_id,local_pdf_path FROM approvals WHERE id=?').get(Number(id));if(!row)throw new Error('Akceptacja nie istnieje.');let target=row.local_pdf_path&&fs.existsSync(row.local_pdf_path)?path.dirname(row.local_pdf_path):'';if(!target){const vehicle=db.prepare('SELECT v.* FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE o.id=?').get(row.order_id);target=vehicle?vehicleArchiveFolder(db,archiveBasePath(app,db),vehicle).folder:archiveBasePath(app,db)}fs.mkdirSync(target,{recursive:true});const error=await shell.openPath(target);if(error)throw new Error(error);return true})
