@@ -1,4 +1,9 @@
-function timestamp(value){const parsed=Date.parse(value||'');return Number.isFinite(parsed)?parsed:0}
+function timestamp(value){
+ const text=String(value||'').trim()
+ const normalized=/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(text)?`${text.replace(' ','T')}Z`:text
+ const parsed=Date.parse(normalized)
+ return Number.isFinite(parsed)?parsed:0
+}
 
 function plural(value,forms){const n=Math.abs(Math.trunc(value)),lastTwo=n%100,last=n%10;return n===1?forms[0]:last>=2&&last<=4&&(lastTwo<12||lastTwo>14)?forms[1]:forms[2]}
 
@@ -15,9 +20,13 @@ export function approvalEventMatches(event,approval,orderId){
  return(Number.isFinite(eventApproval)&&eventApproval>0&&eventApproval===currentApproval)||(Number.isFinite(eventOrder)&&eventOrder>0&&eventOrder===currentOrder)
 }
 
-export function latestQuoteApproval(rows=[]){
- return rows.filter(row=>/^Wycena #\d+(?:\s|$)/.test(String(row?.scope||''))).sort((left,right)=>{
+export function latestApproval(rows=[]){
+ return [...rows].sort((left,right)=>{
   const byTime=timestamp(right.decided_at||right.created_at)-timestamp(left.decided_at||left.created_at)
   return byTime||Number(right.id||0)-Number(left.id||0)
  })[0]||null
+}
+
+export function latestQuoteApproval(rows=[]){
+ return latestApproval(rows.filter(row=>/^Wycena #\d+(?:\s|$)/.test(String(row?.scope||''))))
 }

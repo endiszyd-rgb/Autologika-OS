@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {approvalEventMatches,approvalLinkState,latestQuoteApproval} from '../src/approval-link-state.mjs'
+import {approvalEventMatches,approvalLinkState,latestApproval,latestQuoteApproval} from '../src/approval-link-state.mjs'
 
 const now=Date.parse('2026-09-26T12:00:00Z')
 
@@ -34,4 +34,12 @@ test('order center keeps the latest quote decision visible after the toast disap
  ]
  assert.equal(latestQuoteApproval(rows)?.id,7)
  assert.equal(latestQuoteApproval([{id:1,scope:'Zgoda na jazdę próbną'}]),null)
+})
+
+test('latest decision follows its timestamp after cloud records receive new local ids',()=>{
+ const rows=[
+  {id:40,status:'DECLINED',created_at:'2026-09-26T11:00:00Z'},
+  {id:3,status:'APPROVED',decided_at:'2026-09-26 12:00:00'}
+ ]
+ assert.equal(latestApproval(rows)?.id,3)
 })

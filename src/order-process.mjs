@@ -1,3 +1,5 @@
+import {latestApproval} from './approval-link-state.mjs'
+
 const hasText=value=>Boolean(String(value||'').trim())
 
 export const hasBasicDiagnosis=diagnosis=>['symptom_confirmed','conclusion','recommendation'].some(key=>hasText(diagnosis?.[key]))
@@ -18,9 +20,9 @@ export function summarizeProcedures(procedures=[]){
 }
 
 export function deriveOrderAdvice({order={},diagnosis,items=[],parts=[],approvals=[],payments=[],qcRows=[],logs=[],procedures=[]}={}){
-  const latestApproval=approvals.reduce((latest,item)=>!latest||Number(item.id||0)>Number(latest.id||0)?item:latest,null)
-  const approved=latestApproval?.status==='APPROVED'
-  const pending=latestApproval?.status==='PENDING'
+  const approval=latestApproval(approvals)
+  const approved=approval?.status==='APPROVED'
+  const pending=approval?.status==='PENDING'
   const blockingParts=parts.filter(item=>['DO_ZAMOWIENIA','ZAMOWIONE','W_DRODZE'].includes(item.status))
   const incompleteProcedures=procedures.map(procedureProgress).filter(progress=>!progress.complete)
   const remainingProcedureSteps=incompleteProcedures.reduce((sum,progress)=>sum+progress.remaining,0)

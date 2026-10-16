@@ -68,3 +68,13 @@ test('podsumowanie procedur łączy postęp kilku pakietów naprawy',()=>{
  ])
  assert.deepEqual(summary,{runs:2,completedRuns:1,completed:3,total:5,remaining:2,percent:60,complete:false})
 })
+
+test('synchronized decision with lower local id still wins by timestamp',()=>{
+ const approvals=[
+  {id:20,status:'DECLINED',created_at:'2026-09-26T11:00:00Z'},
+  {id:3,status:'APPROVED',decided_at:'2026-09-26 12:00:00'}
+ ]
+ const advice=deriveOrderAdvice({...base,order:{status:'AKCEPTACJA',total:1000},approvals})
+ assert.equal(advice.status,'NAPRAWA')
+ assert.equal(advice.tab,'works')
+})
