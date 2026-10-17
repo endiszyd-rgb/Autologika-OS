@@ -6,9 +6,9 @@ const {createCustomer,updateCustomer,createVehicle,updateVehicle}=require('../el
 function fixture(){
  const db=new DatabaseSync(':memory:')
  db.exec(`
-  CREATE TABLE customers(id INTEGER PRIMARY KEY,name TEXT,phone TEXT,email TEXT,company TEXT,notes TEXT);
-  CREATE TABLE vehicles(id INTEGER PRIMARY KEY,customer_id INTEGER,plate TEXT,vin TEXT,make TEXT,model TEXT,generation TEXT,year INTEGER,engine TEXT,power_hp REAL,engine_code TEXT,mileage REAL,notes TEXT);
-  INSERT INTO customers VALUES(1,'Jan Kowalski','','','','');
+  CREATE TABLE customers(id INTEGER PRIMARY KEY,name TEXT,phone TEXT,email TEXT,company TEXT,notes TEXT,version INTEGER NOT NULL DEFAULT 1);
+  CREATE TABLE vehicles(id INTEGER PRIMARY KEY,customer_id INTEGER,plate TEXT,vin TEXT,make TEXT,model TEXT,generation TEXT,year INTEGER,engine TEXT,power_hp REAL,engine_code TEXT,mileage REAL,notes TEXT,version INTEGER NOT NULL DEFAULT 1);
+  INSERT INTO customers VALUES(1,'Jan Kowalski','','','','',1);
  `)
  return db
 }
@@ -45,4 +45,22 @@ test('vehicle can be created and edited without creating or selecting a customer
  assert.equal(db.prepare('SELECT customer_id FROM vehicles WHERE id=?').get(created.id).customer_id,1)
  updateVehicle(db,created.id,{customer_id:'',plate:'WE 1234A',make:'Toyota',model:'Corolla'})
  assert.equal(db.prepare('SELECT customer_id FROM vehicles WHERE id=?').get(created.id).customer_id,null)
+})
+
+test('stale customer and vehicle forms cannot overwrite synchronized records',()=>{
+ const db=fixture()
+ const vehicle=createVehicle(db,{customer_id:1,plate:'PO 100AA',make:'Skoda',model:'Octavia'})
+ db.exec("UPDATE customers SET company='Zmiana Android',version=3 WHERE id=1")
+ db.prepare("UPDATE vehicles SET mileage=150000,version=4 WHERE id=?").run(vehicle.id)
+ assert.throws(()=>updateCustomer(db,1,{name:'Jan Kowalski',company:'Stara zmiana PC',expected_version:2}),/innym urządzeniu/)
+ assert.throws(()=>updateVehicle(db,vehicle.id,{customer_id:1,plate:'PO 100AA',make:'Skoda',model:'Octavia',mileage:120000,expected_version:3}),/innym urządzeniu/)
+ assert.equal(db.prepare('SELECT company FROM customers WHERE id=1').get().company,'Zmiana Android')
+ assert.equal(db.prepare('SELECT mileage FROM vehicles WHERE id=?').get(vehicle.id).mileage,150000)
+})
+
+test('identical customer and vehicle saves do not write unchanged records',()=>{
+ const db=fixture()
+ const vehicle=createVehicle(db,{customer_id:1,plate:'PO 200BB',make:'Toyota',model:'Yaris'})
+ assert.equal(updateCustomer(db,1,{name:'Jan Kowalski',expected_version:1}).changed,false)
+ assert.equal(updateVehicle(db,vehicle.id,{customer_id:1,plate:'PO 200BB',make:'Toyota',model:'Yaris',expected_version:1}).changed,false)
 })

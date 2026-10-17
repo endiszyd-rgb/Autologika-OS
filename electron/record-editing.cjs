@@ -8,6 +8,12 @@ function optionalNumber(value,{min=0,max=Number.MAX_SAFE_INTEGER,label='Wartoś�
  return number
 }
 
+function assertCurrentVersion(record,input,label){
+ const expected=input?.expected_version
+ if(expected===undefined||expected===null)return
+ if(Number(expected)!==Number(record.version||1))throw new Error(`${label} został w międzyczasie zmieniony na innym urządzeniu. Wczytaj aktualne dane i spróbuj ponownie.`)
+}
+
 function customerData(input={}){
  const data={name:text(input.name),phone:text(input.phone),email:text(input.email).toLowerCase(),company:text(input.company),notes:text(input.notes)}
  if(!data.name)throw new Error('Wpisz nazwę lub imię klienta.')
@@ -28,8 +34,8 @@ function vehicleData(db,input={},excludeId=0){
 }
 
 function createCustomer(db,input){const d=customerData(input),result=db.prepare('INSERT INTO customers(name,phone,email,company,notes) VALUES (?,?,?,?,?)').run(d.name,d.phone,d.email,d.company,d.notes);return{id:result.lastInsertRowid}}
-function updateCustomer(db,id,input){if(!db.prepare('SELECT id FROM customers WHERE id=?').get(id))throw new Error('Klient już nie istnieje.');const d=customerData(input);db.prepare('UPDATE customers SET name=?,phone=?,email=?,company=?,notes=? WHERE id=?').run(d.name,d.phone,d.email,d.company,d.notes,id);return true}
+function updateCustomer(db,id,input){const current=db.prepare('SELECT * FROM customers WHERE id=?').get(id);if(!current)throw new Error('Klient już nie istnieje.');assertCurrentVersion(current,input,'Klient');const d=customerData(input);const changed=['name','phone','email','company','notes'].some(key=>String(current[key]??'')!==String(d[key]??''));if(!changed)return{changed:false,version:Number(current.version||1)};db.prepare('UPDATE customers SET name=?,phone=?,email=?,company=?,notes=? WHERE id=?').run(d.name,d.phone,d.email,d.company,d.notes,id);const fresh=db.prepare('SELECT version FROM customers WHERE id=?').get(id);return{changed:true,version:Number(fresh?.version||current.version||1)}}
 function createVehicle(db,input){const d=vehicleData(db,input);const result=db.prepare('INSERT INTO vehicles(customer_id,plate,vin,make,model,generation,year,engine,power_hp,engine_code,mileage,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(d.customer_id,d.plate,d.vin,d.make,d.model,d.generation,d.year,d.engine,d.power_hp,d.engine_code,d.mileage,d.notes);return{id:result.lastInsertRowid}}
-function updateVehicle(db,id,input){if(!db.prepare('SELECT id FROM vehicles WHERE id=?').get(id))throw new Error('Pojazd już nie istnieje.');const d=vehicleData(db,input,id);db.prepare('UPDATE vehicles SET customer_id=?,plate=?,vin=?,make=?,model=?,generation=?,year=?,engine=?,power_hp=?,engine_code=?,mileage=?,notes=? WHERE id=?').run(d.customer_id,d.plate,d.vin,d.make,d.model,d.generation,d.year,d.engine,d.power_hp,d.engine_code,d.mileage,d.notes,id);return true}
+function updateVehicle(db,id,input){const current=db.prepare('SELECT * FROM vehicles WHERE id=?').get(id);if(!current)throw new Error('Pojazd już nie istnieje.');assertCurrentVersion(current,input,'Pojazd');const d=vehicleData(db,input,id);const keys=['customer_id','plate','vin','make','model','generation','year','engine','power_hp','engine_code','mileage','notes'],changed=keys.some(key=>String(current[key]??'')!==String(d[key]??''));if(!changed)return{changed:false,version:Number(current.version||1)};db.prepare('UPDATE vehicles SET customer_id=?,plate=?,vin=?,make=?,model=?,generation=?,year=?,engine=?,power_hp=?,engine_code=?,mileage=?,notes=? WHERE id=?').run(d.customer_id,d.plate,d.vin,d.make,d.model,d.generation,d.year,d.engine,d.power_hp,d.engine_code,d.mileage,d.notes,id);const fresh=db.prepare('SELECT version FROM vehicles WHERE id=?').get(id);return{changed:true,version:Number(fresh?.version||current.version||1)}}
 
 module.exports={normalizedPlate,normalizedVin,customerData,vehicleData,createCustomer,updateCustomer,createVehicle,updateVehicle}

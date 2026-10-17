@@ -776,6 +776,20 @@ app.on('browser-window-created', (_, win) => {
       }`)
       await delay(300)
       assert.equal(database.prepare('SELECT company FROM customers WHERE id=?').get(vehicleOnlyCustomer).company,'Warsztat Testowy')
+      await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Edytuj klienta Klient Pojazdu UI"]').click()`)
+      await delay(180)
+      database.prepare('UPDATE customers SET company=?,version=version+1 WHERE id=?').run('Firma zsynchronizowana',vehicleOnlyCustomer)
+      await win.webContents.executeJavaScript(`{
+        const field=[...document.querySelectorAll('.modal label')].find(x=>x.textContent.includes('Firma')).querySelector('input');
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,'Nieaktualna firma z PC');
+        field.dispatchEvent(new Event('input',{bubbles:true}));
+        [...document.querySelectorAll('.modal button')].find(x=>x.textContent==='Zapisz').click();
+      }`)
+      await delay(250)
+      assert.equal(database.prepare('SELECT company FROM customers WHERE id=?').get(vehicleOnlyCustomer).company,'Firma zsynchronizowana')
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.modal .formError')?.textContent.includes('innym')`),true)
+      await win.webContents.executeJavaScript(`document.querySelector('.modal .formError button').click()`)
+      await delay(300)
       await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Edytuj pojazd PO DELETE"]').click()`)
       await delay(200)
       await win.webContents.executeJavaScript(`{
@@ -787,6 +801,21 @@ app.on('browser-window-created', (_, win) => {
       await delay(300)
       assert.equal(database.prepare('SELECT mileage FROM vehicles WHERE id=?').get(vehicleOnly).mileage,76543)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.appFeedbackToast')?.textContent.includes('Dane pojazdu zaktualizowane')`),true)
+      await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Edytuj pojazd PO DELETE"]').click()`)
+      await delay(180)
+      database.prepare('UPDATE vehicles SET mileage=?,version=version+1 WHERE id=?').run(78000,vehicleOnly)
+      await win.webContents.executeJavaScript(`{
+        const field=[...document.querySelectorAll('.modal label')].find(x=>x.textContent.includes('Przebieg')).querySelector('input');
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,'77000');
+        field.dispatchEvent(new Event('input',{bubbles:true}));
+        [...document.querySelectorAll('.modal button')].find(x=>x.textContent==='Zapisz pojazd').click();
+      }`)
+      await delay(250)
+      assert.equal(database.prepare('SELECT mileage FROM vehicles WHERE id=?').get(vehicleOnly).mileage,78000)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.modal .formError')?.textContent.includes('innym')`),true)
+      await win.webContents.executeJavaScript(`document.querySelector('.modal .formError button').click()`)
+      await delay(300)
+      console.log('CUSTOMER_VEHICLE_SYNC_CONFLICT','stale customer and vehicle edits were rejected and current records reloaded')
       console.log('GLOBAL_FEEDBACK_TOAST','successful edit produced one accessible shared application notification')
       console.log('CUSTOMER_VEHICLE_EDIT','customer company and vehicle mileage editing verified')
       const profileOrder=database.prepare("INSERT INTO orders(vehicle_id,title,status,labor_hours,labor_rate,parts_sale,parts_cost) VALUES (?,'Rozrząd i serwis','NAPRAWA',2,220,300,120)").run(vehicleOnly).lastInsertRowid
