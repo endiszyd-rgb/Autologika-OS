@@ -5,7 +5,7 @@ const {stopActiveWorkLogs}=require('./work-time.cjs')
 function getOrder(db,id){
   const orderId=Number(id)
   if(!Number.isInteger(orderId)||orderId<=0)throw new Error('Nie wybrano zlecenia.')
-  const order=db.prepare('SELECT id,status,wait_state,closed_at,archived_at FROM orders WHERE id=?').get(orderId)
+  const order=db.prepare('SELECT * FROM orders WHERE id=?').get(orderId)
   if(!order)throw new Error('Zlecenie nie istnieje.')
   return order
 }
@@ -32,6 +32,33 @@ function updateOrderWait(db,id,waitState){
     db.prepare('UPDATE orders SET wait_state=? WHERE id=?').run(next,order.id)
     db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(order.id,'WAIT','Zmiana oczekiwania',`${order.wait_state||'BRAK'} → ${next}`)
     return true
+  })()
+}
+
+function updateOrderDetails(db,id,data={}){
+  const order=getOrder(db,id)
+  if(order.archived_at||order.status==='WYDANE')throw new Error('Zamknięte zlecenie można zmienić dopiero po kontrolowanym przywróceniu do aktywnych.')
+  const title=String(data.title??order.title??'').trim()
+  const complaint=String(data.complaint??order.complaint??'').trim()
+  const priority=String(data.priority??order.priority??'NORMALNY').toUpperCase()
+  const diagnosisLimit=Number(data.diagnosis_limit??order.diagnosis_limit??0)
+  const dueAt=String(data.due_at??order.due_at??'').trim()||null
+  if(!title)throw new Error('Nazwa zlecenia jest wymagana.')
+  if(title.length>180)throw new Error('Nazwa zlecenia może mieć maksymalnie 180 znaków.')
+  if(complaint.length>5000)throw new Error('Opis zgłoszenia jest zbyt długi.')
+  if(!['NORMALNY','PILNY'].includes(priority))throw new Error('Nieprawidłowy priorytet zlecenia.')
+  if(!Number.isFinite(diagnosisLimit)||diagnosisLimit<0||diagnosisLimit>1000000)throw new Error('Limit diagnostyki musi być liczbą nieujemną.')
+  if(dueAt&&!Number.isFinite(Date.parse(dueAt)))throw new Error('Nieprawidłowy termin zlecenia.')
+  return db.transaction(()=>{
+    db.prepare('UPDATE orders SET title=?,complaint=?,priority=?,diagnosis_limit=?,due_at=? WHERE id=?').run(title,complaint,priority,diagnosisLimit,dueAt,order.id)
+    const changes=[]
+    if(title!==order.title)changes.push(`nazwa: ${order.title||'brak'} → ${title}`)
+    if(complaint!==String(order.complaint||''))changes.push('zaktualizowano zgłoszenie klienta')
+    if(priority!==order.priority)changes.push(`priorytet: ${order.priority||'NORMALNY'} → ${priority}`)
+    if(diagnosisLimit!==Number(order.diagnosis_limit||0))changes.push(`limit diagnostyki: ${diagnosisLimit.toFixed(2)} zł`)
+    if((dueAt||'')!==(order.due_at||''))changes.push(dueAt?'zmieniono termin':'usunięto termin')
+    db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(order.id,'ORDER_DETAILS_UPDATED','Zmieniono dane zlecenia',changes.join(' · ')||'Zapisano dane bez zmiany wartości')
+    return{id:order.id,title,complaint,priority,diagnosis_limit:diagnosisLimit,due_at:dueAt}
   })()
 }
 
@@ -80,4 +107,4 @@ function reopenOrder(db,id,note){
   })()
 }
 
-module.exports={STATUSES,WAIT_STATES,archiveOrder,reopenOrder,releaseOrder,requireOrderReadyForRelease,updateOrderStatus,updateOrderWait}
+module.exports={STATUSES,WAIT_STATES,archiveOrder,reopenOrder,releaseOrder,requireOrderReadyForRelease,updateOrderDetails,updateOrderStatus,updateOrderWait}

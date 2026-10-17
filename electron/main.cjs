@@ -20,7 +20,7 @@ const { readBarcodeCache, writeBarcodeHit, writeBarcodeMiss, pruneBarcodeCache }
 const { createOrderItem, issueInventoryPart, jobPartTechnicalDescription, removeOrderItem, requireEditableOrder, updateOrderItem, updateOrderItemDescription } = require('./inventory-usage.cjs')
 const { syncJobPartBilling } = require('./job-part-installation.cjs')
 const { reconcileOrderPartWait, validateJobPartStatus } = require('./job-part-workflow.cjs')
-const { archiveOrder, reopenOrder, releaseOrder, updateOrderStatus, updateOrderWait } = require('./order-lifecycle.cjs')
+const { archiveOrder, reopenOrder, releaseOrder, updateOrderDetails, updateOrderStatus, updateOrderWait } = require('./order-lifecycle.cjs')
 const { stopWorkLog } = require('./work-time.cjs')
 const { documentHtml: renderProtocolDocument } = require('./protocol-document.cjs')
 const { customerProfile } = require('./customer-profile.cjs')
@@ -497,6 +497,7 @@ ipcMain.handle('orders:updateStatus',(_,{id,status})=>{
 ipcMain.handle('orders:updateWait',(_,{id,waitState})=>{
   return updateOrderWait(getDb(),id,waitState)
 })
+ipcMain.handle('orders:updateDetails',(_,{id,data})=>updateOrderDetails(getDb(),id,data))
 
 ipcMain.handle('orders:updateFinancials',(_,{id,data})=>{const db=getDb();return db.transaction(()=>{requireEditableOrder(db,id);const values=['labor_hours','labor_rate','parts_cost','parts_sale','other_cost','other_sale','discount','diagnosis_fee'].map(key=>Number(data[key]||0));if(values.some(value=>!Number.isFinite(value)||value<0))throw new Error('Wartości finansowe muszą być liczbami nieujemnymi.');db.prepare(`UPDATE orders SET labor_hours=?,labor_rate=?,parts_cost=?,parts_sale=?,other_cost=?,other_sale=?,discount=?,diagnosis_fee=? WHERE id=?`).run(...values,id);db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(id,'FINANCIALS','Zmieniono parametry finansowe zlecenia',`Robocizna ${values[0].toFixed(2)} h × ${values[1].toFixed(2)} zł · rabat ${values[6].toFixed(2)} zł · diagnostyka ${values[7].toFixed(2)} zł`);return true})()})
 ipcMain.handle('orders:updateFinalPrice',(_,{id,price,note})=>{

@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {STATUSES,archiveOrder,reopenOrder,releaseOrder,requireOrderReadyForRelease,updateOrderStatus,updateOrderWait}=require('../electron/order-lifecycle.cjs')
+const {STATUSES,archiveOrder,reopenOrder,releaseOrder,requireOrderReadyForRelease,updateOrderDetails,updateOrderStatus,updateOrderWait}=require('../electron/order-lifecycle.cjs')
 
 test('desktop obsługuje pełny przebieg zgodny z aplikacją Android',()=>{
  assert.deepEqual(STATUSES,['PRZYJETE','DIAGNOZA','WYCENA','AKCEPTACJA','NAPRAWA','QC_NAPRAWY','QC_WYDANIA','PLATNOSC','GOTOWE','WYDANE'])
@@ -9,10 +9,10 @@ test('desktop obsługuje pełny przebieg zgodny z aplikacją Android',()=>{
 
 function database(){
  const db=new DatabaseSync(':memory:')
- db.exec(`CREATE TABLE orders(id INTEGER PRIMARY KEY,status TEXT,wait_state TEXT,closed_at TEXT,archived_at TEXT);
+ db.exec(`CREATE TABLE orders(id INTEGER PRIMARY KEY,title TEXT,complaint TEXT,priority TEXT,diagnosis_limit REAL,due_at TEXT,status TEXT,wait_state TEXT,closed_at TEXT,archived_at TEXT);
  CREATE TABLE order_events(id INTEGER PRIMARY KEY,order_id INTEGER,event_type TEXT,title TEXT,details TEXT);
  CREATE TABLE work_logs(id INTEGER PRIMARY KEY,order_id INTEGER,started_at TEXT,ended_at TEXT,duration_minutes INTEGER);
- INSERT INTO orders VALUES(1,'NAPRAWA','CZESCI',NULL,NULL),(2,'WYDANE','BRAK','2026-09-20 10:00:00',NULL),(3,'GOTOWE','BRAK',NULL,NULL);`)
+ INSERT INTO orders VALUES(1,'Diagnostyka','Hałas','NORMALNY',300,NULL,'NAPRAWA','CZESCI',NULL,NULL),(2,'Serwis','Przegląd','NORMALNY',0,NULL,'WYDANE','BRAK','2026-09-20 10:00:00',NULL),(3,'Opony','','PILNY',0,NULL,'GOTOWE','BRAK',NULL,NULL);`)
  db.transaction=fn=>()=>{db.exec('BEGIN');try{const result=fn();db.exec('COMMIT');return result}catch(error){db.exec('ROLLBACK');throw error}}
  return db
 }
@@ -30,6 +30,20 @@ test('zamkniętego zlecenia nie można zmienić zwykłą zmianą statusu',()=>{
  assert.throws(()=>updateOrderStatus(db,2,'NAPRAWA'),/kontrolowanym przywróceniu/)
  assert.throws(()=>updateOrderWait(db,2,'KLIENT'),/zamkniętym zleceniu/)
  assert.equal(db.prepare('SELECT status FROM orders WHERE id=2').get().status,'WYDANE')
+})
+
+test('edycja danych zlecenia zmienia nazwę i zapisuje historię',()=>{
+ const db=database()
+ const result=updateOrderDetails(db,1,{title:'Wymiana rozrządu',complaint:'Metaliczny hałas po rozruchu',priority:'PILNY',diagnosis_limit:450,due_at:'2026-10-20T14:30'})
+ assert.equal(result.title,'Wymiana rozrządu')
+ assert.deepEqual({...db.prepare('SELECT title,complaint,priority,diagnosis_limit,due_at FROM orders WHERE id=1').get()},{title:'Wymiana rozrządu',complaint:'Metaliczny hałas po rozruchu',priority:'PILNY',diagnosis_limit:450,due_at:'2026-10-20T14:30'})
+ assert.match(db.prepare("SELECT details FROM order_events WHERE event_type='ORDER_DETAILS_UPDATED'").get().details,/Diagnostyka → Wymiana rozrządu/)
+})
+
+test('edycja zlecenia odrzuca pustą nazwę i zamknięte zlecenie',()=>{
+ const db=database()
+ assert.throws(()=>updateOrderDetails(db,1,{title:'   '}),/Nazwa zlecenia jest wymagana/)
+ assert.throws(()=>updateOrderDetails(db,2,{title:'Korekta'}),/Zamknięte zlecenie/)
 })
 
 test('ponowne otwarcie wymaga powodu, przywraca GOTOWE i zapisuje audyt',()=>{
