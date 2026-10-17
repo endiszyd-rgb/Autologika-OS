@@ -3,7 +3,7 @@ import {Icon} from './ui.jsx'
 import './order-workspace.css'
 
 const money=n=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN',maximumFractionDigits:0}).format(Number(n||0))
-const stages=[['PRZYJETE','Przyjęcie'],['DIAGNOZA','Diagnoza'],['WYCENA','Wycena'],['AKCEPTACJA','Akceptacja'],['NAPRAWA','Naprawa'],['QC_NAPRAWY','QC naprawy'],['QC_WYDANIA','QC wydania'],['PLATNOSC','Płatność'],['GOTOWE','Gotowe'],['WYDANE','Wydane']]
+const stages=[['PRZYJETE','Przyjęcie'],['DIAGNOZA','Diagnoza'],['WYCENA','Wycena'],['AKCEPTACJA','Akceptacja'],['NAPRAWA','Naprawa'],['QC_NAPRAWY','Kontrola naprawy'],['QC_WYDANIA','Kontrola wydania'],['PLATNOSC','Płatność'],['GOTOWE','Gotowe'],['WYDANE','Wydane']]
 const openLabels={diagnosis:'diagnostykę',quote:'kosztorys',parts:'części',time:'czas pracy',approval:'akceptacje',payment:'płatność',qc:'kontrolę jakości',closeout:'zamknięcie',timeline:'historię',contact:'kontakt'}
 const groups=[
  ['Realizacja',[['overview','Przegląd','dashboard'],['diagnosis','Diagnostyka','diagnostics'],['quote','Kosztorys','orders'],['parts','Części','inventory'],['time','Czas pracy','reminders']]],

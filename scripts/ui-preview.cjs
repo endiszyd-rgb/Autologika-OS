@@ -447,11 +447,15 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(require('../electron/db.cjs').getDb().prepare('SELECT SUM(amount) n FROM payments WHERE order_id=1').get().n, 600)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.settlementSummary').dataset.paid`),'600.00')
       await openOrderTab('release')
-      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.closeoutOptional')?.textContent.includes('Opcjonalna kontrola')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.closeoutOptional')?.textContent.includes('Dane pomocnicze')`),true)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('[data-release-order]').disabled`),false)
-      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.qcOptionalEditor').open`),false)
+        assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('[data-qc-phase]').length`),2)
+        assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.qcDecision')].every(x=>x.querySelectorAll('button').length===3)`),true)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.closeoutOptional').open`),false)
       await capture('order-closeout')
+      await win.webContents.executeJavaScript(`document.querySelector('.qcWorkflow').scrollIntoView({block:'start'})`)
+      await delay(180)
+      await capture('order-qc-workflow')
       await win.webContents.executeJavaScript(`{
         const field=document.querySelector('select[aria-label="Wybierz zlecenie"]');
         Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(field,'2');
@@ -1062,7 +1066,7 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.workspaceContent button.start').disabled`),true)
       await openOrderTab('release')
       await delay(80)
-      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.qcChecklist input')].every(x=>x.disabled) && document.querySelector('[data-release-order]').textContent.includes('POJAZD WYDANY') && document.querySelector('[data-release-order]').disabled`),true)
+        assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.qcDecision button')].every(x=>x.disabled) && document.querySelector('[data-release-order]').textContent.includes('POJAZD WYDANY') && document.querySelector('[data-release-order]').disabled`),true)
       const lockedOrderId=database.prepare("SELECT o.id FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE v.plate='PO 3WN90'").get().id
       assert.equal(await win.webContents.executeJavaScript(`window.autologika.worklog.start(${lockedOrderId}).then(x=>x.ok===false&&x.error.includes('zamknięte'))`),true)
       assert.equal(await win.webContents.executeJavaScript(`window.autologika.diagnostics.save(${lockedOrderId},{}).then(()=>false).catch(x=>String(x).includes('zamknięte'))`),true)

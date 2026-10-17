@@ -4,7 +4,7 @@ import {effectiveHourlyRate,workLogTimestamp} from './workshop-metrics.mjs'
 
 const moneyFormatter=new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN',maximumFractionDigits:0})
 const money=n=>moneyFormatter.format(Number(n||0))
-const stages=[['PRZYJETE','Przyjęte'],['DIAGNOZA','Diagnoza'],['WYCENA','Wycena'],['AKCEPTACJA','Akceptacja'],['NAPRAWA','Naprawa'],['QC_NAPRAWY','QC naprawy'],['QC_WYDANIA','QC wydania'],['PLATNOSC','Płatność'],['GOTOWE','Gotowe']]
+const stages=[['PRZYJETE','Przyjęte'],['DIAGNOZA','Diagnoza'],['WYCENA','Wycena'],['AKCEPTACJA','Akceptacja'],['NAPRAWA','Naprawa'],['QC_NAPRAWY','Kontrola naprawy'],['QC_WYDANIA','Kontrola wydania'],['PLATNOSC','Płatność'],['GOTOWE','Gotowe']]
 const labels=Object.fromEntries([...stages,['WYDANE','Wydane']])
 const waits={KLIENT:'Kontakt z klientem',CZESCI:'Oczekiwanie na części',DECYZJA:'Decyzja klienta'}
 const positions=[[27,29],[74,35],[34,72],[71,76],[49,17],[18,51],[84,57],[52,86]]

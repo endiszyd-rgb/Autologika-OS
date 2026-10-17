@@ -48,7 +48,7 @@ export function deriveOrderAdvice({order={},diagnosis,items=[],parts=[],approval
   if(order.status==='NAPRAWA'&&!workLogged)return {title:'Zarejestruj czas pracy',detail:'Zakres jest zapisany. Dodaj zakończony wpis czasu pracy.',tab:'time'}
   if(order.status==='NAPRAWA')return {title:'QC wykonanej naprawy',detail:'Prace i czas są zapisane. Sprawdź efekt każdej wykonanej naprawy.',status:'QC_NAPRAWY',wait:'BRAK',tab:'release'}
   if(order.status==='QC_NAPRAWY'&&!qcDone)return {title:'Wykonaj kontrolę naprawy',detail:'Potwierdź punkty kontroli jakości wykonanych prac.',tab:'release'}
-  if(order.status==='QC_NAPRAWY')return {title:'QC przed wydaniem',detail:'Naprawa przeszła kontrolę. Wykonaj końcową kontrolę pojazdu.',status:'QC_WYDANIA',wait:'BRAK',tab:'release'}
+  if(order.status==='QC_NAPRAWY')return {title:'Kontrola przed wydaniem',detail:'Naprawa przeszła kontrolę. Wykonaj końcową kontrolę pojazdu.',status:'QC_WYDANIA',wait:'BRAK',tab:'release'}
   if(order.status==='QC_WYDANIA'&&!qcDone)return {title:'Dokończ kontrolę końcową',detail:'Sprawdź pojazd przed rozliczeniem i wydaniem.',tab:'release'}
   if(order.status==='QC_WYDANIA')return {title:'Przejdź do płatności',detail:'Kontrola końcowa jest zapisana. Rozlicz zlecenie.',status:'PLATNOSC',wait:'BRAK',tab:'settlement'}
   if(order.status==='PLATNOSC'&&due>0.01)return {title:'Rozlicz zlecenie',detail:`Pozostało do zapłaty ${due.toLocaleString('pl-PL',{style:'currency',currency:'PLN',maximumFractionDigits:0})}.`,tab:'settlement'}
