@@ -38,6 +38,10 @@ function updateOrderWait(db,id,waitState){
 function updateOrderDetails(db,id,data={}){
   const order=getOrder(db,id)
   if(order.archived_at||order.status==='WYDANE')throw new Error('Zamknięte zlecenie można zmienić dopiero po kontrolowanym przywróceniu do aktywnych.')
+  const expectedVersion=data.expected_version
+  if(expectedVersion!==undefined&&expectedVersion!==null&&Number(expectedVersion)!==Number(order.version||1)){
+    throw new Error('Zlecenie zostało w międzyczasie zmienione na innym urządzeniu. Zamknij edycję, odśwież dane i spróbuj ponownie.')
+  }
   const title=String(data.title??order.title??'').trim()
   const complaint=String(data.complaint??order.complaint??'').trim()
   const priority=String(data.priority??order.priority??'NORMALNY').toUpperCase()
@@ -49,16 +53,18 @@ function updateOrderDetails(db,id,data={}){
   if(!['NORMALNY','PILNY'].includes(priority))throw new Error('Nieprawidłowy priorytet zlecenia.')
   if(!Number.isFinite(diagnosisLimit)||diagnosisLimit<0||diagnosisLimit>1000000)throw new Error('Limit diagnostyki musi być liczbą nieujemną.')
   if(dueAt&&!Number.isFinite(Date.parse(dueAt)))throw new Error('Nieprawidłowy termin zlecenia.')
-  return db.transaction(()=>{
-    db.prepare('UPDATE orders SET title=?,complaint=?,priority=?,diagnosis_limit=?,due_at=? WHERE id=?').run(title,complaint,priority,diagnosisLimit,dueAt,order.id)
-    const changes=[]
+  const changes=[]
     if(title!==order.title)changes.push(`nazwa: ${order.title||'brak'} → ${title}`)
     if(complaint!==String(order.complaint||''))changes.push('zaktualizowano zgłoszenie klienta')
     if(priority!==order.priority)changes.push(`priorytet: ${order.priority||'NORMALNY'} → ${priority}`)
     if(diagnosisLimit!==Number(order.diagnosis_limit||0))changes.push(`limit diagnostyki: ${diagnosisLimit.toFixed(2)} zł`)
     if((dueAt||'')!==(order.due_at||''))changes.push(dueAt?'zmieniono termin':'usunięto termin')
+  if(!changes.length)return{id:order.id,title,complaint,priority,diagnosis_limit:diagnosisLimit,due_at:dueAt,version:Number(order.version||1),changed:false}
+  return db.transaction(()=>{
+    db.prepare('UPDATE orders SET title=?,complaint=?,priority=?,diagnosis_limit=?,due_at=? WHERE id=?').run(title,complaint,priority,diagnosisLimit,dueAt,order.id)
     db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(order.id,'ORDER_DETAILS_UPDATED','Zmieniono dane zlecenia',changes.join(' · ')||'Zapisano dane bez zmiany wartości')
-    return{id:order.id,title,complaint,priority,diagnosis_limit:diagnosisLimit,due_at:dueAt}
+    const fresh=db.prepare('SELECT version FROM orders WHERE id=?').get(order.id)
+    return{id:order.id,title,complaint,priority,diagnosis_limit:diagnosisLimit,due_at:dueAt,version:Number(fresh?.version||order.version||1),changed:true}
   })()
 }
 

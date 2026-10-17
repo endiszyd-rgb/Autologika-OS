@@ -9,10 +9,10 @@ test('desktop obsługuje pełny przebieg zgodny z aplikacją Android',()=>{
 
 function database(){
  const db=new DatabaseSync(':memory:')
- db.exec(`CREATE TABLE orders(id INTEGER PRIMARY KEY,title TEXT,complaint TEXT,priority TEXT,diagnosis_limit REAL,due_at TEXT,status TEXT,wait_state TEXT,closed_at TEXT,archived_at TEXT);
+ db.exec(`CREATE TABLE orders(id INTEGER PRIMARY KEY,title TEXT,complaint TEXT,priority TEXT,diagnosis_limit REAL,due_at TEXT,status TEXT,wait_state TEXT,closed_at TEXT,archived_at TEXT,version INTEGER NOT NULL DEFAULT 1);
  CREATE TABLE order_events(id INTEGER PRIMARY KEY,order_id INTEGER,event_type TEXT,title TEXT,details TEXT);
  CREATE TABLE work_logs(id INTEGER PRIMARY KEY,order_id INTEGER,started_at TEXT,ended_at TEXT,duration_minutes INTEGER);
- INSERT INTO orders VALUES(1,'Diagnostyka','Hałas','NORMALNY',300,NULL,'NAPRAWA','CZESCI',NULL,NULL),(2,'Serwis','Przegląd','NORMALNY',0,NULL,'WYDANE','BRAK','2026-09-20 10:00:00',NULL),(3,'Opony','','PILNY',0,NULL,'GOTOWE','BRAK',NULL,NULL);`)
+ INSERT INTO orders VALUES(1,'Diagnostyka','Hałas','NORMALNY',300,NULL,'NAPRAWA','CZESCI',NULL,NULL,1),(2,'Serwis','Przegląd','NORMALNY',0,NULL,'WYDANE','BRAK','2026-09-20 10:00:00',NULL,1),(3,'Opony','','PILNY',0,NULL,'GOTOWE','BRAK',NULL,NULL,1);`)
  db.transaction=fn=>()=>{db.exec('BEGIN');try{const result=fn();db.exec('COMMIT');return result}catch(error){db.exec('ROLLBACK');throw error}}
  return db
 }
@@ -44,6 +44,21 @@ test('edycja zlecenia odrzuca pustą nazwę i zamknięte zlecenie',()=>{
  const db=database()
  assert.throws(()=>updateOrderDetails(db,1,{title:'   '}),/Nazwa zlecenia jest wymagana/)
  assert.throws(()=>updateOrderDetails(db,2,{title:'Korekta'}),/Zamknięte zlecenie/)
+})
+
+test('edycja zlecenia odrzuca nieaktualną wersję z innego urządzenia',()=>{
+ const db=database()
+ db.exec('UPDATE orders SET version=4 WHERE id=1')
+ assert.throws(()=>updateOrderDetails(db,1,{title:'Nieaktualna korekta',expected_version:3}),/zmienione na innym urządzeniu/)
+ assert.equal(db.prepare('SELECT title FROM orders WHERE id=1').get().title,'Diagnostyka')
+ assert.equal(db.prepare('SELECT COUNT(*) count FROM order_events').get().count,0)
+})
+
+test('zapis identycznych danych nie zaśmieca historii zlecenia',()=>{
+ const db=database()
+ const result=updateOrderDetails(db,1,{title:'Diagnostyka',complaint:'Hałas',priority:'NORMALNY',diagnosis_limit:300,due_at:null,expected_version:1})
+ assert.equal(result.changed,false)
+ assert.equal(db.prepare('SELECT COUNT(*) count FROM order_events').get().count,0)
 })
 
 test('ponowne otwarcie wymaga powodu, przywraca GOTOWE i zapisuje audyt',()=>{
