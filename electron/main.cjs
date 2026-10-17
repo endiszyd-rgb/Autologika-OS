@@ -13,6 +13,7 @@ const { listAppointments, createAppointment, updateAppointment, removeAppointmen
 const { createSmartJob, listRepairOperations, reserveInventoryPart, issueRepairPart, returnRepairPart, cancelRepairPartReservation, installRepairPart, updateRepairOperation, orderEstimate, snapshotEstimate, createDviInspection, addDviItem, listDvi, decideDviItem, convertDviItemToRepair, createDviToken, resolveDviToken, decideDviItemWithToken } = require('./repair-operations.cjs')
 const { deletionPreview, removeEntity } = require('./entity-deletion.cjs')
 const { createCustomer, updateCustomer, createVehicle, updateVehicle } = require('./record-editing.cjs')
+const { insertOrder, createOrderBundle } = require('./order-creation.cjs')
 const { decodeRegistrationPayload } = require('./registration-decoder.cjs')
 const { LOOKUP_VERSION, normalizeBarcode, normalizePartNumber, isGtin, lookupBarcodeOnline, lookupPartNumberOnline } = require('./part-catalog.cjs')
 const { deleteInventoryPart } = require('./inventory-record.cjs')
@@ -451,7 +452,8 @@ ipcMain.handle('vehicleFindings:setStatus',(_,{id,status})=>{getDb().prepare(`UP
 
 ipcMain.handle('orders:list',(_,status='')=>{const db=getDb();if(status==='ACTIVE')return db.prepare(`${orderSelect} WHERE o.archived_at IS NULL AND o.status!='WYDANE' ORDER BY o.opened_at DESC`).all();if(status==='ARCHIVE')return db.prepare(`${orderSelect} WHERE o.archived_at IS NOT NULL OR o.status='WYDANE' ORDER BY COALESCE(o.archived_at,o.closed_at,o.opened_at) DESC`).all();return status?db.prepare(`${orderSelect} WHERE o.status=? AND o.archived_at IS NULL ORDER BY o.opened_at DESC`).all(status):db.prepare(`${orderSelect} WHERE o.archived_at IS NULL AND o.status!='WYDANE' ORDER BY o.opened_at DESC`).all()})
 ipcMain.handle('orders:get',(_,id)=>getDb().prepare(`${orderSelect} WHERE o.id=?`).get(id))
-ipcMain.handle('orders:create',(_,d)=>{const r=getDb().prepare(`INSERT INTO orders(vehicle_id,title,complaint,status,priority,diagnosis_limit,labor_rate,diagnosis_fee,source,due_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(d.vehicle_id,d.title,d.complaint||'','PRZYJETE',d.priority||'NORMALNY',+d.diagnosis_limit||0,+d.labor_rate||220,+d.diagnosis_fee||0,d.source||'nieznane',d.due_at||null);return{id:r.lastInsertRowid}})
+ipcMain.handle('orders:create',(_,d)=>{const result=getDb().transaction(()=>insertOrder(getDb(),Number(d.vehicle_id),d,d.allow_duplicate===true))();return{id:result.order_id,...result}})
+ipcMain.handle('orders:createComplete',(_,payload)=>createOrderBundle(getDb(),payload))
 ipcMain.handle('orders:archive',(_event,id)=>archiveOrder(getDb(),id))
 ipcMain.handle('orders:restore',(_event,{id,note})=>reopenOrder(getDb(),id,note))
 ipcMain.handle('orders:deletePreview',(_event,id)=>deletionPreview(getDb(),'order',id))
@@ -464,15 +466,20 @@ ipcMain.handle('intake:create',(_,d)=>{
     let customer=selectedCustomerId?db.prepare('SELECT * FROM customers WHERE id=?').get(selectedCustomerId):null
     if(selectedCustomerId&&!customer)throw new Error('Wybrany klient nie istnieje już w kartotece. Odśwież listę i wybierz go ponownie.')
     if(!customer&&phone)customer=db.prepare("SELECT * FROM customers WHERE REPLACE(REPLACE(phone,' ',''),'-','')=? ORDER BY id DESC LIMIT 1").get(phone.replace(/[ -]/g,''))
+    let createdCustomer=false
     if(!customer){
       const cr=db.prepare('INSERT INTO customers(name,phone,email,company,notes) VALUES (?,?,?,?,?)').run(d.customer_name||'Klient',phone,d.customer_email||'',d.company||'',d.customer_notes||'')
       customer={id:cr.lastInsertRowid}
+      createdCustomer=true
     }
     let vehicle=selectedVehicleId?db.prepare('SELECT * FROM vehicles WHERE id=?').get(selectedVehicleId):null
     if(selectedVehicleId&&!vehicle)throw new Error('Wybrany pojazd nie istnieje już w kartotece. Odśwież listę i wybierz go ponownie.')
     if(!vehicle&&vin) vehicle=db.prepare('SELECT * FROM vehicles WHERE UPPER(vin)=? LIMIT 1').get(vin)
     if(!vehicle && plate) vehicle=db.prepare('SELECT * FROM vehicles WHERE customer_id=? AND UPPER(plate)=? ORDER BY id DESC LIMIT 1').get(customer.id,plate)
-    if(selectedCustomerId&&vehicle&&Number(vehicle.customer_id)!==Number(customer.id))throw new Error('Wybrany pojazd nie należy do wskazanego klienta.')
+    if(vehicle&&Number(vehicle.customer_id)!==Number(customer.id)){
+      if(createdCustomer)throw new Error('Pojazd o tym VIN-ie lub numerze rejestracyjnym istnieje już w kartotece. Wybierz zapisany pojazd i jego właściciela zamiast tworzyć nowego klienta.')
+      throw new Error('Wybrany pojazd nie należy do wskazanego klienta.')
+    }
     if(!vehicle){
       const vr=db.prepare('INSERT INTO vehicles(customer_id,plate,vin,make,model,generation,year,engine,power_hp,engine_code,mileage,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(customer.id,plate,vin,d.make||'',d.model||'',d.generation||'',d.year||null,d.engine||'',+d.power_hp||null,d.engine_code||'',+d.mileage||0,d.vehicle_notes||'')
       vehicle={id:vr.lastInsertRowid}
@@ -482,11 +489,8 @@ ipcMain.handle('intake:create',(_,d)=>{
       db.prepare(`UPDATE vehicles SET plate=COALESCE(NULLIF(?,''),plate),vin=COALESCE(NULLIF(?,''),vin),make=COALESCE(NULLIF(?,''),make),model=COALESCE(NULLIF(?,''),model),generation=COALESCE(NULLIF(?,''),generation),year=COALESCE(?,year),engine=COALESCE(NULLIF(?,''),engine),power_hp=COALESCE(?,power_hp),engine_code=COALESCE(NULLIF(?,''),engine_code),mileage=CASE WHEN ?>0 THEN ? ELSE mileage END WHERE id=?`)
         .run(plate,vin,d.make||'',d.model||'',d.generation||'',d.year||null,d.engine||'',+d.power_hp||null,d.engine_code||'',suppliedMileage,suppliedMileage,vehicle.id)
     }
-    const or=db.prepare(`INSERT INTO orders(vehicle_id,title,complaint,status,priority,diagnosis_limit,labor_rate,diagnosis_fee,source,due_at,wait_state) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
-      .run(vehicle.id,d.title||'Nowe zlecenie',d.complaint||'','PRZYJETE',d.priority||'NORMALNY',+d.diagnosis_limit||0,+d.labor_rate||220,+d.diagnosis_fee||0,d.source||'nieznane',d.due_at||null,'BRAK')
-    db.prepare(`INSERT INTO order_notes(order_id,intake_notes,release_notes,qc_notes) VALUES (?,?,?,?)`).run(or.lastInsertRowid,d.intake_notes||'','','')
-    db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(or.lastInsertRowid,'INTAKE','Przyjęcie pojazdu',d.complaint||'')
-    return {order_id:or.lastInsertRowid,vehicle_id:vehicle.id,customer_id:customer.id}
+    const order=insertOrder(db,vehicle.id,d,d.allow_duplicate===true)
+    return {...order,customer_id:Number(customer.id)}
   })
   return tx()
 })

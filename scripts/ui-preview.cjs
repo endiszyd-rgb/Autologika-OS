@@ -94,7 +94,7 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Model')).querySelector('select').value`),'Corolla')
       console.log('GLOBAL_AZTEC_INTAKE','AZTEC captured over an active input and redirected from settings to populated quick intake')
       const inventoryDb=require('../electron/db.cjs').getDb()
-      const intakeActive=inventoryDb.prepare(`SELECT o.id order_id,o.vehicle_id,v.customer_id,v.mileage FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE o.archived_at IS NULL AND o.status!='WYDANE' ORDER BY o.id LIMIT 1`).get()
+      const intakeActive=inventoryDb.prepare(`SELECT o.id order_id,o.vehicle_id,v.customer_id,v.mileage,v.vin,v.plate,v.make FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE o.archived_at IS NULL AND o.status!='WYDANE' ORDER BY o.id LIMIT 1`).get()
       assert.ok(intakeActive)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.intakeRecordPicker select')[0].options.length>1`),true)
       await win.webContents.executeJavaScript(`{
@@ -113,6 +113,14 @@ app.on('browser-window-created', (_, win) => {
       await delay(250)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.intakeDuplicateWarning b').textContent.includes(${JSON.stringify(`#${intakeActive.order_id}`)})`),true)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.stickyIntake .primary').disabled`),true)
+      const duplicateError=await win.webContents.executeJavaScript(`window.autologika.intake.create({customer_id:${Number(intakeActive.customer_id)},vehicle_id:${Number(intakeActive.vehicle_id)},title:'Nieświadomy duplikat'}).then(()=>null).catch(error=>error.message||String(error))`)
+      assert.equal(String(duplicateError).includes('aktywne zlecenie'),true)
+      if(intakeActive.vin){
+        const protectedCounts={customers:inventoryDb.prepare('SELECT COUNT(*) n FROM customers').get().n,vehicles:inventoryDb.prepare('SELECT COUNT(*) n FROM vehicles').get().n,orders:inventoryDb.prepare('SELECT COUNT(*) n FROM orders').get().n}
+        const ownerError=await win.webContents.executeJavaScript(`window.autologika.intake.create({customer_name:'Błędny nowy właściciel',vin:${JSON.stringify(intakeActive.vin)},plate:${JSON.stringify(intakeActive.plate||'')},make:${JSON.stringify(intakeActive.make||'Auto')},title:'Błędne powiązanie'}).then(()=>null).catch(error=>error.message||String(error))`)
+        assert.equal(String(ownerError).includes('istnieje już w kartotece'),true)
+        assert.deepEqual({customers:inventoryDb.prepare('SELECT COUNT(*) n FROM customers').get().n,vehicles:inventoryDb.prepare('SELECT COUNT(*) n FROM vehicles').get().n,orders:inventoryDb.prepare('SELECT COUNT(*) n FROM orders').get().n},protectedCounts)
+      }
       if(Number(intakeActive.mileage)>0){
         await win.webContents.executeJavaScript(`{const input=[...document.querySelectorAll('.formgrid label')].find(x=>x.textContent.startsWith('Przebieg')).querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(String(Number(intakeActive.mileage)-1))});input.dispatchEvent(new Event('input',{bubbles:true}));}`)
         await delay(150)
@@ -560,7 +568,11 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(database.prepare('SELECT COUNT(*) n FROM vehicles').get().n,countsBefore.vehicles+1)
       assert.equal(database.prepare('SELECT COUNT(*) n FROM orders').get().n,countsBefore.orders+1)
       assert.equal(database.prepare("SELECT COUNT(*) n FROM vehicles WHERE plate='PO TEST1' AND make='Audi'").get().n,1)
-      console.log('NEW_ORDER_VEHICLE', 'existing vehicle list and inline customer/vehicle creation verified')
+      const newlyCreatedOrder=database.prepare("SELECT o.id FROM orders o JOIN vehicles v ON v.id=o.vehicle_id WHERE v.plate='PO TEST1' ORDER BY o.id DESC LIMIT 1").get()
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('select[aria-label="Wybierz zlecenie"]').value`),String(newlyCreatedOrder.id))
+      await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Zlecenia"]').click()`)
+      await delay(350)
+      console.log('NEW_ORDER_VEHICLE', 'atomic customer/vehicle/order creation verified and the new order opened in Order Center')
       await delay(250)
       await win.webContents.executeJavaScript(`{
         const setValue=(element,value)=>{const prototype=element.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(prototype,'value').set.call(element,value);element.dispatchEvent(new Event('input',{bubbles:true}));element.dispatchEvent(new Event('change',{bubbles:true}))};
@@ -1159,13 +1171,17 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript("!!document.querySelector('.attentionLauncher.hasAttention')"),true)
       await capture('attention-center')
       console.log('ATTENTION_CENTER','priority queue, persistent counter and operational filters verified')
-      const auditPages=['Diagnostyka','Baza wiedzy','Asystent wiedzy','Pracownicy','Dokumenty']
+      const auditPages=['Diagnostyka','Baza wiedzy','Asystent wiedzy','Pracownicy','Dokumenty','Ustawienia']
       for(const title of auditPages){
         await win.webContents.executeJavaScript(`document.querySelector('nav button[title=${JSON.stringify(title)}]').click()`)
         await delay(300)
         const state=await inspect()
         assert.equal(state.fatal,false,title)
         assert.equal(state.overflow,false,title)
+        if(title==='Ustawienia'){
+          assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.databaseHealth')`),true)
+          assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.databaseMetrics span')].some(node=>node.textContent==='Powiązania robocze')`),true)
+        }
       }
       console.log('NAVIGATION_AUDIT',`${auditPages.length+2} previously uncovered views rendered without errors; debtors open the linked order`)
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Dokumentacja techniczna"]').click()`)
