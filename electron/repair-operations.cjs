@@ -169,7 +169,12 @@ function updateRepairOperation(db,{operationId,data={}}){
     if(!Number.isFinite(parsed)||parsed<min||parsed>max)throw new Error('Nieprawidłowa wartość kosztorysu naprawy.')
     return parsed
   }
+  const text=(value,fallback)=>value===undefined?String(fallback||''):String(value||'').trim()
   const next={
+    title:text(data.title,operation.title),
+    variant:text(data.variant,operation.variant),
+    customer_description:text(data.customer_description,operation.customer_description),
+    technical_description:text(data.technical_description,operation.technical_description),
     planned_hours:number(data.planned_hours,operation.planned_hours),
     labor_rate:number(data.labor_rate,operation.labor_rate),
     labor_cost_rate:number(data.labor_cost_rate,operation.labor_cost_rate),
@@ -178,10 +183,13 @@ function updateRepairOperation(db,{operationId,data={}}){
     other_cost:number(data.other_cost,operation.other_cost),
     other_price:number(data.other_price,operation.other_price)
   }
+  if(!next.title)throw new Error('Nazwa naprawy jest wymagana.')
   return db.transaction(()=>{
-    db.prepare(`UPDATE order_repair_operations SET planned_hours=?,labor_rate=?,labor_cost_rate=?,discount_percent=?,vat_rate=?,other_cost=?,other_price=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(next.planned_hours,next.labor_rate,next.labor_cost_rate,next.discount_percent,next.vat_rate,next.other_cost,next.other_price,operation.id)
-    if(operation.order_item_id)db.prepare('UPDATE order_items SET qty=?,unit_cost=?,unit_price=?,hours_snapshot=?,price_snapshot=? WHERE id=?').run(next.planned_hours,next.labor_cost_rate,next.labor_rate,next.planned_hours,money(next.planned_hours*next.labor_rate),operation.order_item_id)
-    db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(operation.order_id,'REPAIR_ESTIMATE_UPDATED','Zmieniono kosztorys naprawy',`${operation.title} · ${next.planned_hours.toFixed(2)} h · ${money(next.labor_rate)} zł/h · VAT ${next.vat_rate}%`)
+    db.prepare(`UPDATE order_repair_operations SET title=?,variant=?,customer_description=?,technical_description=?,planned_hours=?,labor_rate=?,labor_cost_rate=?,discount_percent=?,vat_rate=?,other_cost=?,other_price=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(next.title,next.variant,next.customer_description,next.technical_description,next.planned_hours,next.labor_rate,next.labor_cost_rate,next.discount_percent,next.vat_rate,next.other_cost,next.other_price,operation.id)
+    if(operation.order_item_id)db.prepare('UPDATE order_items SET name=?,work_name=?,variant_name=?,customer_description=?,technical_description=?,notes=?,qty=?,unit_cost=?,unit_price=?,hours_snapshot=?,price_snapshot=? WHERE id=?').run(next.title,next.title,next.variant,next.customer_description,next.technical_description,next.customer_description,next.planned_hours,next.labor_cost_rate,next.labor_rate,next.planned_hours,money(next.planned_hours*next.labor_rate),operation.order_item_id)
+    if(operation.procedure_run_id)db.prepare('UPDATE work_procedure_runs SET title=?,variant=?,technical_description=? WHERE id=?').run(next.title,next.variant,next.technical_description,operation.procedure_run_id)
+    const renamed=next.title!==operation.title
+    db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(operation.order_id,renamed?'REPAIR_UPDATED':'REPAIR_ESTIMATE_UPDATED',renamed?'Zmieniono naprawę':'Zmieniono kosztorys naprawy',`${renamed?`${operation.title} → `:''}${next.title} · ${next.planned_hours.toFixed(2)} h · ${money(next.labor_rate)} zł/h · VAT ${next.vat_rate}%`)
     return{operationId:operation.id,estimate:calculateRepairEstimate(db,operation.id)}
   })()
 }

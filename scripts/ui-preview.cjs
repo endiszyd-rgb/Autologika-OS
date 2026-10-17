@@ -578,7 +578,22 @@ app.on('browser-window-created', (_, win) => {
       await delay(650)
       assert.equal(database.prepare("SELECT COUNT(*) count FROM order_items WHERE order_id=? AND kind='ROBOCIZNA'").get(flowOrder.id).count,1)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.repairOperationList article').length`),1)
-      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.repairOperationActions button').textContent.includes('Części')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.repairOperationActions button').textContent.includes('Przypisz części')`),true)
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.repairOperationActions button')].find(button=>button.textContent.includes('Edytuj naprawę')).click()`)
+      await delay(120)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.repairIdentityEditor input').value.length>0`),true)
+      await capture('order-repair-editor')
+      await win.webContents.executeJavaScript(`{
+        const set=(prefix,value)=>{const label=[...document.querySelectorAll('.repairIdentityEditor label')].find(row=>row.textContent.startsWith(prefix));const field=label.querySelector('input,textarea');const proto=field instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(field,value);field.dispatchEvent(new Event('input',{bubbles:true}))};
+        set('Nazwa naprawy','Serwis hamulców osi przedniej');set('Opis dla klienta','Wymiana elementów ciernych i kontrola układu');
+      }`)
+      await win.webContents.executeJavaScript(`[...document.querySelectorAll('.repairEstimateEditor button')].find(button=>button.textContent.includes('Zapisz naprawę')).click()`)
+      await delay(450)
+      const editedRepair=database.prepare('SELECT id,title,customer_description,order_item_id,procedure_run_id FROM order_repair_operations WHERE order_id=?').get(flowOrder.id)
+      assert.equal(editedRepair.title,'Serwis hamulców osi przedniej')
+      assert.equal(database.prepare('SELECT name FROM order_items WHERE id=?').get(editedRepair.order_item_id).name,'Serwis hamulców osi przedniej')
+      assert.equal(database.prepare('SELECT title FROM work_procedure_runs WHERE id=?').get(editedRepair.procedure_run_id).title,'Serwis hamulców osi przedniej')
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.repairOperationMain h3').textContent`),'Serwis hamulców osi przedniej')
       assert.equal((await inspect()).overflow,false)
       await capture('order-works-current')
       await openOrderTab('parts')
