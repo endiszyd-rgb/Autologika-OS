@@ -19,7 +19,7 @@ function GenericEngineDiagram(){
  </svg>
 }
 function VerificationBadge({level}){return <span className={'manualVerify '+String(level||'WORKSHOP').toLowerCase()}>{levelText[level]||level||'WARSZTAT'}</span>}
-function ManualDialog({title,close,children,wide=false}){const dialogRef=useModalBehavior(close);return <div className="modalback" onMouseDown={event=>event.target===event.currentTarget&&close()}><div ref={dialogRef} className={'modal '+(wide?'wide':'')} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}><div className="modalhead"><h2>{title}</h2><button type="button" aria-label={'Zamknij: '+title} onClick={close}>?</button></div>{children}</div></div>}
+function ManualDialog({title,close,children,wide=false}){const dialogRef=useModalBehavior(close);return <div className="modalback" onMouseDown={event=>event.target===event.currentTarget&&close()}><div ref={dialogRef} className={'modal '+(wide?'wide':'')} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}><div className="modalhead"><h2>{title}</h2><button type="button" aria-label={'Zamknij: '+title} onClick={close}>&times;</button></div>{children}</div></div>}
 const onlineEngineKey=row=>[row.engine,row.engine_code,row.power_hp,row.generation].map(value=>String(value||'')).join('|')
 
 function OnlineManualSearch({initialVehicle,onClose,onImported}){

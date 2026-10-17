@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.78 — 2026-10-17
+
+### Dyktowanie i czytelniejsza identyfikacja pojazdu
+
+- Dodano dyktowanie zgłoszenia klienta podczas tworzenia nowego zlecenia.
+- Dodano dyktowanie ustaleń i notatek w formularzu wizyty terminarza.
+- W nagłówku zlecenia marka i model są informacją główną, a numer rejestracyjny uzupełnia identyfikację pojazdu.
+- Poprawiono przycisk zamykania okien dokumentacji technicznej.
+- Dodano testy regresji chroniące polskie znaki, dostępność dyktowania i hierarchię danych pojazdu.
+
 ## 1.0.77 — 2026-10-16
 
 ### Interfejs warsztatowy i pełny przebieg zlecenia
