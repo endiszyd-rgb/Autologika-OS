@@ -37,6 +37,7 @@ const { getWorkshopLayout, setWorkshopLayout } = require('./workshop-settings.cj
 const { recognizeDeliveryDocument, importDeliveryDocument, documentHash } = require('./delivery-document.cjs')
 const { wholePartQuantity } = require('./part-quantity.cjs')
 const { approvalDecision, approvalEntry, assertApprovalPending, paymentEntry } = require('./financial-entry.cjs')
+const localAI = require('./local-ai.cjs')
 
 // Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
 app.disableHardwareAcceleration()
@@ -145,6 +146,92 @@ ipcMain.handle('settings:setMonthlyTarget',(_e,value)=>{
   getDb().prepare("INSERT INTO app_settings(setting_key,value,cloud_id,updated_at) VALUES ('monthly_target',?,'monthly-target',CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET value=excluded.value,cloud_id=COALESCE(app_settings.cloud_id,'monthly-target'),updated_at=CURRENT_TIMESTAMP").run(String(target))
   return target
 })
+
+const LOCAL_AI_KEY='local_ai_v1'
+function readLocalAiConfig(){
+  const row=getDb().prepare('SELECT value FROM app_settings WHERE setting_key=? LIMIT 1').get(LOCAL_AI_KEY)
+  let stored={};try{stored=JSON.parse(row?.value||'{}')||{}}catch{}
+  return localAI.normalizeConfig(stored)
+}
+function writeLocalAiConfig(value){
+  const config=localAI.normalizeConfig(value)
+  getDb().prepare(`INSERT INTO app_settings(setting_key,value,cloud_id,updated_at) VALUES (?,?,?,CURRENT_TIMESTAMP)
+    ON CONFLICT(setting_key) DO UPDATE SET value=excluded.value,cloud_id=COALESCE(app_settings.cloud_id,excluded.cloud_id),updated_at=CURRENT_TIMESTAMP`).run(LOCAL_AI_KEY,JSON.stringify(config),'local-ai-v1')
+  return config
+}
+function sendLocalAiProgress(sender,payload){if(sender&&!sender.isDestroyed())sender.send('localAI:progress',payload)}
+ipcMain.handle('localAI:config',()=>readLocalAiConfig())
+ipcMain.handle('localAI:saveConfig',async(_event,value)=>{const config=writeLocalAiConfig({...readLocalAiConfig(),...(value||{})});return localAI.status(config)})
+ipcMain.handle('localAI:status',()=>localAI.status(readLocalAiConfig()))
+ipcMain.handle('localAI:setup',async event=>{
+  if(process.platform!=='win32')throw new Error('Automatyczna instalacja Ollamy jest obecnie dostępna w Windows.')
+  let config=readLocalAiConfig(),current=await localAI.status(config)
+  if(!current.running){
+    let executable=localAI.findOllamaExecutable()
+    if(!executable){
+      const installer=path.join(app.getPath('temp'),'AutoLogika-OllamaSetup.exe')
+      sendLocalAiProgress(event.sender,{stage:'INSTALLER',status:'Pobieranie oficjalnego instalatora Ollamy',percent:0})
+      await localAI.downloadFile(localAI.OLLAMA_INSTALLER_URL,installer,progress=>sendLocalAiProgress(event.sender,progress))
+      sendLocalAiProgress(event.sender,{stage:'INSTALL',status:'Dokończ instalację Ollamy w otwartym oknie',percent:null})
+      await localAI.runInstaller(installer)
+      executable=localAI.findOllamaExecutable()
+    }
+    if(!executable)throw new Error('Nie znaleziono programu Ollama po zakończeniu instalacji.')
+    localAI.startOllama(executable)
+    current=await localAI.waitForServer(config)
+  }
+  if(!current.installed)current=await localAI.pullModel(config,progress=>sendLocalAiProgress(event.sender,progress))
+  config=writeLocalAiConfig({...config,enabled:true,autoAudit:true})
+  current=await localAI.status(config)
+  sendLocalAiProgress(event.sender,{stage:'READY',status:'Lokalny asystent jest gotowy',percent:100})
+  return current
+})
+ipcMain.handle('localAI:pullModel',async event=>{
+  const config=readLocalAiConfig(),current=await localAI.status(config)
+  if(!current.running){const executable=localAI.findOllamaExecutable();if(executable)localAI.startOllama(executable);await localAI.waitForServer(config)}
+  const result=await localAI.pullModel(config,progress=>sendLocalAiProgress(event.sender,progress))
+  writeLocalAiConfig({...config,enabled:true})
+  return result
+})
+function compactText(value,max=3000){return String(value||'').trim().slice(0,max)}
+function repairAiContext(orderId,extra={}){
+  const db=getDb(),id=Number(orderId)
+  const order=db.prepare(`SELECT o.id,o.title,o.complaint,o.status,o.priority,o.due_at,v.make,v.model,v.year,v.engine,v.engine_code,v.vin,v.plate,v.mileage
+    FROM orders o LEFT JOIN vehicles v ON v.id=o.vehicle_id WHERE o.id=?`).get(id)
+  if(!order)throw new Error('Nie znaleziono zlecenia do analizy.')
+  const diagnostic=db.prepare('SELECT symptom_confirmed,dtcs,measurements,hypothesis,conclusion,recommendation FROM diagnostics WHERE order_id=? ORDER BY id DESC LIMIT 1').get(id)||{}
+  const repairs=db.prepare('SELECT title,variant,customer_description,technical_description,status,planned_hours FROM order_repair_operations WHERE order_id=? ORDER BY id').all(id)
+  const parts=db.prepare('SELECT name,part_no,oe_number,source,qty,status,fitment_status FROM repair_parts WHERE order_id=? ORDER BY id').all(id)
+  const cases=db.prepare('SELECT vehicle,engine,symptom,dtcs,measurements,cause,solution,tags FROM knowledge_cases ORDER BY created_at DESC LIMIT 12').all()
+  return {order,diagnostic:Object.fromEntries(Object.entries(diagnostic).map(([key,value])=>[key,compactText(value)])),currentSymptom:compactText(extra.symptoms||''),repairs,parts,workshopCases:cases.map(row=>Object.fromEntries(Object.entries(row).map(([key,value])=>[key,compactText(value,800)])))}
+}
+ipcMain.handle('localAI:analyzeRepair',async(_event,{orderId,extra}={})=>{
+  const config=readLocalAiConfig(),current=await localAI.status(config)
+  if(!current.ready)throw new Error(current.running&&!current.installed?'Model lokalnego AI nie został jeszcze pobrany.':'Lokalne AI nie jest gotowe. Otwórz Ustawienia → Lokalne AI.')
+  return localAI.analyzeRepair(config,repairAiContext(orderId,extra))
+})
+ipcMain.handle('localAI:coachOrder',async(_event,orderId)=>{
+  const config=readLocalAiConfig(),current=await localAI.status(config)
+  if(!current.ready)throw new Error('Lokalne AI nie jest gotowe. Otwórz Ustawienia → Lokalne AI.')
+  const context=repairAiContext(orderId)
+  const db=getDb(),id=Number(orderId)
+  context.payments=db.prepare('SELECT amount,method,paid_at FROM payments WHERE order_id=? ORDER BY id').all(id)
+  context.approvals=db.prepare('SELECT scope,amount,status,decided_at FROM approvals WHERE order_id=? ORDER BY id').all(id)
+  context.qc=db.prepare('SELECT check_key,label,checked,note FROM order_qc WHERE order_id=? AND deleted_at IS NULL ORDER BY id').all(id)
+  context.workLogs=db.prepare('SELECT note,started_at,ended_at,duration_minutes FROM work_logs WHERE order_id=? ORDER BY id').all(id)
+  return localAI.analyzeWorkflow(config,context)
+})
+ipcMain.handle('localAI:analyzeInterface',async(_event,snapshot={})=>{
+  const config=readLocalAiConfig(),current=await localAI.status(config)
+  if(!current.ready||!config.autoAudit)return{skipped:true,reason:'DISABLED'}
+  let recentErrors='';try{const log=fs.readFileSync(rendererLogPath(),'utf8');recentErrors=log.slice(-2500)}catch{}
+  const safe={page:compactText(snapshot.page,80),title:compactText(snapshot.title,200),viewport:snapshot.viewport||{},metrics:snapshot.metrics||{},headings:Array.isArray(snapshot.headings)?snapshot.headings.slice(0,30).map(x=>compactText(x,160)):[],buttons:Array.isArray(snapshot.buttons)?snapshot.buttons.slice(0,60).map(x=>compactText(x,120)):[],visibleText:compactText(snapshot.visibleText,6000),rendererErrors:compactText(recentErrors,2500)}
+  const result=await localAI.analyzeInterface(config,safe)
+  const file=localAI.appendFeedback(app.getPath('documents'),{page:safe.page,model:result.model,content:result.content})
+  return{ok:true,file,content:result.content,model:result.model}
+})
+ipcMain.handle('localAI:feedbackPath',()=>localAI.feedbackPath(app.getPath('documents')))
+ipcMain.handle('localAI:openFeedback',async()=>{const directory=localAI.feedbackDirectory(app.getPath('documents'));fs.mkdirSync(directory,{recursive:true});const error=await shell.openPath(directory);if(error)throw new Error(error);return{ok:true,path:directory}})
 
 ipcMain.handle('settings:getCatalogPrices',()=>{
   const row=getDb().prepare("SELECT value FROM app_settings WHERE setting_key='work_catalog_prices_v1' LIMIT 1").get()

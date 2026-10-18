@@ -45,6 +45,12 @@ contextBridge.exposeInMainWorld('autologika', {
   jobParts: { list:(filter='OTWARTE')=>ipcRenderer.invoke('jobParts:list',filter), create:data=>ipcRenderer.invoke('jobParts:create',data), update:(id,data)=>ipcRenderer.invoke('jobParts:update',{id,data}), remove:id=>ipcRenderer.invoke('jobParts:remove',id), status:(id,status)=>ipcRenderer.invoke('jobParts:status',{id,status}), batchStatus:(ids,status,externalOrderNo='',expectedAt=null)=>ipcRenderer.invoke('jobParts:batchStatus',{ids,status,externalOrderNo,expectedAt}), forOrder:orderId=>ipcRenderer.invoke('jobParts:forOrder',orderId) },
   purchases: { list:()=>ipcRenderer.invoke('purchases:list'), create:data=>ipcRenderer.invoke('purchases:create',data), get:id=>ipcRenderer.invoke('purchases:get',id), addItem:(purchaseId,data)=>ipcRenderer.invoke('purchases:addItem',{purchaseId,data}), setStatus:(id,status)=>ipcRenderer.invoke('purchases:setStatus',{id,status}) },
   assistant: { search:q=>ipcRenderer.invoke('assistant:search',q) },
+  localAI: {
+    config:()=>ipcRenderer.invoke('localAI:config'), status:()=>ipcRenderer.invoke('localAI:status'), saveConfig:value=>ipcRenderer.invoke('localAI:saveConfig',value),
+    setup:()=>ipcRenderer.invoke('localAI:setup'), pullModel:()=>ipcRenderer.invoke('localAI:pullModel'), analyzeRepair:(orderId,extra={})=>ipcRenderer.invoke('localAI:analyzeRepair',{orderId,extra}), coachOrder:orderId=>ipcRenderer.invoke('localAI:coachOrder',orderId),
+    analyzeInterface:snapshot=>ipcRenderer.invoke('localAI:analyzeInterface',snapshot), feedbackPath:()=>ipcRenderer.invoke('localAI:feedbackPath'), openFeedback:()=>ipcRenderer.invoke('localAI:openFeedback'),
+    onProgress:cb=>{const fn=(_event,data)=>cb(data);ipcRenderer.on('localAI:progress',fn);return()=>ipcRenderer.removeListener('localAI:progress',fn)}
+  },
   finance: { analytics:()=>ipcRenderer.invoke('finance:analytics') },
   qc: { list:orderId=>ipcRenderer.invoke('qc:list',orderId), set:(orderId,key,label,checked,note='')=>ipcRenderer.invoke('qc:set',{orderId,key,label,checked,note}) },
   documents: { list:()=>ipcRenderer.invoke('documents:list'), open:id=>ipcRenderer.invoke('documents:open',id), reveal:id=>ipcRenderer.invoke('documents:reveal',id) },

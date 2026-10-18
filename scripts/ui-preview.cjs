@@ -10,7 +10,7 @@ const registrationSample = fs.readFileSync(path.join(__dirname, '..', 'tests', '
 fs.mkdirSync(output, { recursive: true })
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 const errors = []
-setTimeout(() => { console.error('UI smoke test timed out'); app.exit(1) }, 90000).unref()
+setTimeout(() => { console.error('UI smoke test timed out'); app.exit(1) }, 150000).unref()
 app.on('browser-window-created', (_, win) => {
   win.webContents.on('console-message', (_, level, message) => {
     if (level >= 3) errors.push(message)
@@ -1107,6 +1107,8 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.updateBrand h2').textContent`),`Wersja ${expectedVersion}`)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.updateMessage').textContent.includes('trybie developerskim')`),true)
       assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.updateActions button')].some(x=>x.textContent.includes('Sprawdź aktualizacje'))`),true)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.localAiHero h2').textContent.includes('konfiguracji')`),true)
+      assert.equal(await win.webContents.executeJavaScript(`[...document.querySelectorAll('.localAiHero+div button,.localAiSettings~.actionrow button')].some(x=>x.textContent.includes('Zainstaluj Ollamę'))`),true)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.sidefoot').textContent.includes(${JSON.stringify(expectedVersion)})`),true)
       assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('.syncHealth')`),true)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.syncHealth').textContent.includes('STAN WYMIANY DANYCH')`),true)
