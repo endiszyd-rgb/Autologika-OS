@@ -88,3 +88,74 @@ test('koordynator procesu naprawy zwraca następne działania i ryzyka', async t
   assert.deepEqual(result.next_actions, answer.next_actions)
   assert.deepEqual(result.risks, answer.risks)
 })
+
+test('lokalne AI ponawia analizę po wykryciu zapętlenia tokenów', async t => {
+  const bodies = []
+  const api = await fakeOllama((request, response) => {
+    const chunks = []
+    request.on('data', chunk => chunks.push(chunk))
+    request.on('end', () => {
+      bodies.push(JSON.parse(Buffer.concat(chunks).toString('utf8')))
+      response.setHeader('Content-Type', 'application/json')
+      if (bodies.length === 1) {
+        response.statusCode = 500
+        return response.end(JSON.stringify({ error: 'prediction aborted, token repeat limit reached' }))
+      }
+      response.end(JSON.stringify({ model: 'qwen3:4b-instruct', message: { role: 'assistant', content: 'Analiza zakończona.' } }))
+    })
+  })
+  t.after(api.close)
+
+  const result = await localAI.chat({ enabled: true, endpoint: api.endpoint, model: 'qwen3:4b-instruct' }, [{ role: 'system', content: 'Odpowiedz krótko.' }])
+
+  assert.equal(result.content, 'Analiza zakończona.')
+  assert.equal(bodies.length, 2)
+  assert.equal(bodies[0].options.num_predict, 1200)
+  assert.equal(bodies[0].options.temperature, 0.65)
+  assert.equal(bodies[1].options.num_predict, 900)
+  assert.equal(bodies[1].options.temperature, 0.75)
+  assert.match(bodies[1].messages[0].content, /Nie powtarzaj/)
+})
+
+test('lokalne AI zwraca czytelny błąd po dwóch zapętlonych odpowiedziach', async t => {
+  let calls = 0
+  const api = await fakeOllama((request, response) => {
+    calls++
+    request.resume()
+    request.on('end', () => {
+      response.statusCode = 500
+      response.end('{"error":"prediction aborted, token repeat limit reached"}')
+    })
+  })
+  t.after(api.close)
+
+  await assert.rejects(
+    localAI.chat({ enabled: true, endpoint: api.endpoint, model: 'qwen3:4b-instruct' }, [{ role: 'user', content: 'Sprawdź zlecenie.' }]),
+    /Lokalny model zapętlił odpowiedź/
+  )
+  assert.equal(calls, 2)
+})
+
+test('lokalne AI zastępuje niedziałający schemat pełny trybem JSON', async t => {
+  const bodies = []
+  const schema = { type: 'object', properties: { status: { type: 'string' } }, required: ['status'] }
+  const api = await fakeOllama((request, response) => {
+    const chunks = []
+    request.on('data', chunk => chunks.push(chunk))
+    request.on('end', () => {
+      bodies.push(JSON.parse(Buffer.concat(chunks).toString('utf8')))
+      response.setHeader('Content-Type', 'application/json')
+      response.end(JSON.stringify(bodies.length === 1
+        ? { model: '', message: { role: '', content: '' }, done: false }
+        : { model: 'qwen3:8b', message: { role: 'assistant', content: '{"status":"OK"}' }, done: true }))
+    })
+  })
+  t.after(api.close)
+
+  const result = await localAI.chat({ endpoint: api.endpoint, model: 'qwen3:8b' }, [{ role: 'system', content: 'Zwróć wynik.' }], schema)
+
+  assert.equal(result.content, '{"status":"OK"}')
+  assert.deepEqual(bodies[0].format, schema)
+  assert.equal(bodies[1].format, 'json')
+  assert.match(bodies[1].messages[0].content, /Wymagany schemat JSON/)
+})

@@ -87,22 +87,56 @@ async function pullModel(config = {}, onProgress = () => {}) {
   return status({ ...cfg, enabled: true })
 }
 
-async function chat(config = {}, messages = [], format = null) {
-  const cfg = normalizeConfig(config)
+function isTokenRepeatError(error) {
+  return /prediction aborted|token repeat limit reached/i.test(String(error?.message || error || ''))
+}
+
+function isEmptyModelError(error) {
+  return error?.code === 'EMPTY_AI_RESPONSE'
+}
+
+function chatBody(config, messages, format, retry = false) {
+  const retryInstruction = retry
+    ? `\nNie powtarzaj zdań ani fragmentów odpowiedzi. Zakończ odpowiedź po wypełnieniu wymaganej struktury.${format && typeof format === 'object' ? ` Wymagany schemat JSON: ${JSON.stringify(format)}` : ''}`
+    : ''
   const body = {
-    model: cfg.model,
-    messages: messages.map(message => ({ role: message.role, content: String(message.content || '') })),
+    model: config.model,
+    messages: messages.map(message => ({
+      role: message.role,
+      content: `${String(message.content || '')}${retry && message.role === 'system' ? retryInstruction : ''}`
+    })),
     stream: false,
     think: false,
     keep_alive: '10m',
-    options: { temperature: 0.2, num_ctx: 8192 }
+    options: retry
+      ? { temperature: 0.75, top_p: 0.9, num_ctx: 8192, num_predict: 900 }
+      : { temperature: 0.65, top_p: 0.9, num_ctx: 8192, num_predict: 1200 }
   }
-  if (format) body.format = format
-  const response = await request(cfg.endpoint, '/api/chat', { method: 'POST', body, timeout: 8 * 60 * 1000 })
-  const payload = response.json()
-  const content = String(payload.message?.content || '').trim()
-  if (!content) throw new Error('Lokalny model zwrócił pustą odpowiedź.')
-  return { content, model: payload.model || cfg.model, metrics: { promptTokens: payload.prompt_eval_count || 0, responseTokens: payload.eval_count || 0 } }
+  if (format) body.format = retry && typeof format === 'object' ? 'json' : format
+  return body
+}
+
+async function chat(config = {}, messages = [], format = null) {
+  const cfg = normalizeConfig(config)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await request(cfg.endpoint, '/api/chat', { method: 'POST', body: chatBody(cfg, messages, format, attempt === 1), timeout: 8 * 60 * 1000 })
+      const payload = response.json()
+      const content = String(payload.message?.content || '').trim()
+      if (!content) {
+        const emptyError = new Error('Lokalny model zwrócił pustą odpowiedź.')
+        emptyError.code = 'EMPTY_AI_RESPONSE'
+        throw emptyError
+      }
+      return { content, model: payload.model || cfg.model, metrics: { promptTokens: payload.prompt_eval_count || 0, responseTokens: payload.eval_count || 0 } }
+    } catch (error) {
+      const retryable = isTokenRepeatError(error) || isEmptyModelError(error)
+      if (attempt === 0 && retryable) continue
+      if (isTokenRepeatError(error)) throw new Error('Lokalny model zapętlił odpowiedź. Uruchom analizę ponownie; jeżeli problem wraca, wybierz większy model w Ustawieniach lokalnego AI.')
+      if (isEmptyModelError(error)) throw new Error('Lokalny model nie utworzył odpowiedzi. Uruchom analizę ponownie albo zaktualizuj Ollamę w Ustawieniach lokalnego AI.')
+      throw error
+    }
+  }
 }
 
 function parseJsonResponse(result) {
@@ -207,4 +241,4 @@ async function waitForServer(config, timeoutMs = 45000) {
   throw new Error('Ollama została zainstalowana, ale lokalny serwer nie uruchomił się na czas.')
 }
 
-module.exports = { DEFAULT_ENDPOINT, DEFAULT_MODEL, OLLAMA_INSTALLER_URL, normalizeConfig, status, pullModel, chat, analyzeRepair, analyzeWorkflow, analyzeInterface, appendFeedback, feedbackDirectory, feedbackPath, findOllamaExecutable, startOllama, downloadFile, runInstaller, waitForServer }
+module.exports = { DEFAULT_ENDPOINT, DEFAULT_MODEL, OLLAMA_INSTALLER_URL, normalizeConfig, status, pullModel, chat, analyzeRepair, analyzeWorkflow, analyzeInterface, appendFeedback, feedbackDirectory, feedbackPath, findOllamaExecutable, startOllama, downloadFile, runInstaller, waitForServer, isTokenRepeatError }
