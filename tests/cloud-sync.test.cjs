@@ -1,7 +1,20 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute,sqliteBindValue,isMissingApprovalTable,syncResultSnapshot,approvalDeploymentMessage,backgroundMode}}=require('../electron/cloud-sync.cjs')
+const {_testing:{buildPayload,applyPayload,applyRemoteDeletion,reconcileOrderTotals,queueState,fetchSyncPages,pullCursor,bindAccount,timestampMs,timestampIso,remoteWins,remoteHeadsRoute,sqliteBindValue,isMissingApprovalTable,syncResultSnapshot,approvalDeploymentMessage,backgroundMode,isInvalidRefreshToken,cloudConnectionError,EXPIRED_SESSION_MESSAGE}}=require('../electron/cloud-sync.cjs')
+
+test('expired Cloud sessions are recognized without treating network failures as invalid tokens',()=>{
+ assert.equal(isInvalidRefreshToken(new Error('Auth 400: {"error_code":"refresh_token_not_found","msg":"Invalid Refresh Token: Refresh Token Not Found"}')),true)
+ assert.equal(isInvalidRefreshToken(new Error('Nie można połączyć się z Supabase. ERR_NAME_NOT_RESOLVED')),false)
+ assert.match(EXPIRED_SESSION_MESSAGE,/Zaloguj się ponownie/)
+})
+
+test('paused Supabase projects receive an actionable connection message',()=>{
+ const message=cloudConnectionError('https://example.supabase.co/auth/v1/settings',{cause:{code:'ERR_NAME_NOT_RESOLVED'}})
+ assert.match(message,/wstrzymany/)
+ assert.match(message,/Resume project/)
+ assert.match(cloudConnectionError('https://example.test',{message:'socket closed'}),/socket closed/)
+})
 
 test('PC compares SQLite UTC timestamps with Cloud ISO timestamps without a local timezone shift',()=>{
  assert.equal(timestampMs('2026-09-20 10:15:30'),Date.parse('2026-09-20T10:15:30.000Z'))
