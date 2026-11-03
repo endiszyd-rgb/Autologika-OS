@@ -44,6 +44,7 @@ Aktualizacja: 2026-11-03. Branch roboczy: `feature/ios-pwa`.
 - `npm run test:pwa`: PASS — build Vite/PWA, manifest, ikony, statyczny precache bez danych Supabase oraz rejestracja SW w przeglądarce 430 × 932.
 - Browser smoke bez konfiguracji: PASS — czytelny ekran konfiguracji, brak fatal error i brak poziomego overflow.
 - Browser smoke z bezpieczną przykładową konfiguracją publiczną: PASS — ekran logowania, brak fatal error i rejestracja SW.
+- Zalogowany shell iPhone 16 Plus `430 × 932`: PASS — dolny dock, pełna szerokość treści, brak poziomego overflow. Naprawiono kolizję publicznego klucza Supabase z metodą identyfikatora rekordu (`this.key is not a function`).
 - `npm test`: PASS — 233 testy CJS + 79 testów MJS oraz audyt 462 przycisków, 234 metod API, 262 kanałów IPC i 23 ekranów menu.
 - Android `npm test`: PASS — 116/116.
 - Android `npm run check:source`: PASS — 43 pliki JavaScript/JSX.

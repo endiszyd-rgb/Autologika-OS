@@ -44,6 +44,13 @@ jobs:
       - name: Sprawdź manifest i Service Worker
         run: node scripts/check-pwa-build.mjs
 
+      - name: Sprawdź układ iPhone 16 Plus
+        env:
+          PWA_FAKE_AUTH: '1'
+          PWA_EXPECT_MOBILE_DOCK: '1'
+          PWA_EXPECT_HEADING: Pulpit warsztatu
+        run: xvfb-run -a node scripts/run-pwa-browser-smoke.cjs
+
       - name: Przygotuj GitHub Pages
         uses: actions/configure-pages@v5
 

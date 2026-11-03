@@ -44,7 +44,7 @@ function messageFromResponse(status,text=''){
 export class PwaCloudClient{
   constructor(){
     this.url=normalizeUrl(import.meta.env.VITE_SUPABASE_URL||'')
-    this.key=String(import.meta.env.VITE_SUPABASE_ANON_KEY||import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY||'').trim()
+    this.apiKey=String(import.meta.env.VITE_SUPABASE_ANON_KEY||import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY||'').trim()
     this.session=readSession()
     this.records=new Map()
     this.localToCloud=new Map()
@@ -54,18 +54,18 @@ export class PwaCloudClient{
     this.deviceId=deviceId()
   }
 
-  get configured(){return validUrl(this.url)&&validPublishableKey(this.key)}
+  get configured(){return validUrl(this.url)&&validPublishableKey(this.apiKey)}
   get user(){return this.session?.user||null}
   get authenticated(){return Boolean(this.user?.id&&this.session?.access_token)}
   get online(){return navigator.onLine!==false}
 
   configStatus(){
-    return {configured:this.configured,url:this.url,keyKind:this.key?(/^sb_publishable_/i.test(this.key)?'publishable':'anon'):'missing'}
+    return {configured:this.configured,url:this.url,keyKind:this.apiKey?(/^sb_publishable_/i.test(this.apiKey)?'publishable':'anon'):'missing'}
   }
 
   async auth(path,body){
     if(!this.configured)throw new Error('Brak bezpiecznej konfiguracji PWA. Ustaw VITE_SUPABASE_URL i VITE_SUPABASE_ANON_KEY podczas budowania.')
-    const response=await fetch(`${this.url}${path}`,{method:'POST',headers:{apikey:this.key,'Content-Type':'application/json'},body:JSON.stringify(body)})
+    const response=await fetch(`${this.url}${path}`,{method:'POST',headers:{apikey:this.apiKey,'Content-Type':'application/json'},body:JSON.stringify(body)})
     const text=await response.text()
     if(!response.ok)throw new Error(messageFromResponse(response.status,text))
     return text?JSON.parse(text):null
@@ -108,7 +108,7 @@ export class PwaCloudClient{
     if(!this.online)throw new Error('Brak połączenia z internetem. Dane formularza pozostają na ekranie.')
     const token=await this.token()
     let response
-    try{response=await fetch(`${this.url}${path}`,{...options,headers:{apikey:this.key,Authorization:`Bearer ${token}`,'Content-Type':'application/json',...(options.headers||{})}})}
+    try{response=await fetch(`${this.url}${path}`,{...options,headers:{apikey:this.apiKey,Authorization:`Bearer ${token}`,'Content-Type':'application/json',...(options.headers||{})}})}
     catch(error){throw new Error(`Nie udało się połączyć z AutoLogika Cloud: ${error?.message||error}`)}
     if(response.status===401&&retry){await this.refresh();return this.request(path,options,false)}
     const text=await response.text()
@@ -182,13 +182,13 @@ export class PwaCloudClient{
 
   async upload(bucket,path,file){
     const token=await this.token(),encoded=String(path).split('/').map(encodeURIComponent).join('/')
-    const response=await fetch(`${this.url}/storage/v1/object/${encodeURIComponent(bucket)}/${encoded}`,{method:'POST',headers:{apikey:this.key,Authorization:`Bearer ${token}`,'Content-Type':file.type||'application/octet-stream','x-upsert':'true'},body:file})
+    const response=await fetch(`${this.url}/storage/v1/object/${encodeURIComponent(bucket)}/${encoded}`,{method:'POST',headers:{apikey:this.apiKey,Authorization:`Bearer ${token}`,'Content-Type':file.type||'application/octet-stream','x-upsert':'true'},body:file})
     const text=await response.text();if(!response.ok)throw new Error(messageFromResponse(response.status,text));return path
   }
 
   async download(bucket,path){
     const token=await this.token(),encoded=String(path).split('/').map(encodeURIComponent).join('/')
-    const response=await fetch(`${this.url}/storage/v1/object/authenticated/${encodeURIComponent(bucket)}/${encoded}`,{headers:{apikey:this.key,Authorization:`Bearer ${token}`}})
+    const response=await fetch(`${this.url}/storage/v1/object/authenticated/${encodeURIComponent(bucket)}/${encoded}`,{headers:{apikey:this.apiKey,Authorization:`Bearer ${token}`}})
     const text=response.ok?null:await response.text();if(!response.ok)throw new Error(messageFromResponse(response.status,text));return response.blob()
   }
 }
