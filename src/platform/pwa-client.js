@@ -157,18 +157,30 @@ export class PwaCloudClient{
   }
 
   async upsert(entity,payload={},cloudId=null){
+    return (await this.upsertMany([{entity,payload,cloudId}]))[0]
+  }
+
+  // One PostgREST request commits related records together, or none of them.
+  async upsertMany(entries){
     if(!this.authenticated)throw new Error('Zaloguj się do AutoLogika Cloud.')
-    const id=this.resolveCloudId(entity,cloudId||payload.cloud_id||crypto.randomUUID()),now=new Date().toISOString()
-    const current=this.records.get(this.key(entity,id))
-    const head=(await this.request(`/rest/v1/sync_records?select=updated_at,version,device_id,deleted_at&workshop_id=eq.${encodeURIComponent(this.user.id)}&entity_type=eq.${encodeURIComponent(entity)}&cloud_id=eq.${encodeURIComponent(id)}&limit=1`,{method:'GET'}))?.[0]||null
-    if(current&&head&&String(head.updated_at||'')!==String(current.updated_at||'')&&head.device_id!==this.deviceId){await this.sync(true);throw new Error('Dane zostały zmienione na innym urządzeniu. Widok odświeżono — sprawdź zmianę i zapisz ponownie.')}
-    if(head?.deleted_at)throw new Error('Ten rekord został usunięty na innym urządzeniu. Odśwież widok.')
-    const clean={...(current?.payload||{}),...payload};delete clean.id;delete clean.cloud_id;delete clean.updated_at;delete clean.deleted_at;delete clean.version
-    for(const [field,target] of Object.entries(RELATIONS))if(clean[field]!=null)clean[field]=this.resolveCloudId(target,clean[field])
-    const record={workshop_id:this.user.id,entity_type:entity,cloud_id:id,payload:clean,updated_at:now,deleted_at:null,version:Number(head?.version||current?.version||0)+1,device_id:this.deviceId}
-    await this.request('/rest/v1/sync_records?on_conflict=workshop_id,entity_type,cloud_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(record)})
-    const stored={...record};delete stored.workshop_id
-    this.records.set(this.key(entity,id),stored);this.indexLocalId(entity,id);this.emit({type:'change',entity,id});return this.hydrate(entity,stored)
+    await this.ensureLoaded()
+    const records=[]
+    for(const {entity,payload={},cloudId=null} of entries){
+      const id=this.resolveCloudId(entity,cloudId||payload.cloud_id||crypto.randomUUID()),now=new Date().toISOString()
+      const current=this.records.get(this.key(entity,id))
+      const head=(await this.request(`/rest/v1/sync_records?select=updated_at,version,device_id,deleted_at&workshop_id=eq.${encodeURIComponent(this.user.id)}&entity_type=eq.${encodeURIComponent(entity)}&cloud_id=eq.${encodeURIComponent(id)}&limit=1`,{method:'GET'}))?.[0]||null
+      if(current&&head&&String(head.updated_at||'')!==String(current.updated_at||'')&&head.device_id!==this.deviceId){await this.sync(true);throw new Error('Dane zostały zmienione na innym urządzeniu. Widok odświeżono — sprawdź zmianę i zapisz ponownie.')}
+      if(head?.deleted_at)throw new Error('Ten rekord został usunięty na innym urządzeniu. Odśwież widok.')
+      const clean={...(current?.payload||{}),...payload};delete clean.id;delete clean.cloud_id;delete clean.updated_at;delete clean.deleted_at;delete clean.version
+      for(const [field,target] of Object.entries(RELATIONS))if(clean[field]!=null)clean[field]=this.resolveCloudId(target,clean[field])
+      const record={workshop_id:this.user.id,entity_type:entity,cloud_id:id,payload:clean,updated_at:now,deleted_at:null,version:Number(head?.version||current?.version||0)+1,device_id:this.deviceId}
+      records.push(record)
+    }
+    if(!records.length)return []
+    await this.request('/rest/v1/sync_records?on_conflict=workshop_id,entity_type,cloud_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify(records)})
+    const result=records.map(record=>{const stored={...record};delete stored.workshop_id;this.records.set(this.key(record.entity_type,record.cloud_id),stored);this.indexLocalId(record.entity_type,record.cloud_id);return this.hydrate(record.entity_type,stored)})
+    this.emit({type:'change',entities:[...new Set(records.map(record=>record.entity_type))]})
+    return result
   }
 
   async remove(entity,id){

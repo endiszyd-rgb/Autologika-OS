@@ -1,4 +1,5 @@
 import {pwaCloud} from './pwa-client.js'
+import {createPwaRepairs,hydrateProcedure} from './pwa-repairs.mjs'
 
 const now=()=>new Date().toISOString()
 const text=value=>String(value??'').trim()
@@ -24,7 +25,7 @@ async function linkedOrder(order){
 }
 async function orderList(status=''){
   const archive=['ARCHIVE','ARCHIWUM'].includes(status)
-  const list=await rows('orders',row=>archive?Boolean(row.archived_at):status?!row.archived_at&&row.status===status:!row.archived_at)
+  const list=await rows('orders',row=>archive?Boolean(row.archived_at):status?!row.archived_at&&(status==='ACTIVE'?row.status!=='WYDANE':row.status===status):!row.archived_at)
   return Promise.all(list.map(linkedOrder))
 }
 async function orderGet(id){return linkedOrder(await pwaCloud.get('orders',String(id)))}
@@ -66,6 +67,10 @@ export function createPwaApi(){
   const syncListeners=new Set(),remoteListeners=new Set()
   pwaCloud.subscribe(event=>{for(const cb of syncListeners)try{cb(event)}catch{}})
   const items=entityApi('order_items'),jobParts=entityApi('job_part_orders'),communications=entityApi('communications'),payments=entityApi('payments'),salesRefs=entityApi('sales_refs'),findings=entityApi('vehicle_findings',{foreignKey:'vehicle_id'}),technical=entityApi('technical_data_entries',{foreignKey:'order_id'})
+  const repairs=createPwaRepairs(pwaCloud)
+  const catalogSetting=async key=>{const row=(await rows('app_settings')).find(row=>row.setting_key===key);try{const value=JSON.parse(row?.value||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return {}}}
+  const changeCatalogSetting=async(key,cloudId,change)=>{const row=(await rows('app_settings')).find(row=>row.setting_key===key),map=await catalogSetting(key);change(map);await pwaCloud.upsert('app_settings',{setting_key:key,value:JSON.stringify(map)},row?.cloud_id||cloudId);return map}
+
   const api={
     platform:{kind:'pwa',isPwa:true,isElectron:false},
     diagnosticsLog:{write:async()=>true,path:async()=>null},
@@ -85,7 +90,21 @@ export function createPwaApi(){
       createComplete:async payload=>{let customerId=payload.vehicle?.customer_id||null,vehicleId=payload.order?.vehicle_id||null;if(payload.mode==='new'){if(payload.owner_mode==='new'){const customer=await api.customers.create(payload.customer||{});customerId=customer.id}const vehicle=await api.vehicles.create({...payload.vehicle,customer_id:customerId});vehicleId=vehicle.id}const order=await api.orders.create({...payload.order,vehicle_id:vehicleId});await pwaCloud.upsert('order_notes',{order_cloud_id:order.id,intake_notes:payload.order?.intake_notes||'',release_notes:'',qc_notes:'',created_at:now()});await createEvent(order.id,'Utworzono zlecenie',payload.order?.complaint||'','INTAKE');return{order_id:order.id,vehicle_id:vehicleId,customer_id:customerId}},
       updateDetails:(id,data)=>patch('orders',id,data),updateStatus:async(id,status)=>{if(!allowedOrderStatuses.has(status))throw new Error('Nieprawidłowy status zlecenia.');const result=await patch('orders',id,{status});await createEvent(id,'Zmieniono status',status,'STATUS');return result},updateWait:(id,wait_state)=>patch('orders',id,{wait_state}),updateFinancials:(id,data)=>patch('orders',id,data),updateFinalPrice:(id,final_price,note)=>patch('orders',id,{final_price,final_price_note:note}),archive:id=>patch('orders',id,{archived_at:now()}),restore:id=>patch('orders',id,{archived_at:null}),deletePreview:async id=>({order:await orderGet(id),canDelete:false,blockers:['Usuwanie z pełną kontrolą powiązań wykonaj w aplikacji Windows.']}),remove:protectedRemove('zlecenia'),exportPdf:printOrderDocument,notesGet:async id=>(await listFor('order_notes','order_id',id))[0]||{intake_notes:'',release_notes:'',qc_notes:''},notesSave:async(id,data)=>{const current=(await listFor('order_notes','order_id',id))[0];return pwaCloud.upsert('order_notes',{...data,order_cloud_id:String(id)},current?.id)}
     },
-    intake:{create:data=>api.orders.createComplete(data)},
+    intake:{create:async data=>{
+      if(!text(data.customer_name)||!text(data.title)||(!text(data.plate)&&!text(data.vin)))throw new Error('Uzupełnij klienta, pojazd i tytuł zlecenia.')
+      if(data.vehicle_id){
+        const vehicle=await pwaCloud.get('vehicles',data.vehicle_id)
+        if(!vehicle)throw new Error('Wybrany pojazd nie istnieje.')
+        if(Number(data.mileage)>0&&Number(data.mileage)<Number(vehicle.mileage||0))throw new Error('Przebieg nie może być mniejszy od zapisanego.')
+        const active=(await orderList()).find(order=>relation(order,'vehicle_id',data.vehicle_id)&&order.status!=='WYDANE')
+        if(active&&!data.allow_duplicate)throw new Error('Ten pojazd ma już aktywne zlecenie.')
+        if(Number(data.mileage)>Number(vehicle.mileage||0))await api.vehicles.update(vehicle.id,{mileage:Number(data.mileage)})
+      }
+      const customer={name:data.customer_name,phone:data.customer_phone||'',email:data.customer_email||'',company:data.company||''}
+      const vehicle=Object.fromEntries(['plate','vin','make','model','generation','year','engine','power_hp','engine_code','mileage','customer_id'].map(key=>[key,data[key]??'']))
+      const order=Object.fromEntries(['title','complaint','diagnosis_limit','labor_rate','diagnosis_fee','priority','source','due_at','intake_notes','vehicle_id'].map(key=>[key,data[key]??'']))
+      return api.orders.createComplete({mode:data.vehicle_id?'existing':'new',owner_mode:data.customer_id?'existing':'new',customer,vehicle,order})
+    }},
     communications:{list:communications.list,add:(orderId,data)=>communications.create(orderId,data),resolve:id=>patch('communications',id,{resolved:true,resolved_at:now()})},
     payments:{list:payments.list,add:(orderId,data)=>payments.create(orderId,{...data,amount:finitePositive(data.amount,'Kwota płatności')}),remove:payments.remove},
     salesRefs:{list:salesRefs.list,add:(orderId,data)=>salesRefs.create(orderId,data)},
@@ -115,8 +134,8 @@ export function createPwaApi(){
       requestApproval:async quoteId=>{const orderId=String(quoteId).replace(/^pwa-/,'');return pwaCloud.upsert('approvals',{order_cloud_id:orderId,quote_id:quoteId,status:'PENDING',created_at:now()})},
       accept:async quoteId=>{const orderId=String(quoteId).replace(/^pwa-/,'');await patch('orders',orderId,{quote_status:'ZAAKCEPTOWANA'});return{ok:true}}
     },
-    procedures:{list:id=>listFor('work_procedure_runs','order_id',id),createBundle:(id,data)=>pwaCloud.upsert('work_procedure_runs',{...data,order_cloud_id:String(id)}),toggle:async(id,key,checked)=>{const row=await pwaCloud.get('work_procedure_runs',String(id)),progress={...(row?.progress||{}),[key]:checked};return patch('work_procedure_runs',id,{progress})},setProgress:(id,progress)=>patch('work_procedure_runs',id,{progress}),remove:id=>pwaCloud.remove('work_procedure_runs',String(id))},
-    repairs:{list:id=>listFor('order_repair_operations','order_id',id),update:(id,data)=>patch('order_repair_operations',id,data),estimate:async id=>({operations:await listFor('order_repair_operations','order_id',id),total:0}),reserveInventory:unavailable('Transakcyjna rezerwacja magazynowa'),issuePart:unavailable('Transakcyjne wydanie części'),returnPart:unavailable('Transakcyjny zwrot części'),cancelReservation:unavailable('Transakcyjna rezerwacja magazynowa'),installPart:unavailable('Transakcyjne wydanie części'),snapshotEstimate:async()=>({ok:false})},
+    procedures:{list:async id=>(await listFor('work_procedure_runs','order_id',id)).map(hydrateProcedure),createBundle:repairs.createBundle,toggle:async(id,key,checked)=>{const row=await pwaCloud.get('work_procedure_runs',String(id)),progress={...hydrateProcedure(row).progress,[key]:checked};return patch('work_procedure_runs',id,{progress_json:JSON.stringify(progress)})},setProgress:(id,progress)=>patch('work_procedure_runs',id,{progress_json:JSON.stringify(progress)}),remove:id=>pwaCloud.remove('work_procedure_runs',String(id))},
+    repairs:{list:repairs.list,update:repairs.update,estimate:repairs.estimate,reserveInventory:unavailable('Transakcyjna rezerwacja magazynowa'),issuePart:unavailable('Transakcyjne wydanie części'),returnPart:unavailable('Transakcyjny zwrot części'),cancelReservation:unavailable('Transakcyjna rezerwacja magazynowa'),installPart:unavailable('Transakcyjne wydanie części'),snapshotEstimate:async()=>({ok:false})},
     dvi:{list:id=>listFor('dvi_inspections','order_id',id),create:async(id,author='')=>{const order=await orderGet(id);return pwaCloud.upsert('dvi_inspections',{order_cloud_id:String(id),vehicle_cloud_id:String(order.vehicle_id),author,status:'DRAFT',created_at:now()})},addItem:(inspectionId,data)=>pwaCloud.upsert('dvi_items',{...data,inspection_cloud_id:String(inspectionId)}),decide:(id,decision,decided_by='')=>pwaCloud.upsert('dvi_decisions',{dvi_item_cloud_id:String(id),decision,decided_by,decided_at:now()}),convertToRepair:unavailable('Konwersja DVI do naprawy'),createToken:unavailable('Publiczny link DVI'),resolveToken:unavailable('Publiczny link DVI'),decideWithToken:unavailable('Publiczny link DVI'),pickMedia:async(orderId)=>addAttachment(orderId,'DVI')},
     workTemplates:{list:()=>rows('work_templates'),create:data=>pwaCloud.upsert('work_templates',{...data,created_at:now()}),update:(id,data)=>patch('work_templates',id,data),remove:id=>pwaCloud.remove('work_templates',String(id))},
     knowledge:{list:async()=>[],create:unavailable('Lokalna baza wiedzy'),fromOrder:unavailable('Lokalna baza wiedzy')},assistant:{search:async()=>[]},finance:{analytics:async()=>({})},reminders:{list:async()=>[],create:unavailable('Lokalne przypomnienia'),done:unavailable('Lokalne przypomnienia'),reopen:unavailable('Lokalne przypomnienia')},
@@ -132,7 +151,7 @@ export function createPwaApi(){
     localAI:{config:async()=>({enabled:false}),status:async()=>({available:false,message:'Lokalna Ollama działa wyłącznie na komputerze warsztatowym.'}),saveConfig:unavailable('Lokalna Ollama'),setup:unavailable('Lokalna Ollama'),pullModel:unavailable('Lokalna Ollama'),analyzeRepair:unavailable('Lokalna Ollama'),coachOrder:unavailable('Lokalna Ollama'),analyzeInterface:unavailable('Lokalna Ollama'),feedbackPath:async()=>null,openFeedback:unavailable('Lokalny plik feedbacku'),onProgress:()=>()=>{}},
     mobileServer:{start:unavailable('Serwer mobilny'),stop:noop,status:async()=>({running:false}),config:async()=>({}),saveConfig:noop},
     system:{dbPath:async()=>null,backup:unavailable('Kopia lokalnej bazy SQLite'),autoBackup:noop,autoBackupStatus:async()=>({available:false}),health:async()=>({ok:true,platform:'pwa',online:navigator.onLine}),openBackupFolder:unavailable('Folder kopii zapasowej'),copyText:async value=>navigator.clipboard.writeText(String(value||'')),copyCloudSchema:unavailable('Schemat chmury'),openExternal:async url=>{window.open(url,'_blank','noopener,noreferrer');return true},openPhone:async phone=>{location.href=`tel:${phone}`;return true},openSms:async(phone,body='')=>{location.href=`sms:${phone}?body=${encodeURIComponent(body)}`;return true}},
-    settings:{monthlyTarget:async()=>0,setMonthlyTarget:noop,workshopLayout:async()=>({}),setWorkshopLayout:noop,approvalArchive:async()=>({}),openApprovalArchive:unavailable('Lokalne archiwum'),chooseApprovalArchive:unavailable('Lokalne archiwum'),catalogPrices:async()=>({}),setCatalogPrice:noop,resetCatalogPrice:noop,setCatalogPricesBulk:noop,resetCatalogPricesBulk:noop,catalogOverrides:async()=>({}),setCatalogOverride:noop,resetCatalogOverride:noop},
+    settings:{monthlyTarget:async()=>0,setMonthlyTarget:noop,workshopLayout:async()=>({}),setWorkshopLayout:noop,approvalArchive:async()=>({}),openApprovalArchive:unavailable('Lokalne archiwum'),chooseApprovalArchive:unavailable('Lokalne archiwum'),catalogPrices:()=>catalogSetting('work_catalog_prices_v1'),setCatalogPrice:unavailable('Edycja starszego cennika'),resetCatalogPrice:key=>changeCatalogSetting('work_catalog_prices_v1','work-catalog-prices-v1',map=>{delete map[key]}),setCatalogPricesBulk:unavailable('Edycja zbiorcza cennika'),resetCatalogPricesBulk:unavailable('Reset zbiorczy cennika'),catalogOverrides:()=>catalogSetting('work_catalog_overrides_v2'),setCatalogOverride:(id,data)=>changeCatalogSetting('work_catalog_overrides_v2','work-catalog-overrides-v2',map=>{map[id]={...(map[id]||{}),...data}}),resetCatalogOverride:id=>changeCatalogSetting('work_catalog_overrides_v2','work-catalog-overrides-v2',map=>{delete map[id]})},
     resources:{list:()=>rows('work_resources'),create:data=>pwaCloud.upsert('work_resources',data),update:(id,data)=>patch('work_resources',id,data),unavailabilityList:id=>listFor('resource_unavailability','resource_id',id),unavailabilityCreate:data=>pwaCloud.upsert('resource_unavailability',{...data,resource_cloud_id:String(data.resource_id)}),unavailabilityRemove:id=>pwaCloud.remove('resource_unavailability',String(id))},
     documents:{list:async()=>[...(await rows('attachments')),...(await rows('delivery_document_imports'))],open:async id=>{const record=await pwaCloud.get('attachments',String(id))||await pwaCloud.get('delivery_document_imports',String(id));return openStoredFile(record)},reveal:unavailable('Folder dokumentów')}
   }

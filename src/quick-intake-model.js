@@ -50,3 +50,16 @@ export function findScannedIntakeVehicle(vehicles,scan){
  const vin=clean(scan?.registration?.form?.vin||scan?.vin).replace(/\s/g,'').toUpperCase(),plate=clean(scan?.registration?.form?.plate).replace(/\s/g,'').toUpperCase()
  return (vehicles||[]).find(vehicle=>(vin&&clean(vehicle.vin).replace(/\s/g,'').toUpperCase()===vin)||(plate&&clean(vehicle.plate).replace(/\s/g,'').toUpperCase()===plate))||null
 }
+
+export function applyIntakeScan(current,scan,vehicles=[],customers=[]){
+ const vehicle=findScannedIntakeVehicle(vehicles,scan)
+ if(vehicle)return selectIntakeVehicle(current,vehicle,customers)
+ const form=scan?.registration?.form||{},next=clearIntakeVehicle(current)
+ if(clean(form.customer_name)&&clean(form.customer_name)!==clean(current.customer_name)){
+  Object.assign(next,{customer_id:'',customer_name:form.customer_name,customer_phone:'',customer_email:'',company:''})
+ }
+ for(const field of VEHICLE_FIELDS)if(clean(form[field]))next[field]=form[field]
+ if(!next.vin&&scan?.vin)next.vin=scan.vin
+ next.intake_notes=[current.intake_notes,form.intake_notes].filter(Boolean).join('\n')
+ return next
+}

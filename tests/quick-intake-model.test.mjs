@@ -47,3 +47,19 @@ test('chroni historię pojazdu przed przypadkowym cofnięciem przebiegu',()=>{
  assert.equal(intakeMileageState({mileage:125000},'').invalid,false)
  assert.equal(intakeMileageState(null,90000).invalid,false)
 })
+
+test('camera scan fills the open intake without losing complaint or entered notes',async()=>{
+ const {applyIntakeScan}=await import('../src/quick-intake-model.js')
+ const result=applyIntakeScan({customer_id:1,customer_name:'Anna',customer_phone:'123',vehicle_id:10,plate:'OLD',generation:'old',complaint:'Szarpie',intake_notes:'Klient czeka'}, {registration:{form:{customer_name:'Jan',plate:'NEW',vin:'NEWVIN',make:'Toyota',intake_notes:'Odczyt AZTEC'}}})
+ assert.equal(result.customer_id,'');assert.equal(result.vehicle_id,'')
+ assert.equal(result.customer_name,'Jan');assert.equal(result.customer_phone,'')
+ assert.equal(result.plate,'NEW');assert.equal(result.generation,'')
+ assert.equal(result.complaint,'Szarpie');assert.match(result.intake_notes,/Klient czeka\nOdczyt AZTEC/)
+})
+
+test('camera scan reuses known vehicle and customer rather than duplicating them',async()=>{
+ const {applyIntakeScan}=await import('../src/quick-intake-model.js')
+ const result=applyIntakeScan({complaint:'Nie odpala'},{vin:'abc123'},vehicles,customers)
+ assert.equal(result.vehicle_id,10);assert.equal(result.customer_id,1)
+ assert.equal(result.customer_phone,'500 600 700');assert.equal(result.complaint,'Nie odpala')
+})
