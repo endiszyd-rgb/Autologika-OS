@@ -13,6 +13,7 @@
     "test:five-modules": "node scripts/run-electron-smoke.cjs five-modules-smoke.cjs",
     "test:migration:existing": "node scripts/run-electron-smoke.cjs existing-db-v18-smoke.cjs",
     "test:ui": "npm run build && node scripts/run-electron-smoke.cjs ui-preview.cjs",
+    "test:pwa": "npm run build && node scripts/check-pwa-build.mjs && node scripts/run-pwa-browser-smoke.cjs",
     "test:protocol": "node scripts/run-electron-smoke.cjs protocol-preview.cjs",
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
     "build": "vite build",
@@ -43,6 +44,7 @@
     "electron": "^34.0.0",
     "electron-builder": "^25.1.8",
     "vite": "^6.0.5",
+    "vite-plugin-pwa": "2.0.0",
     "wait-on": "^8.0.1"
   },
   "build": {

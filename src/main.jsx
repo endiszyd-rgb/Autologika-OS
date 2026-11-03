@@ -39,8 +39,11 @@ import {useDebouncedValue} from './performance.js'
 import {filterOrderRows,orderFilterOptions} from './order-list-model.mjs'
 import {workLogMinutes,workLogTimestamp} from './workshop-metrics.mjs'
 import {QC_PHASES,parseQcDecision,qcDecisionComplete,serializeQcDecision,summarizeQc} from './qc-workflow.mjs'
+import {ensurePlatformApi} from './platform/index.js'
+import {PwaShell} from './platform/pwa-shell.jsx'
+import './platform/pwa.css'
 
-const api=window.autologika
+const api=ensurePlatformApi()
 const lazyNamed=(loader,name)=>React.lazy(()=>loader().then(module=>({default:module[name]})))
 const WorkshopSchedule=lazyNamed(()=>import('./schedule.jsx'),'WorkshopSchedule')
 const TechnicalManual=React.lazy(()=>import('./technical-manual.jsx'))
@@ -867,4 +870,4 @@ function CenterNewPart({order,close,saved}){
  useEffect(()=>{Promise.all([api.suppliers.list(),api.inventory.list('')]).then(([s,p])=>{setSuppliers(s);setInventory(p)})},[])
  return <NewJobPart orders={[order]} suppliers={suppliers} inventory={inventory} close={close} saved={saved}/>
 }
-createRoot(document.getElementById('root')).render(<AppErrorBoundary><App/></AppErrorBoundary>)
+createRoot(document.getElementById('root')).render(<PwaShell><AppErrorBoundary><App/></AppErrorBoundary></PwaShell>)
