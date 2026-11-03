@@ -3,7 +3,7 @@ const assert=require('node:assert/strict')
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path')
 
 app.setPath('userData',fs.mkdtempSync(path.join(os.tmpdir(),'autologika-pwa-')))
-const url=process.argv[2]
+const url=process.argv.at(-1)
 setTimeout(()=>{console.error('PWA browser smoke timeout');app.exit(1)},30000).unref()
 
 app.whenReady().then(async()=>{
