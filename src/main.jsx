@@ -42,6 +42,7 @@ import {QC_PHASES,parseQcDecision,qcDecisionComplete,serializeQcDecision,summari
 import {ensurePlatformApi} from './platform/index.js'
 import {PwaShell} from './platform/pwa-shell.jsx'
 import './platform/pwa.css'
+import './aztec-camera.css'
 
 const api=ensurePlatformApi()
 const lazyNamed=(loader,name)=>React.lazy(()=>loader().then(module=>({default:module[name]})))
