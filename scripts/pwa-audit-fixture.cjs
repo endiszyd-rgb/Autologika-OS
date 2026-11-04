@@ -42,6 +42,9 @@ async function auditModules(win){
    all.push({name,fatal:!!document.querySelector('.fatalScreen'),overflow:document.documentElement.scrollWidth>innerWidth,text:document.querySelector('.pageBody')?.innerText.slice(0,90),error:document.querySelector('.fatalScreen code')?.textContent})
    if(all.at(-1).fatal)break
   }
+  const api=window.autologika,order=(await api.orders.list())[0],customer=(await api.customers.list())[0],vehicle=(await api.vehicles.list())[0]
+  const profile=await api.customers.profile(customer.id),car=await api.vehicles.profile(vehicle.id),quote=await api.quotes.get(order.id),health=await api.vehicleHealth.get(vehicle.id),inspection=await api.dvi.list(order.id),analytics=await api.finance.analytics()
+  if(profile.totals.balance!==300||car.totals.revenue!==400||!Array.isArray(health.subsystems)||quote.total!==300||inspection[0].items.length!==1||analytics.current.revenue!==400)throw new Error('PWA detail contracts invalid')
   return all
  })()`)
  const failed=result.filter(row=>row.fatal||row.overflow)
