@@ -37,7 +37,7 @@ test('catalog repair writes priced labor, repair, procedure, parts and QC with c
  assert.deepEqual(hydrateProcedure(procedures[0]).steps,['Wymień klocki'])
  const estimate=await api.estimate(order.id)
  assert.equal(estimate.totals.net,450);assert.equal(estimate.totals.gross,553.5)
- assert.ok(procedures[0].steps_json);assert.equal(procedures[0].steps,undefined)
+ assert.ok(procedures[0].steps_json);assert.deepEqual(procedures[0].steps,['Wymień klocki'])
 })
 
 test('retrying a catalog bundle does not duplicate labor or parts',async()=>{
@@ -95,7 +95,8 @@ test('conflicting record blocks the whole related update before POST',async()=>{
 async function fullApi(cloud){
  globalThis.__pwaApiTestCloud=cloud
  const stub=`data:text/javascript;base64,${Buffer.from('export const pwaCloud=globalThis.__pwaApiTestCloud\n//'+Math.random()).toString('base64')}`
- const apiSource=(await readFile(new URL('../src/platform/pwa-api.js',import.meta.url),'utf8')).replace("'./pwa-client.js'",JSON.stringify(stub)).replace("'./pwa-repairs.mjs'",JSON.stringify(new URL('../src/platform/pwa-repairs.mjs',import.meta.url).href))
+ let apiSource=(await readFile(new URL('../src/platform/pwa-api.js',import.meta.url),'utf8')).replace("'./pwa-client.js'",JSON.stringify(stub)).replace("'./pwa-repairs.mjs'",JSON.stringify(new URL('../src/platform/pwa-repairs.mjs',import.meta.url).href))
+ apiSource=apiSource.replace(/from '(\.[^']+)'/g,(_match,path)=>`from ${JSON.stringify(new URL(path,new URL('../src/platform/pwa-api.js',import.meta.url)).href)}`)
  return (await import(`data:text/javascript;base64,${Buffer.from(apiSource).toString('base64')}`)).createPwaApi()
 }
 
@@ -120,4 +121,66 @@ test('PWA loads workshop catalog prices and saves overrides as desktop-compatibl
  assert.equal((await api.settings.catalogOverrides())['variant-1'].price,390)
  const row=(await cloud.list('app_settings')).find(row=>row.setting_key==='work_catalog_overrides_v2')
  assert.equal(JSON.parse(row.value)['variant-1'].hours,1.5)
+})
+
+test('iOS balances and finance derive totals from synchronized labor and payments with a zero final price',async()=>{
+ const {cloud,order}=await fixture(),api=await fullApi(cloud)
+ await cloud.upsert('orders',{opened_at:new Date().toISOString(),status:'GOTOWE'},order.cloud_id)
+ await api.items.create(order.id,{kind:'ROBOCIZNA',name:'Diagnoza',qty:1.5,unit_price:200})
+ await api.payments.add(order.id,{amount:100})
+ assert.equal((await api.orders.get(order.id)).total,300)
+ assert.equal((await api.debtors.list())[0].balance,200)
+ const analytics=await api.finance.analytics();assert.equal(analytics.current.revenue,300);assert.equal(analytics.current.paid,100)
+ await cloud.upsert('orders',{final_price:0},order.cloud_id)
+ assert.equal((await api.orders.get(order.id)).total,0)
+ assert.equal((await api.debtors.list()).length,0)
+})
+
+test('labor editing allows fractional hours and zero hourly price without falling back to old price',async()=>{
+ const {cloud,order}=await fixture(),api=await fullApi(cloud)
+ const item=await api.items.create(order.id,{kind:'ROBOCIZNA',name:'Test',labor_hours:1.25,labor_rate:220})
+ await api.quotes.updateItem(item.id,{...item,labor_hours:1.75,labor_rate:0})
+ const quote=await api.quotes.get(order.id)
+ assert.equal(quote.items[0].qty,1.75);assert.equal(quote.total,0)
+})
+
+test('intake atomic failure leaves no orphan customer or vehicle and retry does not duplicate order',async()=>{
+ const f=await fixture(),api=await fullApi(f.cloud),data={customer_name:'Jan',plate:'NEW',title:'Naprawa'}
+ f.fail();await assert.rejects(api.intake.create(data));assert.equal((await f.cloud.list('customers')).length,0);assert.equal((await f.cloud.list('vehicles')).length,0)
+ f.recover();const first=await api.intake.create(data),second=await api.intake.create(data)
+ assert.equal(first.order_id,second.order_id);assert.equal((await f.cloud.list('customers')).length,1)
+})
+
+test('technical data uses vehicle scope and Care completion uses desktop DONE status',async()=>{
+ const {cloud,order}=await fixture(),api=await fullApi(cloud)
+ const vehicle=await api.vehicles.create({plate:'ZPL',make:'Toyota',model:'Corolla'})
+ await cloud.upsert('orders',{vehicle_cloud_id:vehicle.cloud_id},order.cloud_id)
+ await api.technicalData.create(order.id,{parameter:'Moment',value:'100',scope:'VEHICLE'})
+ assert.equal((await api.technicalData.forOrder(order.id))[0].parameter,'Moment')
+ const reminder=await api.reminders.create({vehicle_id:vehicle.id,title:'Olej',due_mileage:1})
+ assert.equal((await api.reminders.list())[0].urgency,'SOON')
+ await api.reminders.done(reminder.id);assert.equal((await api.reminders.list()).length,0)
+ assert.equal((await api.serviceReminders.listForVehicle(vehicle.id))[0].status,'DONE')
+})
+
+test('DVI returns its nested observations and decision and health uses a complete renderer contract',async()=>{
+ const {cloud,order}=await fixture(),api=await fullApi(cloud)
+ const vehicle=await api.vehicles.create({plate:'ZPL',make:'Toyota'});await cloud.upsert('orders',{vehicle_cloud_id:vehicle.cloud_id},order.cloud_id)
+ const inspection=await api.dvi.create(order.id)
+ const item=await api.dvi.addItem(inspection.id,{status:'REPAIR',description:'Klocki',area:'Hamulce',amount:500})
+ await api.dvi.decide(item.id,'APPROVED','Klient')
+ const nested=(await api.dvi.list(order.id))[0].items[0]
+ assert.equal(nested.proposed_amount,500);assert.equal(nested.decision,'APPROVED')
+ const health=await api.vehicleHealth.get(vehicle.id)
+ assert.ok(Array.isArray(health.subsystems));assert.ok(Array.isArray(health.actions))
+})
+
+test('release and timer return success contracts expected by the UI and stop saves elapsed minutes',async()=>{
+ const {cloud,order}=await fixture(),api=await fullApi(cloud)
+ const timer=await api.worklog.startAs(order.id,0);assert.equal(timer.ok,true)
+ assert.equal((await api.worklog.startAs(order.id,0)).ok,false)
+ await api.worklog.stop(timer.id);assert.ok(Number.isFinite((await api.worklog.list(order.id))[0].duration_minutes))
+ assert.equal((await api.closeout.complete(order.id)).ok,true)
+ assert.equal((await api.orders.get(order.id)).status,'WYDANE')
+ await assert.rejects(api.quotes.accept(`pwa-${order.id}`),/Windows/)
 })

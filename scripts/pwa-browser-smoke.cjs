@@ -12,7 +12,8 @@ app.whenReady().then(async()=>{
   await win.loadURL(url)
   if(process.env.PWA_FAKE_AUTH==='1'){
     await win.webContents.executeJavaScript(`localStorage.setItem('autologika.pwa.session.v1',JSON.stringify({access_token:'test-token',refresh_token:'test-refresh',expires_at:Date.now()+3600000,user:{id:'00000000-0000-4000-8000-000000000001',email:'test@example.invalid'}}))`)
-    win.webContents.session.webRequest.onBeforeRequest({urls:['https://*.supabase.co/*']},(_details,callback)=>callback({cancel:true}))
+    if(process.env.PWA_AUDIT_ALL_MODULES==='1')await require('./pwa-audit-fixture.cjs').installFakeCloud(win.webContents.session)
+    else win.webContents.session.webRequest.onBeforeRequest({urls:['https://*.supabase.co/*']},(_details,callback)=>callback({cancel:true}))
     await win.webContents.reload()
   }
   await new Promise(resolve=>setTimeout(resolve,1800))
@@ -49,6 +50,7 @@ app.whenReady().then(async()=>{
     assert.ok(result.contentWidth>=result.viewport.width-16)
     assert.ok(result.contentLeft<=8)
   }
+  if(process.env.PWA_AUDIT_ALL_MODULES==='1')await require('./pwa-audit-fixture.cjs').auditModules(win)
   console.log('PWA BROWSER OK',JSON.stringify(result))
   app.exit(0)
 }).catch(error=>{console.error(error);app.exit(1)})

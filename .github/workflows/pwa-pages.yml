@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/ios-pwa
+      - audit/ios-sync-integrity
   workflow_dispatch:
 
 permissions:
@@ -47,6 +48,7 @@ jobs:
       - name: Sprawdź układ iPhone 16 Plus
         env:
           PWA_FAKE_AUTH: '1'
+          PWA_AUDIT_ALL_MODULES: '1'
           PWA_EXPECT_MOBILE_DOCK: '1'
           PWA_EXPECT_HEADING: Pulpit warsztatu
         run: xvfb-run -a node scripts/run-pwa-browser-smoke.cjs
@@ -60,6 +62,7 @@ jobs:
           path: dist
 
   deploy:
+    if: github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
