@@ -47,3 +47,5 @@ body{padding-left:var(--pwa-safe-left);padding-right:var(--pwa-safe-right);overs
 @supports(height:100svh){.pwaAccess{min-height:100svh}@media(max-width:600px){.modal,.plannerModal{max-height:calc(100svh - var(--pwa-safe-top) - var(--pwa-safe-bottom) - 16px)}}}
 @media(display-mode:standalone){body{padding-bottom:var(--pwa-safe-bottom)}}
 @media(prefers-reduced-motion:reduce){.pwaConnectivity{transition:none}.pwaAccessCard,.pwaInstall,.pwaUpdate{backdrop-filter:none}}
+
+.pwaConnectivity.saving{background:#17486a;color:#fff;border:1px solid #4b94c7}.pwaConnectivity.offline{pointer-events:auto;border-radius:14px;overflow-wrap:anywhere}.pwaConnectivity button{margin-left:8px;padding:5px 9px;border:1px solid currentColor;border-radius:8px;background:transparent;color:inherit;font:inherit}

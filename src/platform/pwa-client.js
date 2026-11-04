@@ -52,6 +52,7 @@ export class PwaCloudClient{
     this.epoch=0
     this.changeRevision=0
     this.localChanges=new Map()
+    this.pendingWrites=0
     this.mutations=Promise.resolve()
     this.refreshing=null
     this.lastSync=null
@@ -106,7 +107,7 @@ export class PwaCloudClient{
 
   clear(){this.epoch++;this.records.clear();this.localToCloud.clear();this.localChanges.clear();this.loaded=false;this.loading=null;this.refreshing=null;this.lastSync=null;this.syncError=''}
   assertSession(epoch){if(epoch!==this.epoch||!this.authenticated)throw new Error('Sesja została zmieniona. Zaloguj się ponownie.')}
-  mutate(operation){const epoch=this.epoch,task=this.mutations.then(()=>{this.assertSession(epoch);return operation()});this.mutations=task.catch(()=>{});return task}
+  mutate(operation){const epoch=this.epoch;this.pendingWrites++;this.emit({type:'write-activity'});const task=this.mutations.then(()=>{this.assertSession(epoch);return operation()}).finally(()=>{this.pendingWrites--;this.emit({type:'write-activity'})});this.mutations=task.catch(()=>{});return task}
   subscribe(listener){this.listeners.add(listener);return()=>this.listeners.delete(listener)}
   emit(event={type:'sync'}){for(const listener of this.listeners)try{listener(event)}catch{}}
 

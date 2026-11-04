@@ -74,3 +74,9 @@ test('resume refreshes cloud and teardown removes timers and listeners',async()=
  assert.equal(calls,1);win.dispatchEvent(new Event('pageshow'));doc.dispatchEvent(new Event('visibilitychange'));assert.equal(calls,3)
  doc.hidden=true;tick();assert.equal(calls,3);stop();doc.hidden=false;win.dispatchEvent(new Event('pageshow'));assert.equal(calls,3);assert.equal(cleared,true)
 })
+
+test('queued write indicator counts pending work and clears after a failure',async()=>{
+ const cloud=fixture(),gate=deferred(),events=[];cloud.subscribe(event=>events.push(event.type))
+ const first=cloud.mutate(()=>gate.promise),second=cloud.mutate(()=>{throw new Error('Offline')})
+ assert.equal(cloud.pendingWrites,2);gate.resolve('saved');assert.equal(await first,'saved');await assert.rejects(second,/Offline/);assert.equal(cloud.pendingWrites,0);assert.equal(events.filter(type=>type==='write-activity').length,4)
+})

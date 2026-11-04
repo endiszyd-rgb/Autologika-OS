@@ -78,7 +78,7 @@ function entityApi(entity,{foreignKey='order_id'}={}){
 
 export function createPwaApi(){
   const syncListeners=new Set(),remoteListeners=new Set()
-  pwaCloud.subscribe(event=>{if(typeof window!=='undefined'&&window.autologikaPwaDirty&&(event.type==='sync'||event.type==='change'))return;for(const cb of syncListeners)try{cb(event)}catch{}})
+  pwaCloud.subscribe(event=>{if(event.type==='write-activity')return;if(typeof window!=='undefined'&&window.autologikaPwaDirty&&(event.type==='sync'||event.type==='change'))return;for(const cb of syncListeners)try{cb(event)}catch{}})
   const items=entityApi('order_items'),jobParts=entityApi('job_part_orders'),communications=entityApi('communications'),payments=entityApi('payments'),salesRefs=entityApi('sales_refs'),findings=entityApi('vehicle_findings',{foreignKey:'vehicle_id'}),technical=entityApi('technical_data_entries',{foreignKey:'order_id'})
   const repairs=createPwaRepairs(pwaCloud),schedule=createPwaSchedule(pwaCloud)
   const catalogSetting=async key=>{const row=(await rows('app_settings')).find(row=>row.setting_key===key);try{const value=JSON.parse(row?.value||'{}');return value&&typeof value==='object'&&!Array.isArray(value)?value:{}}catch{return {}}}
@@ -123,6 +123,7 @@ export function createPwaApi(){
       updateDetails:(id,data)=>patch('orders',id,data),updateStatus:async(id,status)=>{if(!allowedOrderStatuses.has(status))throw new Error('Nieprawidłowy status zlecenia.');const result=await patch('orders',id,{status});await createEvent(id,'Zmieniono status',status,'STATUS');return result},updateWait:(id,wait_state)=>patch('orders',id,{wait_state}),updateFinancials:(id,data)=>patch('orders',id,data),updateFinalPrice:(id,final_price,note)=>{const value=final_price==null||String(final_price).trim()===''?null:Number(final_price);if(value!==null&&(!Number.isFinite(value)||value<0||value>100000000))throw new Error('Nieprawidłowa cena końcowa.');if(value!==null&&!text(note))throw new Error('Podaj powód zmiany ceny końcowej.');return patch('orders',id,{final_price:value,final_price_note:note})},archive:id=>patch('orders',id,{archived_at:now()}),restore:id=>patch('orders',id,{archived_at:null}),deletePreview:async id=>({order:await orderGet(id),canDelete:false,blockers:['Usuwanie z pełną kontrolą powiązań wykonaj w aplikacji Windows.']}),remove:protectedRemove('zlecenia'),exportPdf:printOrderDocument,notesGet:async id=>(await listFor('order_notes','order_id',id))[0]||{intake_notes:'',release_notes:'',qc_notes:''},notesSave:async(id,data)=>{const current=(await listFor('order_notes','order_id',id))[0];return pwaCloud.upsert('order_notes',{...data,order_cloud_id:String(id)},current?.id)}
     },
     intake:{create:async data=>{
+      if(data.idempotency_key){const previous=await pwaCloud.get('orders',`pwa-intake:${data.idempotency_key}:order`);if(previous)return {order_id:previous.id,vehicle_id:previous.vehicle_id,customer_id:data.customer_id||null}}
       if(!text(data.customer_name)||!text(data.title)||(!text(data.plate)&&!text(data.vin)))throw new Error('Uzupełnij klienta, pojazd i tytuł zlecenia.')
       if(data.vehicle_id){
         const vehicle=await pwaCloud.get('vehicles',data.vehicle_id)

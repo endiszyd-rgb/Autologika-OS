@@ -37,6 +37,22 @@ async function auditModules(win){
   document.querySelector('.pwaInstallClose')?.click()
   const expand=[...document.querySelectorAll('.sideModeButtons button')].find(button=>button.textContent.includes('Wszystkie moduły'));expand?.click();await wait(50)
   const names=[...document.querySelectorAll('.shell>aside nav button')].map(button=>button.title)
+  const intakeButton=[...document.querySelectorAll('.shell>aside nav button')].find(button=>button.textContent.includes('Szybkie przyjęcie'))
+  if(!intakeButton)throw new Error('Missing quick intake navigation')
+  intakeButton.click();await wait(500)
+  const intake=document.querySelector('.intakePage'),field=intake?.querySelector('input:not([readonly]):not([data-pwa-ignore-dirty])')
+  if(!field)throw new Error('Missing editable intake field')
+  field.focus();const old=field.value,setValue=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set
+  setValue.call(field,'Test niezapisanego formularza');field.dispatchEvent(new Event('input',{bubbles:true}));await wait(50)
+  const originalConfirm=window.confirm;let confirmations=0
+  window.confirm=()=>{confirmations++;return false}
+  document.querySelector('.shell>aside nav button').click();await wait(50)
+  if(!document.querySelector('.intakePage')||field.value!=='Test niezapisanego formularza'||confirmations!==1)throw new Error('Navigation lost unsaved intake')
+  setValue.call(field,old);field.dispatchEvent(new Event('input',{bubbles:true}));await wait(50)
+  document.querySelector('.shell>aside nav button').click();await wait(100)
+  window.confirm=originalConfirm
+  if(document.querySelector('.intakePage')||confirmations!==1)throw new Error('Restored input still blocks navigation')
+
   for(const name of names){
    [...document.querySelectorAll('.shell>aside nav button')].find(button=>button.title===name)?.click();await wait(220)
    all.push({name,fatal:!!document.querySelector('.fatalScreen'),overflow:document.documentElement.scrollWidth>innerWidth,text:document.querySelector('.pageBody')?.innerText.slice(0,90),error:document.querySelector('.fatalScreen code')?.textContent})
@@ -45,6 +61,10 @@ async function auditModules(win){
   const api=window.autologika,order=(await api.orders.list())[0],customer=(await api.customers.list())[0],vehicle=(await api.vehicles.list())[0]
   const profile=await api.customers.profile(customer.id),car=await api.vehicles.profile(vehicle.id),quote=await api.quotes.get(order.id),health=await api.vehicleHealth.get(vehicle.id),inspection=await api.dvi.list(order.id),analytics=await api.finance.analytics()
   if(profile.totals.balance!==300||car.totals.revenue!==400||!Array.isArray(health.subsystems)||quote.total!==300||inspection[0].items.length!==1||analytics.current.revenue!==400)throw new Error('PWA detail contracts invalid')
+  const retryKey='browser-retry-test',before=(await api.orders.list()).length
+  const payload={idempotency_key:retryKey,customer_id:customer.id,vehicle_id:vehicle.id,customer_name:customer.name,plate:vehicle.plate,title:'Test ponowienia',allow_duplicate:true}
+  const first=await api.intake.create(payload),retry=await api.intake.create({...payload,allow_duplicate:false})
+  if(first.order_id!==retry.order_id||(await api.orders.list()).length!==before+1)throw new Error('Intake retry duplicated or rejected an existing order')
   return all
  })()`)
  const failed=result.filter(row=>row.fatal||row.overflow)
