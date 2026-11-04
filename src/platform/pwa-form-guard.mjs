@@ -14,7 +14,7 @@ export function createDraftTracker(){
 const ignored=control=>control.readOnly||['hidden','submit','button','file'].includes(control.type)||control.closest('[data-pwa-ignore-dirty]')||/szukaj|wyszuk|search/i.test(`${control.placeholder||''} ${control.getAttribute('aria-label')||''}`)
 const controls=root=>[...root.querySelectorAll('input,textarea,select')].filter(control=>!ignored(control))
 const signature=(root,defaults=false)=>JSON.stringify(controls(root).map(control=>[control.name||control.id||control.type,control.type==='checkbox'||control.type==='radio'?(defaults?control.defaultChecked:control.checked):defaults&&control.tagName!=='SELECT'?control.defaultValue:control.value]))
-const scopeFor=node=>node?.closest?.('.modal,.plannerModal,.intakePage')
+const scopeFor=node=>node?.closest?.('.modal,.plannerModal,.intakePage')||node?.closest?.('.formgrid,.dviComposer,.diagnosisEditor')
 let activeGuard=null
 export function confirmPwaNavigation(){return activeGuard?activeGuard.confirm():true}
 export function preparePwaFormSave(scope){return activeGuard?activeGuard.prepare(scope):()=>{}}
