@@ -11,7 +11,7 @@ export function createDraftTracker(){
   checkpoint(keys){const captured=keys.filter(key=>entries.has(key)).map(key=>[key,entries.get(key).current]);return()=>{for(const [key,value] of captured){const entry=entries.get(key);if(entry?.current===value)entry.baseline=value}}}
  }
 }
-const ignored=control=>control.disabled||control.readOnly||['hidden','submit','button','file'].includes(control.type)||control.closest('[data-pwa-ignore-dirty]')||/szukaj|wyszuk|search/i.test(`${control.placeholder||''} ${control.getAttribute('aria-label')||''}`)
+const ignored=control=>control.readOnly||['hidden','submit','button','file'].includes(control.type)||control.closest('[data-pwa-ignore-dirty]')||/szukaj|wyszuk|search/i.test(`${control.placeholder||''} ${control.getAttribute('aria-label')||''}`)
 const controls=root=>[...root.querySelectorAll('input,textarea,select')].filter(control=>!ignored(control))
 const signature=(root,defaults=false)=>JSON.stringify(controls(root).map(control=>[control.name||control.id||control.type,control.type==='checkbox'||control.type==='radio'?(defaults?control.defaultChecked:control.checked):defaults&&control.tagName!=='SELECT'?control.defaultValue:control.value]))
 const scopeFor=node=>node?.closest?.('.modal,.plannerModal,.intakePage')
@@ -28,7 +28,7 @@ export function installPwaFormGuard(win=window,doc=document,onDirty=()=>{}){
  const prepare=scope=>{sweep();const container=scope||doc.activeElement?.closest?.('.modal,.plannerModal,.panel,.intakePage')||doc.activeElement;const finish=tracker.checkpoint(relevant(container));return()=>{sweep();finish();notify()}}
  const focus=event=>{const root=scopeFor(event.target);if(root)tracker.capture(root,signature(root))}
  const input=event=>{if(!event.target.matches?.('input,textarea,select')||ignored(event.target))return;const root=scopeFor(event.target);if(!root)return;tracker.change(root,signature(root),signature(root,true));notify()}
- const changed=event=>{const root=event.detail?.root||scopeFor(doc.activeElement);if(root){tracker.change(root,signature(root),signature(root,true));notify()}}
+ const changed=event=>{const root=event.detail?.root||scopeFor(doc.activeElement);if(root&&tracker.keys().includes(root)){tracker.change(root,signature(root));notify()}}
  const click=event=>{const button=event.target.closest?.('button');if(!button)return;const modal=button.closest('.modal,.plannerModal');if(modal&&(/^(Anuluj|Zamknij)(\b|:)/i.test(button.textContent.trim())||/^Zamknij/i.test(button.getAttribute('aria-label')||'')))if(!confirm(modal)){event.preventDefault();event.stopImmediatePropagation()}}
  const backdrop=event=>{if(event.target.matches?.('.modalback,.plannerModalShade')){const modal=event.target.querySelector('.modal,.plannerModal');if(modal&&!confirm(modal)){event.preventDefault();event.stopImmediatePropagation()}}}
  const key=event=>{if(event.key==='Escape'){const modal=doc.querySelector('.modal,.plannerModal');if(modal&&!confirm(modal)){event.preventDefault();event.stopImmediatePropagation()}}}
