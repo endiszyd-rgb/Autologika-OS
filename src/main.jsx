@@ -1,3 +1,4 @@
+import {PwaOrderContact} from './platform/pwa-order-contact.jsx'
 import {confirmPwaNavigation,preparePwaFormSave} from './platform/pwa-form-guard.mjs'
 import React,{useCallback,useEffect,useId,useMemo,useRef,useState} from 'react'
 import {createRoot} from 'react-dom/client'
@@ -731,6 +732,7 @@ function OrderCenter({changed,refreshToken,initialId,openManual,openIntake}){
    setTab(buttons[next].dataset.orderTab)
  }
  return <section className="orderCenterPage">
+   {pwaMode&&<PwaOrderContact order={o}/>}
    <div className="centerPicker"><label>Aktywne zlecenie<select aria-label="Wybierz zlecenie" value={id||''} onChange={e=>{if(!confirmPwaNavigation())return;setId(Number(e.target.value));setTab('overview')}}>{orders.map(x=><option key={x.id} value={x.id}>{x.make} {x.model} · {x.plate||'bez rejestracji'} · #{x.id} · {x.title}</option>)}</select></label><div className="grow"/><button className="primary" onClick={()=>openManual?.(o)}>◫ Dokumentacja auta</button><details className="centerDocuments"><summary>Dokumenty PDF ▾</summary><div><button onClick={()=>api.orders.exportPdf(o.id,'intake')}>Protokół przyjęcia</button><button onClick={()=>api.orders.exportPdf(o.id,'order')}>Zlecenie serwisowe</button><button onClick={()=>api.orders.exportPdf(o.id,'release')}>Protokół wydania</button></div></details></div>
     <div className="centerHero">
       <div className="centerHeroIdentity"><small>ZLECENIE #{o.id}</small><h2>{o.make} {o.model} · {o.plate||'bez rejestracji'}</h2><div className="orderTitleRow"><div><span>NAZWA ZLECENIA</span><h3>{o.title||'Diagnostyka / naprawa'}</h3></div><button type="button" data-edit-order-details disabled={locked} title={locked?'Najpierw otwórz zlecenie do korekty':'Zmień nazwę i podstawowe dane zlecenia'} onClick={()=>setShowOrderEdit(true)}>✎ Edytuj zlecenie</button></div><p>{o.customer} · {o.phone?<button className="phoneLink" onClick={()=>api.system.openPhone(o.phone)}>☎ {o.phone}</button>:'telefon brak'} · {o.vin||'VIN brak'}{o.due_at?` · termin ${new Date(o.due_at).toLocaleDateString('pl-PL')}`:''}</p></div>

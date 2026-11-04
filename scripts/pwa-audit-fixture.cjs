@@ -55,6 +55,7 @@ async function auditModules(win){
 
   for(const name of names){
    [...document.querySelectorAll('.shell>aside nav button')].find(button=>button.title===name)?.click();await wait(220)
+   if(name==='Centrum zlecenia'){const contact=document.querySelector('.pwaOrderContact');if(!contact?.querySelector('a[href^="tel:"]')||!contact.querySelector('a[href^="sms:"]')||!contact.textContent.includes('SMS: auto gotowe'))throw new Error('Missing quick customer contact')}
    all.push({name,fatal:!!document.querySelector('.fatalScreen'),overflow:document.documentElement.scrollWidth>innerWidth,text:document.querySelector('.pageBody')?.innerText.slice(0,90),error:document.querySelector('.fatalScreen code')?.textContent})
    if(all.at(-1).fatal)break
   }
