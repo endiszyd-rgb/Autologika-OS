@@ -51,12 +51,18 @@ export function findScannedIntakeVehicle(vehicles,scan){
  return (vehicles||[]).find(vehicle=>(vin&&clean(vehicle.vin).replace(/\s/g,'').toUpperCase()===vin)||(plate&&clean(vehicle.plate).replace(/\s/g,'').toUpperCase()===plate))||null
 }
 
+export function findScannedIntakeCustomer(customers,scan){
+ const name=clean(scan?.registration?.form?.customer_name).replace(/\s+/g,' ').toLocaleUpperCase('pl-PL')
+ if(!name)return null
+ return (customers||[]).find(customer=>clean(customer.name).replace(/\s+/g,' ').toLocaleUpperCase('pl-PL')===name)||null
+}
+
 export function applyIntakeScan(current,scan,vehicles=[],customers=[]){
  const vehicle=findScannedIntakeVehicle(vehicles,scan)
  if(vehicle)return selectIntakeVehicle(current,vehicle,customers)
- const form=scan?.registration?.form||{},next=clearIntakeVehicle(current)
+ const form=scan?.registration?.form||{},customer=findScannedIntakeCustomer(customers,scan),next=customer?selectIntakeCustomer(current,customer):clearIntakeVehicle(current)
  if(clean(form.customer_name)&&clean(form.customer_name)!==clean(current.customer_name)){
-  Object.assign(next,{customer_id:'',customer_name:form.customer_name,customer_phone:'',customer_email:'',company:''})
+  if(!customer)Object.assign(next,{customer_id:'',customer_name:form.customer_name,customer_phone:'',customer_email:'',company:''})
  }
  for(const field of VEHICLE_FIELDS)if(clean(form[field]))next[field]=form[field]
  if(!next.vin&&scan?.vin)next.vin=scan.vin

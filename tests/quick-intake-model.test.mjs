@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {clearIntakeVehicle,filterIntakeCustomers,findActiveIntakeOrder,findScannedIntakeVehicle,intakeMileageState,selectIntakeCustomer,selectIntakeVehicle,vehiclesForIntakeCustomer} from '../src/quick-intake-model.js'
+import {clearIntakeVehicle,filterIntakeCustomers,findActiveIntakeOrder,findScannedIntakeCustomer,findScannedIntakeVehicle,intakeMileageState,selectIntakeCustomer,selectIntakeVehicle,vehiclesForIntakeCustomer} from '../src/quick-intake-model.js'
 
 const customers=[{id:1,name:'Anna Nowak',phone:'500 600 700',email:'anna@example.pl',company:'Auto Anna'},{id:2,name:'Jan Kowalski',phone:'700800900'}]
 const vehicles=[{id:10,customer_id:1,plate:'WA 1234',vin:'ABC123',make:'Volvo',model:'V60',mileage:125000},{id:20,customer_id:2,plate:'KR 55',vin:'XYZ789',make:'Ford',model:'Focus'}]
@@ -34,6 +34,11 @@ test('skan rozpoznaje pojazd zapisany już w kartotece',()=>{
  assert.equal(findScannedIntakeVehicle(vehicles,{registration:{form:{plate:'kr55'}}}).id,20)
 })
 
+test('skan rozpoznaje istniejącego klienta po dokładnej nazwie z dowodu',()=>{
+ assert.equal(findScannedIntakeCustomer(customers,{registration:{form:{customer_name:'  jan   kowalski '}}})?.id,2)
+ assert.equal(findScannedIntakeCustomer(customers,{registration:{form:{customer_name:'Jan Kowal'}}}),null)
+})
+
 test('wykrywa aktywne zlecenie dla wybranego pojazdu',()=>{
  const orders=[{id:31,vehicle_id:10,status:'NAPRAWA'},{id:32,vehicle_id:20,status:'WYDANE'},{id:33,vehicle_id:20,status:'PRZYJETE',archived_at:'2026-09-20'}]
  assert.equal(findActiveIntakeOrder(orders,10)?.id,31)
@@ -62,4 +67,12 @@ test('camera scan reuses known vehicle and customer rather than duplicating them
  const result=applyIntakeScan({complaint:'Nie odpala'},{vin:'abc123'},vehicles,customers)
  assert.equal(result.vehicle_id,10);assert.equal(result.customer_id,1)
  assert.equal(result.customer_phone,'500 600 700');assert.equal(result.complaint,'Nie odpala')
+})
+
+test('camera scan reuses an exact owner match even for a new vehicle',async()=>{
+ const {applyIntakeScan}=await import('../src/quick-intake-model.js')
+ const result=applyIntakeScan({complaint:'Kontrola po zakupie'},{registration:{form:{customer_name:' jan  kowalski ',plate:'KR 2026',make:'Ford'}}},vehicles,customers)
+ assert.equal(result.customer_id,2);assert.equal(result.customer_phone,'700800900')
+ assert.equal(result.vehicle_id,'');assert.equal(result.plate,'KR 2026')
+ assert.equal(result.complaint,'Kontrola po zakupie')
 })
