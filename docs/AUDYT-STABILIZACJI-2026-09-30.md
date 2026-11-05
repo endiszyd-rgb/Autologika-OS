@@ -32,6 +32,8 @@ Terminarz, dokumentacja techniczna, magazyn, import dokumentu dostawy, Autologik
 
 Ustawienia nie używają już blokujących okien `alert` przy błędach serwera mobilnego, synchronizacji, logowania i zapisu. Komunikat pojawia się w aplikacji jako przyklejony, dostępny status, który można zamknąć bez przerywania pracy. Część pozostałych operacji nadal używa `window.confirm` i `window.alert`; należy zastępować je wspólnym modalem przy okazji pracy nad konkretnym ekranem.
 
+Aktualizacja 2026-11-05: dodano wspólny, nieblokujący dialog potwierdzenia ze stanem wykonywania i błędu IPC. Korzystają z niego trwałe usunięcie zlecenia, klienta i pojazdu, usuwanie wykonanej pracy oraz części magazynowej, a także zbiorcze księgowanie zamontowanych części. Dialog pokazuje skutki operacji i blokuje ponowne kliknięcie podczas zapisu. Pozostałe potwierdzenia w dokumentacji technicznej, szablonach i plikach zlecenia są kolejną partią tej migracji.
+
 ### LOW — ciche błędy procesów okresowych
 
 Odświeżanie licznika uwag i okresowy odczyt stanu synchronizacji ignorują pojedyncze błędy, aby nie przerywać pracy offline. Stan synchronizacji zachowuje ostatni błąd, lecz licznik uwag nie sygnalizuje chwilowego problemu. Warto dodać dyskretny stan „dane mogą być nieaktualne”, bez modalnego komunikatu.
