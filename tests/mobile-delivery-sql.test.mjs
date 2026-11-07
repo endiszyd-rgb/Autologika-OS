@@ -17,6 +17,8 @@ test('mobile delivery transaction validates, updates stock, rolls back, deduplic
   await assert.rejects(receive('b',doc('FV/1',[row])),/już przyjęty/)
   await assert.rejects(receive('c',doc('FV/2',[row,{...row,qty:-1}])),/Nieprawidłowy/);assert.equal((await stock()).stock,'5')
   assert.equal((await db.query("select count(*)::int count from sync_records where entity_type='delivery_document_imports'")).rows[0].count,1)
+  await db.query("insert into sync_records(workshop_id,entity_type,cloud_id,payload) values($1,'delivery_document_imports',$2,$3)",[owner,'e'.repeat(64),JSON.stringify({item_count:2,quantity:2,supplier_name:'PC',document_no:'PC/1'})])
+  const desktopRetry=await receive('e',doc('PC/1',[row]));assert.equal(desktopRetry.already_imported,true);assert.equal((await stock()).stock,'5')
   await assert.rejects(receive('d',doc('FV/3',[row]),other),/należeć/)
   await db.query("select set_config('request.jwt.claim.sub',$1,false)",[other]);const isolated=await receive('a',doc('FV/1',[row]),other);assert.equal(isolated.created,1);assert.equal((await db.query("select count(*)::int count from sync_records where cloud_id='existing'")).rows[0].count,0)
   await db.query("select set_config('request.jwt.claim.sub',$1,false)",[owner]);assert.equal((await stock()).stock,'5')

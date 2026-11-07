@@ -18,7 +18,7 @@ begin
  -- Dwie dostawy z telefonu nie mogą równolegle zmienić tego samego stanu.
  perform pg_advisory_xact_lock(hashtextextended(owner_id::text||':mobile-delivery',0));
  stamp:=clock_timestamp();
- select * into history from public.sync_records where workshop_id=owner_id and entity_type='delivery_document_imports' and cloud_id='pwa-delivery:'||p_hash;
+ select * into history from public.sync_records where workshop_id=owner_id and entity_type='delivery_document_imports' and (cloud_id='pwa-delivery:'||p_hash or cloud_id=p_hash or payload->>'source_hash'=p_hash) order by updated_at desc limit 1;
  if found then
   if history.deleted_at is not null then raise exception 'Ta dostawa została usunięta. Skontaktuj się z administratorem przed ponownym importem.';end if;
   return coalesce(history.payload->'import_result',jsonb_build_object('item_count',history.payload->'item_count','quantity',history.payload->'quantity','created',0,'updated',0,'supplier_name',history.payload->>'supplier_name'))||jsonb_build_object('already_imported',true);
