@@ -81,7 +81,9 @@ async function auditModules(win){
   if(!savedDocs.some(doc=>doc.file==='document-browser-test.png'&&doc.exists))throw new Error('Saved scan missing from document list')
   ;[...capture.querySelectorAll('button')].find(button=>button.textContent==='Gotowe').click();await wait(60)
   if(document.body.style.overflow==='hidden')throw new Error('Document overlay left the page locked')
-  const deliveryButton=[...document.querySelectorAll('.documentsPage button')].find(button=>button.textContent==='Skanuj dostawę do magazynu')
+  ;[...document.querySelectorAll('.shell>aside nav button')].find(button=>button.title==='Pulpit').click();await wait(200)
+  const deliveryButton=document.querySelector('.studioDocumentScan')
+  if(!deliveryButton||!deliveryButton.textContent.includes('Skanuj dokument'))throw new Error('Missing dashboard delivery scan entry')
   deliveryButton.click();await wait(80)
   const deliveryCapture=document.querySelector('.pwaDocumentCapture'),deliveryInput=deliveryCapture.querySelector('input[accept="image/*"]:not([capture])')
   const invoiceCanvas=document.createElement('canvas');invoiceCanvas.width=2300;invoiceCanvas.height=430
@@ -93,7 +95,8 @@ async function auditModules(win){
   const receive=[...deliveryCapture.querySelectorAll('button')].find(button=>button.textContent==='Przyjmij części do magazynu');if(!receive||receive.disabled)throw new Error('Cannot confirm recognized delivery')
   receive.click();await wait(400)
   if(!deliveryCapture.textContent.includes('Dostawa przyjęta do magazynu'))throw new Error('Delivery RPC failed: '+deliveryCapture.textContent)
-  ;[...deliveryCapture.querySelectorAll('button')].find(button=>button.textContent==='Gotowe').click();await wait(60)
+  ;[...deliveryCapture.querySelectorAll('button')].find(button=>button.textContent==='Przejdź do magazynu').click();await wait(200)
+  if(document.querySelector('.pwaDocumentCapture')||document.querySelector('.shell>aside nav button[aria-current=page]')?.title!=='Części / magazyn')throw new Error('Dashboard delivery did not open inventory after import')
   for(const name of names){
    [...document.querySelectorAll('.shell>aside nav button')].find(button=>button.title===name)?.click();await wait(220)
    if(name==='Centrum zlecenia'){const contact=document.querySelector('.pwaOrderContact');if(!contact?.querySelector('a[href^="tel:"]')||!contact.querySelector('a[href^="sms:"]')||!contact.textContent.includes('SMS: auto gotowe'))throw new Error('Missing quick customer contact')}

@@ -5,7 +5,7 @@
 1. Pulpit: skan dokumentu, albo Dokumenty → Skanuj dostawę do magazynu.
 2. Wykonaj zdjęcie / wybierz je z galerii. OCR uruchamia się automatycznie na telefonie.
 3. Sprawdź numery części, nazwy, ilości i ceny netto. Popraw błędne lub dopisz pominięte wiersze.
-4. Przyjmij części do magazynu. Funkcja serwerowa zapisze całą dostawę w jednej transakcji.
+4. Przyjmij części do magazynu; z okna uruchomionego na Pulpicie możesz od razu przejść do magazynu. Funkcja serwerowa zapisze całą dostawę w jednej transakcji.
 
 Zdjęcie i potwierdzona dostawa trafiają do historii w chmurze. Dopasowanie do istniejącej karty bazuje na znormalizowanym numerze części, a koszt zakupu jest średnią ważoną. Jeśli karta nie istnieje, powstaje nowa z domyślnym narzutem odpowiadającym Windows.
 
@@ -15,7 +15,7 @@ OCR korzysta ze wspólnego parsera Windows/iOS oraz lokalnie hostowanych plików
 
 W projekcie Supabase otwórz SQL Editor, wklej całą zawartość `cloud_mobile_delivery.sql` i wybierz Run. Funkcja wymaga tabeli `sync_records` i jej dotychczasowych reguł RLS. Nie udostępnia klucza administracyjnego aplikacji. Bez tej aktualizacji działa OCR i korekta tabeli, a import pokazuje czytelny komunikat o brakującej funkcji.
 
-Dostęp z tej sesji obejmuje repozytorium, nie panel administracyjny Supabase. Migracja nie została automatycznie uruchomiona w rzeczywistej bazie.
+Migracja została wdrożona 7 listopada 2026 przez połączony Supabase. Test transakcyjny w rzeczywistej bazie przeszedł; wszystkie dane testowe wycofano.
 
 ## Weryfikacja
 
