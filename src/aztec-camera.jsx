@@ -1,9 +1,12 @@
+import {createPortal} from 'react-dom'
+import {usePwaOverlayViewport} from './platform/pwa-overlay.jsx'
 import React,{useEffect,useRef,useState} from 'react'
 import {bytesToBase64,cameraErrorMessage} from './aztec-camera-utils.mjs'
 
 const isNotFound=error=>/NotFoundException|No MultiFormat Readers|No code/i.test(String(error?.name||error?.message||error||''))
 
 export default function AztecCamera({onDetected,onClose}){
+ const viewportStyle=usePwaOverlayViewport()
  const videoRef=useRef(null),readerRef=useRef(null),controlsRef=useRef(null),trackRef=useRef(null),doneRef=useRef(false),attemptRef=useRef(0)
  const[status,setStatus]=useState('Uruchamiam tylny aparat…'),[error,setError]=useState(''),[torchAvailable,setTorchAvailable]=useState(false),[torch,setTorch]=useState(false),[starting,setStarting]=useState(true)
 
@@ -40,9 +43,9 @@ export default function AztecCamera({onDetected,onClose}){
  }
  const toggleTorch=async()=>{const next=!torch;try{await trackRef.current?.applyConstraints?.({advanced:[{torch:next}]});setTorch(next)}catch{setTorchAvailable(false);setError('Ten aparat nie pozwala sterować lampą z poziomu Safari.')} }
  useEffect(()=>{start();return()=>stop()},[])
- return <div className="aztecCamera" role="dialog" aria-modal="true" aria-label="Skanowanie kodu AZTEC">
+ return createPortal(<div className="aztecCamera" style={viewportStyle} role="dialog" aria-modal="true" aria-label="Skanowanie kodu AZTEC">
   <div className="aztecCameraTop"><div><small>IOS · SKAN LOKALNY</small><b>Skanuj AZTEC dowodu</b></div><button type="button" className="aztecClose" aria-label="Zamknij skaner" onClick={()=>{stop();onClose?.()}}>×</button></div>
   <div className="aztecViewport"><video ref={videoRef} autoPlay muted playsInline/><div className="aztecShade"/><div className="aztecFrame"><i/><i/><i/><i/><span/></div>{starting&&<div className="aztecLoading"><i/>Uruchamianie…</div>}</div>
   <div className="aztecCameraPanel"><p className={error?'error':''}>{error||status}</p><div className="aztecCameraActions">{torchAvailable&&<button type="button" className={torch?'active':''} onClick={toggleTorch}>{torch?'Wyłącz lampę':'Włącz lampę'}</button>}<label className="pwaNativeFile">Zrób zdjęcie kodu<input aria-label="Zrób zdjęcie kodu AZTEC" type="file" accept="image/*" capture="environment" onClick={stop} onChange={selectPhoto} onCancel={()=>setStarting(false)}/></label><label className="pwaNativeFile">Wybierz z galerii<input aria-label="Wybierz kod AZTEC z galerii" type="file" accept="image/*" onClick={stop} onChange={selectPhoto} onCancel={()=>setStarting(false)}/></label><button type="button" onClick={start}>Uruchom ponownie</button></div><small>Dane dowodu są dekodowane na tym urządzeniu i nie są wysyłane do usługi OCR.</small></div>
- </div>
+ </div>,document.body)
 }
