@@ -21,6 +21,11 @@ async function installFakeCloud(session){
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers})
   const url=new URL(request.url)
   if(!url.hostname.endsWith('.supabase.co'))return new Response('{}',{status:403,headers})
+  if(url.pathname==='/rest/v1/rpc/import_mobile_delivery'){
+   const requestBody=await request.json(),item=requestBody.p_document?.items?.[0]
+   if(!item||Number(item.qty)!==2||Number(item.unit_cost)!==10)return new Response(JSON.stringify({message:'Invalid OCR import payload'}),{status:400,headers})
+   return new Response(JSON.stringify({item_count:1,quantity:2,created:1,updated:0,already_imported:false}),{headers})
+  }
   if(url.pathname!=='/rest/v1/sync_records')return new Response('{}',{headers})
   if(request.method==='GET'){
    const entity=url.searchParams.get('entity_type')?.replace(/^eq\./,''),id=url.searchParams.get('cloud_id')?.replace(/^eq\./,''),offset=Number(url.searchParams.get('offset')||0),limit=Number(url.searchParams.get('limit')||1000)
@@ -55,7 +60,7 @@ async function auditModules(win){
 
   const docsButton=[...document.querySelectorAll('.shell>aside nav button')].find(button=>button.title==='Dokumenty')
   docsButton.click();await wait(300)
-  const captureButton=[...document.querySelectorAll('.documentsPage button')].find(button=>button.textContent.includes('Skanuj / dodaj'))
+  const captureButton=[...document.querySelectorAll('.documentsPage button')].find(button=>button.textContent.includes('Dodaj zdjęcie / PDF'))
   if(!captureButton)throw new Error('Missing document capture entry')
   captureButton.click();await wait(100)
   const capture=document.querySelector('.pwaDocumentCapture'),gallery=capture?.querySelector('input[type=file][accept="image/*"]:not([capture])')
@@ -76,6 +81,19 @@ async function auditModules(win){
   if(!savedDocs.some(doc=>doc.file==='document-browser-test.png'&&doc.exists))throw new Error('Saved scan missing from document list')
   ;[...capture.querySelectorAll('button')].find(button=>button.textContent==='Gotowe').click();await wait(60)
   if(document.body.style.overflow==='hidden')throw new Error('Document overlay left the page locked')
+  const deliveryButton=[...document.querySelectorAll('.documentsPage button')].find(button=>button.textContent==='Skanuj dostawę do magazynu')
+  deliveryButton.click();await wait(80)
+  const deliveryCapture=document.querySelector('.pwaDocumentCapture'),deliveryInput=deliveryCapture.querySelector('input[accept="image/*"]:not([capture])')
+  const invoiceCanvas=document.createElement('canvas');invoiceCanvas.width=2300;invoiceCanvas.height=430
+  const ctx=invoiceCanvas.getContext('2d');ctx.fillStyle='white';ctx.fillRect(0,0,2300,430);ctx.fillStyle='black';ctx.font='44px Arial'
+  ;['HURTOWNIA AUTOLOGIKA','Faktura nr FV/2026/123','1 FILTR123 FILTR OLEJU 2.00 SZT 10.00 20.00 23 4.60 24.60','Wartosc dokumentu 24.60'].forEach((line,index)=>ctx.fillText(line,35,70+index*85))
+  const invoiceBlob=await new Promise(resolve=>invoiceCanvas.toBlob(resolve,'image/png')),invoiceFiles=new DataTransfer();invoiceFiles.items.add(new File([invoiceBlob],'ocr-test.png',{type:'image/png'}));deliveryInput.files=invoiceFiles.files;deliveryInput.dispatchEvent(new Event('change',{bubbles:true}))
+  for(let attempt=0;attempt<300&&!deliveryCapture.querySelector('.pwaDeliveryItem');attempt++){await wait(150);if(deliveryCapture.querySelector('[role=alert]'))throw new Error('Browser OCR failed: '+deliveryCapture.querySelector('[role=alert]').textContent)}
+  if(!deliveryCapture.querySelector('.pwaDeliveryItem'))throw new Error('Browser OCR did not find invoice items')
+  const receive=[...deliveryCapture.querySelectorAll('button')].find(button=>button.textContent==='Przyjmij części do magazynu');if(!receive||receive.disabled)throw new Error('Cannot confirm recognized delivery')
+  receive.click();await wait(400)
+  if(!deliveryCapture.textContent.includes('Dostawa przyjęta do magazynu'))throw new Error('Delivery RPC failed: '+deliveryCapture.textContent)
+  ;[...deliveryCapture.querySelectorAll('button')].find(button=>button.textContent==='Gotowe').click();await wait(60)
   for(const name of names){
    [...document.querySelectorAll('.shell>aside nav button')].find(button=>button.title===name)?.click();await wait(220)
    if(name==='Centrum zlecenia'){const contact=document.querySelector('.pwaOrderContact');if(!contact?.querySelector('a[href^="tel:"]')||!contact.querySelector('a[href^="sms:"]')||!contact.textContent.includes('SMS: auto gotowe'))throw new Error('Missing quick customer contact')}

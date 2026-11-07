@@ -4,7 +4,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path')
 
 app.setPath('userData',fs.mkdtempSync(path.join(os.tmpdir(),'autologika-pwa-')))
 const url=process.argv.at(-1)
-setTimeout(()=>{console.error('PWA browser smoke timeout');app.exit(1)},30000).unref()
+setTimeout(()=>{console.error('PWA browser smoke timeout');app.exit(1)},120000).unref()
 
 app.whenReady().then(async()=>{
   const win=new BrowserWindow({show:false,width:430,height:932,useContentSize:true,webPreferences:{contextIsolation:true,nodeIntegration:false}})

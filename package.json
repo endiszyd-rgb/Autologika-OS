@@ -40,6 +40,7 @@
   "devDependencies": {
     "@babel/parser": "^7.29.8",
     "@babel/traverse": "^7.29.8",
+    "@electric-sql/pglite": "0.5.15",
     "@electron/rebuild": "^3.7.1",
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",
@@ -61,6 +62,7 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
+      "shared/**/*",
       "package.json",
       "cloud_schema_supabase.sql",
       "REMOTE_APPROVAL_SETUP.md",

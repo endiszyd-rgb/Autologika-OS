@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -7,6 +8,13 @@ export default defineConfig({
   define: { 'import.meta.env.VITE_APP_VERSION': JSON.stringify(packageJson.version) },
   plugins: [
     react(),
+    {name:'local-mobile-ocr',generateBundle(){
+      for(const [name,source] of [
+        ['worker.min.js','node_modules/tesseract.js/dist/worker.min.js'],
+        ['tesseract-core-lstm.wasm.js','node_modules/tesseract.js-core/tesseract-core-lstm.wasm.js'],
+        ['pol.traineddata.gz','node_modules/@tesseract.js-data/pol/4.0.0/pol.traineddata.gz']
+      ])this.emitFile({type:'asset',fileName:`ocr/${name}`,source:fs.readFileSync(source)})
+    }},
     VitePWA({
       registerType: 'prompt',
       injectRegister: null,
@@ -37,12 +45,14 @@ export default defineConfig({
         skipWaiting: false,
         navigateFallback: 'index.html',
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globIgnores:['ocr/**'],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024
       }
     })
   ],
   base: './',
   build: {
+    commonjsOptions:{include:[/node_modules/,/shared/]},
     outDir: 'dist',
     emptyOutDir: true,
     rollupOptions: {

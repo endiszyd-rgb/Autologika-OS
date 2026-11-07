@@ -53,7 +53,7 @@ const lazyNamed=(loader,name)=>React.lazy(()=>loader().then(module=>({default:mo
 const WorkshopSchedule=lazyNamed(()=>import('./schedule.jsx'),'WorkshopSchedule')
 const TechnicalManual=React.lazy(()=>import('./technical-manual.jsx'))
 const PartsWorkspace=lazyNamed(()=>import('./parts-workspace.jsx'),'PartsWorkspace')
-const DeliveryDocumentImport=pwaMode?PwaDocumentCapture:lazyNamed(()=>import('./delivery-document-import.jsx'),'DeliveryDocumentImport')
+const DeliveryDocumentImport=pwaMode?(props=><PwaDocumentCapture {...props} delivery/>):lazyNamed(()=>import('./delivery-document-import.jsx'),'DeliveryDocumentImport')
 const Care=lazyNamed(()=>import('./care.jsx'),'Care')
 const Finance=lazyNamed(()=>import('./company-screens.jsx'),'Finance')
 const Documents=lazyNamed(()=>pwaMode?import('./platform/pwa-documents.jsx'):import('./company-screens.jsx'),'Documents')
