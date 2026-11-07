@@ -4,7 +4,7 @@ import {bytesToBase64,cameraErrorMessage} from './aztec-camera-utils.mjs'
 const isNotFound=error=>/NotFoundException|No MultiFormat Readers|No code/i.test(String(error?.name||error?.message||error||''))
 
 export default function AztecCamera({onDetected,onClose}){
- const videoRef=useRef(null),fileRef=useRef(null),readerRef=useRef(null),controlsRef=useRef(null),trackRef=useRef(null),doneRef=useRef(false),attemptRef=useRef(0)
+ const videoRef=useRef(null),readerRef=useRef(null),controlsRef=useRef(null),trackRef=useRef(null),doneRef=useRef(false),attemptRef=useRef(0)
  const[status,setStatus]=useState('Uruchamiam tylny aparat…'),[error,setError]=useState(''),[torchAvailable,setTorchAvailable]=useState(false),[torch,setTorch]=useState(false),[starting,setStarting]=useState(true)
 
  const stop=()=>{attemptRef.current++;controlsRef.current?.stop?.();controlsRef.current=null;trackRef.current?.stop?.();trackRef.current=null;const stream=videoRef.current?.srcObject;if(stream?.getTracks)stream.getTracks().forEach(track=>track.stop());if(videoRef.current)videoRef.current.srcObject=null}
@@ -43,7 +43,6 @@ export default function AztecCamera({onDetected,onClose}){
  return <div className="aztecCamera" role="dialog" aria-modal="true" aria-label="Skanowanie kodu AZTEC">
   <div className="aztecCameraTop"><div><small>IOS · SKAN LOKALNY</small><b>Skanuj AZTEC dowodu</b></div><button type="button" className="aztecClose" aria-label="Zamknij skaner" onClick={()=>{stop();onClose?.()}}>×</button></div>
   <div className="aztecViewport"><video ref={videoRef} autoPlay muted playsInline/><div className="aztecShade"/><div className="aztecFrame"><i/><i/><i/><i/><span/></div>{starting&&<div className="aztecLoading"><i/>Uruchamianie…</div>}</div>
-  <div className="aztecCameraPanel"><p className={error?'error':''}>{error||status}</p><div className="aztecCameraActions">{torchAvailable&&<button type="button" className={torch?'active':''} onClick={toggleTorch}>{torch?'Wyłącz lampę':'Włącz lampę'}</button>}<button type="button" onClick={()=>fileRef.current?.click()}>Zrób / wybierz zdjęcie</button><button type="button" onClick={start}>Uruchom ponownie</button></div><small>Dane dowodu są dekodowane na tym urządzeniu i nie są wysyłane do usługi OCR.</small></div>
-  <input ref={fileRef} className="aztecFile" type="file" accept="image/*" onChange={selectPhoto}/>
+  <div className="aztecCameraPanel"><p className={error?'error':''}>{error||status}</p><div className="aztecCameraActions">{torchAvailable&&<button type="button" className={torch?'active':''} onClick={toggleTorch}>{torch?'Wyłącz lampę':'Włącz lampę'}</button>}<label className="pwaNativeFile">Zrób zdjęcie kodu<input aria-label="Zrób zdjęcie kodu AZTEC" type="file" accept="image/*" capture="environment" onClick={stop} onChange={selectPhoto} onCancel={()=>setStarting(false)}/></label><label className="pwaNativeFile">Wybierz z galerii<input aria-label="Wybierz kod AZTEC z galerii" type="file" accept="image/*" onClick={stop} onChange={selectPhoto} onCancel={()=>setStarting(false)}/></label><button type="button" onClick={start}>Uruchom ponownie</button></div><small>Dane dowodu są dekodowane na tym urządzeniu i nie są wysyłane do usługi OCR.</small></div>
  </div>
 }

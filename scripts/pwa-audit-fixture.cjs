@@ -53,6 +53,22 @@ async function auditModules(win){
   window.confirm=originalConfirm
   if(document.querySelector('.intakePage')||confirmations!==1)throw new Error('Restored input still blocks navigation')
 
+  const docsButton=[...document.querySelectorAll('.shell>aside nav button')].find(button=>button.title==='Dokumenty')
+  docsButton.click();await wait(300)
+  const captureButton=[...document.querySelectorAll('.documentsPage button')].find(button=>button.textContent.includes('Skanuj / dodaj'))
+  if(!captureButton)throw new Error('Missing document capture entry')
+  captureButton.click();await wait(100)
+  const capture=document.querySelector('.pwaDocumentCapture'),gallery=capture?.querySelector('input[type=file][accept="image/*"]:not([capture])')
+  if(!gallery||!capture.querySelector('input[capture=environment]'))throw new Error('Missing native camera/gallery controls')
+  const canvas=document.createElement('canvas');canvas.width=20;canvas.height=20
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png')),transfer=new DataTransfer()
+  transfer.items.add(new File([blob],'document-browser-test.png',{type:'image/png'}));gallery.files=transfer.files;gallery.dispatchEvent(new Event('change',{bubbles:true}));await wait(80)
+  const save=[...capture.querySelectorAll('button')].find(button=>button.textContent==='Zapisz dokument')
+  if(save.disabled)throw new Error('Selected photo cannot be saved');save.click();await wait(300)
+  if(!capture.textContent.includes('Dokument zapisany w chmurze'))throw new Error('Document save failed: '+capture.textContent)
+  const savedDocs=await window.autologika.documents.list()
+  if(!savedDocs.some(doc=>doc.file==='document-browser-test.png'&&doc.exists))throw new Error('Saved scan missing from document list')
+  ;[...capture.querySelectorAll('button')].find(button=>button.textContent==='Gotowe').click();await wait(60)
   for(const name of names){
    [...document.querySelectorAll('.shell>aside nav button')].find(button=>button.title===name)?.click();await wait(220)
    if(name==='Centrum zlecenia'){const contact=document.querySelector('.pwaOrderContact');if(!contact?.querySelector('a[href^="tel:"]')||!contact.querySelector('a[href^="sms:"]')||!contact.textContent.includes('SMS: auto gotowe'))throw new Error('Missing quick customer contact')}
