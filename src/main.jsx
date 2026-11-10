@@ -47,6 +47,7 @@ import {PwaShell} from './platform/pwa-shell.jsx'
 import './platform/pwa.css'
 import './aztec-camera.css'
 import './confirmation-dialog.css'
+import './analytics-shell.css'
 import {ConfirmationHost,confirmAction} from './confirmation-dialog.jsx'
 
 const api=ensurePlatformApi()
