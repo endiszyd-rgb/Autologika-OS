@@ -247,3 +247,174 @@
  .studioKpis,.studioWorkSide{grid-template-columns:1fr}.studioRadarPanel{min-height:0}.studioRadar{margin-top:8px}.studioGoal{min-height:310px}
 }
 @media(prefers-reduced-motion:reduce){.studioHeading,.studioOverview,.studioKpis,.studioWorkGrid{animation:none}.studioKpi::before{transition:none}}
+
+/* 1.1.3 motion pass — transitions are operational feedback, not decoration. */
+.pageBody{
+ position:relative;
+ transform-origin:50% 0;
+ animation:cockpitPageReveal .52s cubic-bezier(.16,.8,.22,1) both!important;
+ will-change:opacity,transform,filter;
+}
+.pageBody::before{
+ content:"";
+ position:absolute;
+ z-index:80;
+ top:-25px;
+ left:0;
+ width:42%;
+ height:2px;
+ border-radius:999px;
+ pointer-events:none;
+ background:linear-gradient(90deg,transparent,#6b8fff 30%,#42e0d2 78%,transparent);
+ box-shadow:0 0 18px rgba(79,206,231,.55);
+ transform-origin:left;
+ animation:cockpitRouteLine .68s cubic-bezier(.16,.78,.2,1) both;
+}
+.pageBody>*:first-child{animation:cockpitContentSettle .58s .05s cubic-bezier(.16,.8,.22,1) both}
+
+.modalback{
+ animation:cockpitBackdropIn .28s ease-out both!important;
+ perspective:1100px;
+}
+.modal{
+ transform-origin:50% 12%;
+ animation:cockpitModalIn .42s cubic-bezier(.16,.86,.22,1) both!important;
+ will-change:opacity,transform,filter;
+}
+.modal>.modalhead{animation:cockpitModalSection .38s .08s ease-out both}
+.modal>.modalhead~*{animation:cockpitModalSection .42s .13s ease-out both}
+.commandPalette{animation:cockpitModalIn .36s cubic-bezier(.16,.86,.22,1) both!important}
+
+.appLoadingState{
+ border-color:rgba(100,144,242,.2);
+ background:
+  radial-gradient(circle at 50% 38%,rgba(65,112,232,.16),transparent 32%),
+  linear-gradient(145deg,rgba(13,25,49,.96),rgba(6,13,27,.96));
+ box-shadow:inset 0 1px rgba(255,255,255,.025),0 24px 70px rgba(0,4,18,.3);
+ animation:cockpitLoadingIn .32s ease-out both;
+}
+.appLoadingState::after{
+ content:"";
+ position:absolute;
+ inset:0;
+ pointer-events:none;
+ background:linear-gradient(105deg,transparent 30%,rgba(105,148,255,.06) 46%,rgba(69,224,211,.1) 50%,transparent 66%);
+ transform:translateX(-100%);
+ animation:cockpitLoadingSweep 1.8s ease-in-out infinite;
+}
+.appLoadingMark{position:relative;width:48px;height:48px;display:grid;place-items:center}
+.appLoadingMark::before,.appLoadingMark::after{content:"";position:absolute;border-radius:50%;border:1px solid rgba(102,140,255,.32)}
+.appLoadingMark::before{inset:0;border-top-color:#6d91ff;border-right-color:#46ddd2;animation:cockpitSpinner 1.15s linear infinite}
+.appLoadingMark::after{inset:7px;border-left-color:#46ddd2;animation:cockpitSpinner .86s linear infinite reverse}
+.appLoadingMark i{position:absolute!important;width:4px!important;height:4px!important;border-radius:50%!important;background:#dce6ff!important;box-shadow:0 0 12px #6c9aff!important;animation:cockpitLoaderDot 1.35s ease-in-out infinite!important}
+.appLoadingMark i:nth-child(1){transform:translate(-9px,6px);animation-delay:-.45s!important}.appLoadingMark i:nth-child(2){transform:translate(0,-8px);animation-delay:-.2s!important}.appLoadingMark i:nth-child(3){transform:translate(10px,7px)}
+.appLoadingCopy b{color:#f0f5ff}.appLoadingCopy span{color:#7d8da9}
+.appLoadingSkeleton i{background:linear-gradient(90deg,#14223f 20%,#2f4e89 43%,#2a777d 50%,#14223f 72%);background-size:240% 100%;animation-duration:1.25s}
+
+.studioSkeleton{
+ position:relative;
+ min-height:470px;
+ padding-top:34px;
+ animation:cockpitLoadingIn .3s ease-out both;
+}
+.studioSkeleton::before{content:"ŁADOWANIE PULPITU";position:absolute;top:0;left:0;color:#7085ab;font-size:8px;font-weight:850;letter-spacing:.18em}
+.studioSkeleton::after{content:"";position:absolute;top:17px;left:0;width:160px;height:2px;border-radius:2px;background:linear-gradient(90deg,#668cff,#39d9d1,transparent);animation:cockpitSkeletonProgress 1.4s ease-in-out infinite}
+.studioSkeleton>div{border:1px solid rgba(105,143,220,.13)!important;background:linear-gradient(105deg,#09142a 20%,#142b52 44%,#164b58 50%,#09142a 76%)!important;background-size:240% 100%!important;animation:cockpitSkeletonShimmer 1.6s linear infinite!important}
+
+/* Radar: every vehicle is an unmistakable, keyboard-accessible action. */
+.studioRadar{overflow:visible}
+.studioRadar::after{
+ content:"";
+ position:absolute;
+ inset:25%;
+ z-index:-1;
+ border-radius:50%;
+ pointer-events:none;
+ background:radial-gradient(circle,rgba(70,146,242,.13),transparent 68%);
+ animation:radarCoreBreath 2.8s ease-in-out infinite;
+}
+.studioSweep{animation:studioScan 5.8s linear infinite!important;filter:drop-shadow(0 0 7px rgba(62,213,208,.34))}
+.studioSweep::before{
+ content:"";
+ position:absolute;
+ left:50%;
+ top:50%;
+ width:46%;
+ height:1px;
+ transform-origin:left center;
+ background:linear-gradient(90deg,rgba(94,238,223,.9),rgba(100,150,255,.12),transparent);
+ box-shadow:0 0 8px rgba(70,220,210,.54);
+}
+.studioSweep::after{
+ content:"";
+ position:absolute;
+ right:2%;
+ top:49.2%;
+ width:5px;
+ height:5px;
+ border-radius:50%;
+ background:#78f3df;
+ box-shadow:0 0 13px #55dfd2;
+}
+.radarEcho{position:absolute;inset:34%;z-index:0;border:1px solid rgba(76,211,205,.34);border-radius:50%;pointer-events:none;animation:radarEchoOut 3.2s ease-out infinite}
+.radarEcho.echoTwo{animation-delay:1.6s}
+.studioBlip{
+ width:76px;
+ height:64px;
+ min-width:76px;
+ padding:7px!important;
+ justify-content:center;
+ cursor:pointer!important;
+ pointer-events:auto!important;
+ touch-action:manipulation;
+ isolation:isolate;
+ transition:filter .2s ease!important;
+}
+.studioBlip::before{
+ content:"";
+ position:absolute;
+ inset:3px;
+ z-index:-1;
+ border:1px solid transparent;
+ border-radius:15px;
+ background:rgba(12,28,56,0);
+ transform:scale(.82);
+ transition:background .2s ease,border-color .2s ease,transform .24s cubic-bezier(.16,.8,.22,1),box-shadow .2s ease;
+}
+.studioBlip>i,.studioBlip>span{pointer-events:none}
+.studioBlip>i{width:8px;height:8px;transition:transform .2s ease,box-shadow .2s ease}
+.studioBlip:hover::before,.studioBlip:focus-visible::before{border-color:rgba(110,158,255,.42);background:rgba(18,39,77,.78);transform:scale(1);box-shadow:0 10px 26px rgba(0,7,27,.36),inset 0 1px rgba(255,255,255,.04)}
+.studioBlip:hover>i,.studioBlip:focus-visible>i{transform:scale(1.42);box-shadow:0 0 17px rgba(82,164,255,1)}
+.studioBlip:active::before{transform:scale(.92);background:rgba(35,65,119,.92)}
+.studioBlip.opening{z-index:12;filter:brightness(1.25)}
+.studioBlip.opening::before{border-color:#60e0d4;background:rgba(27,74,96,.88);box-shadow:0 0 0 5px rgba(71,221,209,.1),0 0 32px rgba(71,221,209,.38);animation:radarOpening .42s ease-in-out infinite alternate}
+.studioBlip.opening>i{background:#65f2dc;box-shadow:0 0 18px #65f2dc}
+.radarTooltip{z-index:20;min-width:155px;text-align:left}
+.radarTooltip em{display:block;margin-top:7px;padding-top:6px;border-top:1px solid rgba(109,149,229,.18);color:#82a4ef;font-size:8px;font-style:normal;font-weight:800;letter-spacing:.06em}
+
+.studioKpi{animation:cockpitCardIn .48s cubic-bezier(.16,.8,.22,1) both}
+.studioKpi:nth-child(1){animation-delay:.10s}.studioKpi:nth-child(2){animation-delay:.16s}.studioKpi:nth-child(3){animation-delay:.22s}.studioKpi:nth-child(4){animation-delay:.28s}
+.studioPanel{animation:cockpitCardIn .46s cubic-bezier(.16,.8,.22,1) both}
+
+@keyframes cockpitPageReveal{0%{opacity:0;transform:translateY(18px) scale(.992);filter:blur(8px)}55%{opacity:1;filter:blur(0)}100%{opacity:1;transform:none;filter:none}}
+@keyframes cockpitContentSettle{from{opacity:.2;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes cockpitRouteLine{0%{opacity:0;transform:scaleX(.05)}45%{opacity:1;transform:scaleX(1.65)}100%{opacity:0;transform:scaleX(2.35)}}
+@keyframes cockpitBackdropIn{from{opacity:0;backdrop-filter:blur(0)}to{opacity:1;backdrop-filter:blur(10px)}}
+@keyframes cockpitModalIn{0%{opacity:0;transform:translateY(34px) rotateX(-4deg) scale(.955);filter:blur(8px)}65%{opacity:1;transform:translateY(-3px) rotateX(0) scale(1.006);filter:blur(0)}100%{opacity:1;transform:none;filter:none}}
+@keyframes cockpitModalSection{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@keyframes cockpitCardIn{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes cockpitLoadingIn{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:none}}
+@keyframes cockpitLoadingSweep{0%{transform:translateX(-110%)}55%,100%{transform:translateX(110%)}}
+@keyframes cockpitSpinner{to{transform:rotate(360deg)}}
+@keyframes cockpitLoaderDot{0%,100%{opacity:.35}50%{opacity:1;box-shadow:0 0 18px #6c9aff}}
+@keyframes cockpitSkeletonShimmer{to{background-position:-240% 0}}
+@keyframes cockpitSkeletonProgress{0%,100%{transform:scaleX(.18);opacity:.45}50%{transform:scaleX(1);opacity:1}}
+@keyframes radarCoreBreath{0%,100%{opacity:.55;transform:scale(.86)}50%{opacity:1;transform:scale(1.18)}}
+@keyframes radarEchoOut{0%{opacity:.72;transform:scale(.38)}70%,100%{opacity:0;transform:scale(2.55)}}
+@keyframes radarOpening{from{transform:scale(.94)}to{transform:scale(1.05)}}
+
+@media(max-width:620px){.studioBlip{width:68px;height:60px;min-width:68px}.pageBody::before{top:-16px}}
+@media(prefers-reduced-motion:reduce){
+ .pageBody,.pageBody::before,.pageBody>*:first-child,.modalback,.modal,.modal>*{animation:none!important;filter:none!important}
+ .studioBlip{width:76px;height:64px;min-width:76px}
+}

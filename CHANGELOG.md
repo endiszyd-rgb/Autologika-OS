@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.3 — 2026-11-10
+
+### Animacje interfejsu i działające radary
+
+- Dodano wyraźne, płynne przejścia pomiędzy ekranami oraz animowane wejścia okien, kart i paneli.
+- Rozbudowano stany ładowania o animowany wskaźnik, przebieg postępu i czytelne szkielety treści.
+- Radar pulpitu otrzymał aktywną wiązkę, echa, większe obszary kliknięcia oraz widoczny stan otwierania zlecenia.
+- Punkty radaru Workshop LIVE powiększono do ergonomicznego obszaru 48 × 48 px i połączono z właściwymi zleceniami.
+- Dodano reakcje na najechanie, fokus klawiatury i kliknięcie oraz podpowiedzi identyfikujące pojazd i etap pracy.
+- Rozszerzono test Electron o kontrolę rozmiaru, interaktywności, informacji zwrotnej i docelowego ekranu obu radarów.
+
 ## 1.0.78 — 2026-10-17
 
 ### Dyktowanie i czytelniejsza identyfikacja pojazdu

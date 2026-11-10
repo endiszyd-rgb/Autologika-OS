@@ -23,8 +23,9 @@ function Counter({value}){
 }
 
 export function WorkshopDashboard({api,go,openOrder,scanDocument,refresh}){
- const [data,setData]=useState(null),[target,setTarget]=useState(50000),[error,setError]=useState(''),[filter,setFilter]=useState('ALL'),[retry,setRetry]=useState(0)
+ const [data,setData]=useState(null),[target,setTarget]=useState(50000),[error,setError]=useState(''),[filter,setFilter]=useState('ALL'),[retry,setRetry]=useState(0),[radarOpening,setRadarOpening]=useState(null),radarTimer=useRef(null)
  useEffect(()=>{let alive=true;setError('');Promise.all([api.dashboard(),api.settings?.monthlyTarget?.()||Promise.resolve(50000)]).then(([d,t])=>{if(alive){setData(d);setTarget(Number(t)||50000)}}).catch(e=>alive&&setError(e.message||String(e)));return()=>{alive=false}},[api,retry,refresh])
+ useEffect(()=>()=>clearTimeout(radarTimer.current),[])
  if(error)return <div className="empty"><p>Nie udało się wczytać pulpitu: {error}</p><button onClick={()=>setRetry(x=>x+1)}>Spróbuj ponownie</button></div>
  if(!data)return <div className="studioSkeleton" aria-label="Ładowanie pulpitu" role="status"><div/><div/><div/></div>
  const revenue=Number(data.month?.revenue||0),cost=Number(data.month?.variableCost||0),hours=Number(data.month?.actualHours||0),productiveRevenue=Number(data.month?.productiveRevenue||0),hourlyRate=effectiveHourlyRate(productiveRevenue,hours),open=Number(data.open||0),attention=Number(data.notificationCount||0)
@@ -33,6 +34,7 @@ export function WorkshopDashboard({api,go,openOrder,scanDocument,refresh}){
  const hasMeasuredHours=hourlyRate!==null,maxSource=Math.max(...(data.sources||[]).map(x=>Number(x.c)),1)
  const stageCounts=Object.fromEntries(stages.map(([stage])=>[stage,Number(data.status?.find(row=>row.status===stage)?.c||0)])),maxStage=Math.max(...Object.values(stageCounts),1)
  const visible=filter==='ALL'?recent:recent.filter(o=>o.status===filter)
+ const openFromRadar=(order,event)=>{if(radarOpening!==null)return;event?.currentTarget?.classList.add('opening');setRadarOpening(order.id);clearTimeout(radarTimer.current);radarTimer.current=setTimeout(()=>openOrder(order.id),600)}
  return <section className="studioDashboard">
   <div className="studioHeading"><div><div className="sectionEyebrow">TWÓJ WARSZTAT. JEDEN WIDOK.</div><h2>Dobry dzień na <span>dobrą robotę.</span></h2><p>Wszystko, czego potrzebujesz, żeby utrzymać tempo.</p></div><div className="studioHeadingActions"><button className="studioDocumentScan" title="Odczytaj części, ilości i ceny ze zdjęcia faktury / WZ i przyjmij dostawę do magazynu" onClick={scanDocument}><Icon name="documents"/> Skanuj dokument</button><button className="primary studioIntake" onClick={()=>go('intake')}><Icon name="intake"/> Przyjmij pojazd</button></div></div>
   <div className="studioOverview">
@@ -40,10 +42,10 @@ export function WorkshopDashboard({api,go,openOrder,scanDocument,refresh}){
     <div className="radarIntro"><div className="sectionEyebrow"><span className="studioLiveDot"/> RADAR WARSZTATU</div><h3>Każde auto.<br/>Na Twoim radarze.</h3><p>Od pierwszej diagnozy<br/>do ostatniej kontroli.</p><button className="studioTextButton" onClick={()=>go('kanban')}>Otwórz przepływ <Icon name="arrow"/></button><div className="radarLegend"><span><i/>W warsztacie</span><span><i/>Wymaga reakcji</span></div></div>
     <div className="studioRadar" role="group" aria-label="Radar ostatnich aktywnych zleceń">
      <div className="radarCross horizontal"/><div className="radarCross vertical"/>
-     <div className="studioRing outer"/><div className="studioRing middle"/><div className="studioRing inner"/><div className="studioSweep"/>
+     <div className="studioRing outer"/><div className="studioRing middle"/><div className="studioRing inner"/><div className="radarEcho echoOne"/><div className="radarEcho echoTwo"/><div className="studioSweep"/>
      <span className="radarBearing north">000</span><span className="radarBearing east">090</span><span className="radarBearing south">180</span><span className="radarBearing west">270</span>
      <div className="studioRadarCore"><Icon name="car" size={22}/><strong><Counter value={open}/></strong><span>OTWARTYCH ZLECEŃ</span></div>
-     {active.slice(0,8).map((o,i)=><button key={o.id} className={'studioBlip '+(waits[o.wait_state]?'blocked':'')} style={{left:positions[i][0]+'%',top:positions[i][1]+'%','--delay':`${i*-.6}s`}} onClick={()=>openOrder(o.id)} aria-label={`Otwórz ${o.plate||'zlecenie '+o.id}: ${o.title}`}><i/><span>{o.plate||`#${o.id}`}</span><div className="radarTooltip"><b>{o.make} {o.model}</b><small>{waits[o.wait_state]||labels[o.status]}</small></div></button>)}
+     {active.slice(0,8).map((o,i)=><button type="button" key={o.id} data-radar-order={o.id} className={'studioBlip '+(waits[o.wait_state]?'blocked ':'')+(radarOpening===o.id?'opening':'')} style={{left:positions[i][0]+'%',top:positions[i][1]+'%','--delay':`${i*-.6}s`}} onClick={event=>openFromRadar(o,event)} title={`Otwórz zlecenie: ${o.make||''} ${o.model||''} ${o.plate||''}`} aria-label={`Otwórz ${o.plate||'zlecenie '+o.id}: ${o.title}`}><i/><span>{radarOpening===o.id?'OTWIERAM…':o.plate||`#${o.id}`}</span><div className="radarTooltip"><b>{o.make} {o.model}</b><small>{waits[o.wait_state]||labels[o.status]}</small><em>Otwórz zlecenie →</em></div></button>)}
     </div>
     <div className="radarPanelFooter"><span><i className="studioLiveDot"/>Dane z bazy warsztatu</span><span>{active.length>8?'8 ostatnich aut na radarze':`${Math.min(active.length,8)} aut na radarze`}</span></div>
    </div>
