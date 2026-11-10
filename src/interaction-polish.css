@@ -4,8 +4,8 @@
   --interaction-accent-strong:#d6ff9d;
   --interaction-focus:#c9f58a;
   --interaction-focus-soft:rgba(191,242,125,.18);
-  --interaction-surface:#101512;
-  --interaction-surface-hover:#1b241d;
+  --interaction-surface:#180d10;
+  --interaction-surface-hover:#2a151a;
   --interaction-border:#3b493f;
   --interaction-border-hover:#64785f;
   --interaction-danger:#f08a82;
@@ -13,7 +13,7 @@
 }
 
 html{
-  scrollbar-color:#53645a #0b100d;
+  scrollbar-color:#53645a #12090b;
   scrollbar-width:thin;
 }
 
@@ -28,15 +28,15 @@ body{
 }
 
 ::-webkit-scrollbar{width:11px;height:11px}
-::-webkit-scrollbar-track{background:#0b100d}
+::-webkit-scrollbar-track{background:#12090b}
 ::-webkit-scrollbar-thumb{
   min-height:34px;
-  border:3px solid #0b100d;
+  border:3px solid #12090b;
   border-radius:999px;
   background:#46564d;
 }
 ::-webkit-scrollbar-thumb:hover{background:#64796a}
-::-webkit-scrollbar-corner{background:#0b100d}
+::-webkit-scrollbar-corner{background:#12090b}
 
 :where(button,[role="button"],a,input,select,textarea,summary,[tabindex]):focus{outline:none}
 :where(button,[role="button"],a,input,select,textarea,summary,[tabindex]):focus-visible{
@@ -84,7 +84,7 @@ button.primary:not(:disabled):hover{
 :where(button,[role="button"])[aria-pressed="true"],
 :where(button,[role="button"])[aria-selected="true"]{
   border-color:#708858;
-  background-color:#253220;
+  background-color:#391921;
   color:#e5ffc4;
 }
 
@@ -99,7 +99,7 @@ button.primary:not(:disabled):hover{
 
 :where(input:not([type="checkbox"]):not([type="radio"]),select,textarea){
   border-color:var(--interaction-border);
-  background:#0b100d;
+  background:#12090b;
   color:#edf4ed;
   caret-color:var(--interaction-accent);
   transition:
@@ -110,12 +110,12 @@ button.primary:not(:disabled):hover{
 
 :where(input:not([type="checkbox"]):not([type="radio"]),select,textarea):hover:not(:disabled){
   border-color:#526359;
-  background:#0e1510;
+  background:#180b0e;
 }
 
 :where(input:not([type="checkbox"]):not([type="radio"]),select,textarea):focus{
   border-color:#8caf61;
-  background:#101712;
+  background:#1b0c10;
   box-shadow:0 0 0 3px rgba(191,242,125,.1);
 }
 
@@ -154,9 +154,9 @@ textarea{resize:vertical}
   gap:16px;
   overflow:hidden;
   padding:34px;
-  border:1px solid var(--line,#26382e);
+  border:1px solid var(--line,#401e26);
   border-radius:18px;
-  background:linear-gradient(145deg,#111914 0%,#0b110e 100%);
+  background:linear-gradient(145deg,#1d0d11 0%,#14080b 100%);
   color:var(--text,#f3f6f2);
 }
 
@@ -169,7 +169,7 @@ textarea{resize:vertical}
 .appLoadingCopy b{font-size:15px;letter-spacing:.01em}
 .appLoadingCopy span{font-size:12px;color:var(--muted,#8f9b94)}
 .appLoadingSkeleton{width:min(360px,64vw);display:grid;gap:7px;margin-top:3px}
-.appLoadingSkeleton i{height:6px;border-radius:999px;background:linear-gradient(90deg,#233029 20%,#3a4d40 45%,#233029 70%);background-size:220% 100%;animation:loadingShimmer 1.35s linear infinite}
+.appLoadingSkeleton i{height:6px;border-radius:999px;background:linear-gradient(90deg,#371c23 20%,#3a4d40 45%,#371c23 70%);background-size:220% 100%;animation:loadingShimmer 1.35s linear infinite}
 .appLoadingSkeleton i:nth-child(2){width:82%}.appLoadingSkeleton i:nth-child(3){width:58%}
 
 @keyframes loadingPulse{0%,100%{opacity:.38;transform:scaleY(.72)}50%{opacity:1;transform:scaleY(1)}}
@@ -189,8 +189,8 @@ textarea{resize:vertical}
   border:1px solid #49663c;
   border-radius:14px;
   overflow:hidden;
-  background:#101a13f2;
-  box-shadow:0 18px 55px #000b;
+  background:#1e0c11f2;
+  box-shadow:0 18px 55px #000000bb;
   animation:feedbackToastIn .24s var(--interaction-ease) both;
 }
 .appFeedbackToast>span{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#b8f46b1c;color:#b8f46b;font-size:20px;font-weight:900}
@@ -198,14 +198,14 @@ textarea{resize:vertical}
 .appFeedbackToast>button{width:32px;height:32px;padding:0;border-color:transparent;background:transparent;font-size:18px}
 .appFeedbackProgress{position:absolute;left:0;bottom:0;width:100%;height:2px;background:currentColor;opacity:.62;transform-origin:left;animation:feedbackProgress var(--feedback-duration,4500ms) linear both}
 .appFeedbackToast.warning{border-color:#7f6732;background:#201b10f2}.appFeedbackToast.warning>span{background:#e8bc5118;color:#e8bc51}
-.appFeedbackToast.error{border-color:#83463f;background:#251412f2}.appFeedbackToast.error>span{background:#ef756618;color:#ff8b7e}
+.appFeedbackToast.error{border-color:#83463f;background:#280f15f2}.appFeedbackToast.error>span{background:#ef756618;color:#ff8b7e}
 @keyframes feedbackToastIn{from{opacity:0;transform:translateY(-10px) scale(.98)}to{opacity:1;transform:none}}
 @keyframes feedbackProgress{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @media(max-width:600px){.appFeedbackToast{top:10px;right:10px;width:calc(100vw - 20px)}}
 
 .statusBadge{--status-color:#a8b1ac;display:inline-flex;align-items:center;gap:7px;width:max-content;padding:6px 9px;border:1px solid color-mix(in srgb,var(--status-color) 34%,transparent);border-radius:999px;background:color-mix(in srgb,var(--status-color) 10%,transparent);color:var(--status-color);font-size:10px;font-weight:850;letter-spacing:.055em;text-transform:uppercase;white-space:nowrap}
 .statusBadge i{width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px color-mix(in srgb,var(--status-color) 15%,transparent)}
-.statusBadge.info{--status-color:#78c8ee}.statusBadge.warning{--status-color:#e7bd59}.statusBadge.violet{--status-color:#be9bea}.statusBadge.active{--status-color:#ee966a}.statusBadge.success{--status-color:#aeea72}.statusBadge.danger{--status-color:#ff8b7e}.statusBadge.neutral{--status-color:#9da8a2}
+.statusBadge.info{--status-color:#eb7baa}.statusBadge.warning{--status-color:#e7bd59}.statusBadge.violet{--status-color:#e89db0}.statusBadge.active{--status-color:#ee966a}.statusBadge.success{--status-color:#aeea72}.statusBadge.danger{--status-color:#ff8b7e}.statusBadge.neutral{--status-color:#9da8a2}
 
 :where(.panel,.metric,.workspaceCard,.case,.kanCol,.centerPart,.orderrow,.attentionItem){
   transition:
@@ -261,10 +261,10 @@ textarea{resize:vertical}
   border:1px solid #455248;
   border-bottom-color:#657367;
   border-radius:6px;
-  background:#0b100d;
+  background:#12090b;
   color:#8e9b91;
   font:700 9px/1 ui-monospace,SFMono-Regular,Consolas,monospace;
-  box-shadow:inset 0 -1px 0 #0008;
+  box-shadow:inset 0 -1px 0 #00000088;
 }
 
 .modalHeadActions button{
@@ -284,7 +284,7 @@ textarea{resize:vertical}
   margin:16px -18px -18px;
   padding:13px 18px;
   border-top:1px solid #465149;
-  background:linear-gradient(180deg,#171d19e8,#171d19 38%);
+  background:linear-gradient(180deg,#221216e8,#221216 38%);
   backdrop-filter:blur(14px);
 }
 
@@ -298,7 +298,7 @@ textarea{resize:vertical}
   gap:14px;
   margin:0 0 12px;
   padding:12px 14px;
-  box-shadow:0 12px 30px #0006;
+  box-shadow:0 12px 30px #00000066;
 }
 
 .settingsFeedback>span{

@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.1.4 — 2026-11-10
+
+### Nowy wygląd w odcieniach bordo
+
+- Cała aplikacja PC ma nową kolorystykę w odcieniach bordo; zielone statusy sukcesu i bursztynowe ostrzeżenia pozostały bez zmian.
+- Menu boczne jest wąskim paskiem ikon, który po najechaniu rozwija się z nazwami nad treścią, bez przesuwania ekranu. Podświetlenie aktywnej pozycji płynnie przeskakuje między pozycjami.
+- Nowy górny pasek: ścieżka ekranu, wyszukiwarka (Ctrl K), stan bazy, data, licznik spraw do uwagi i przycisk „Przyjmij auto”.
+- Pulpit: radar zastąpiono panelem „Przepływ zleceń” ze słupkami 9 etapów; kliknięcie etapu filtruje listę zleceń. Radar Workshop LIVE z wersji 1.1.3 pozostaje.
+- Wbudowano czcionkę Outfit z polskimi znakami (działa bez internetu).
+- Naprawiono przyciski „Tryb warsztatowy” i „Wszystkie moduły”, które wychodziły poza menu.
+
+### Szybsze działanie
+
+- Start do pulpitu skrócono z ok. 1,6 s do ok. 0,9 s (ekran powitalny nie czeka już sztywnej sekundy).
+- Workshop LIVE w bezczynności zużywa ok. 1–2% CPU zamiast ok. 23%: zatrzymano zapętlone animacje dekoracyjne, zegar z sekundami odświeża tylko siebie, a reszta ekranu aktualizuje się razem z danymi.
+- Kod ekranów wczytuje się w tle po starcie (z przerwą, gdy użytkownik pracuje), więc pierwsze otwarcie ekranu jest szybsze; np. Workflow blokował okno ok. 320 ms, teraz ok. 100 ms.
+- Wyłączono rozmycie tła (backdrop-filter), najbardziej obciążający efekt graficzny.
+- Okna dialogowe ponownie przykrywają menu boczne.
+
+### Narzędzia
+
+- Nowy pomiar wydajności `scripts/perf-probe.cjs` (czasy ekranów, zapytań, CPU w bezczynności, ślad Chromium) na odizolowanej kopii bazy.
+- Test Electron sprawdza położenie podświetlenia menu, przykrywanie menu przez okna dialogowe i panel przepływu zleceń.
+
 ## 1.1.3 — 2026-11-10
 
 ### Animacje interfejsu i działające radary
