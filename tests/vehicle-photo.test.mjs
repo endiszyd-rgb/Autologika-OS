@@ -145,3 +145,25 @@ test('photo with declared body style must not match a conflicting known body sty
  assert.equal(resolveVerifiedVehiclePhoto({make:'Dacia',model:'Duster',year:2022,bodyType:'sedan'}),null)
  assert.ok(resolveVerifiedVehiclePhoto({make:'Dacia',model:'Duster',year:2022,bodyType:'suv'}))
 })
+
+test('four new verified models resolve only for their conservatively matched years',()=>{
+ const examples=[
+  {make:'Volkswagen',model:'Touran',generation:'I (1T1/1T2)',year:2007,bodyType:'mpv'},
+  {make:'Mazda',model:'3',year:2007,bodyType:'hatchback'},
+  {make:'Hyundai',model:'Tucson',year:2007,bodyType:'suv'},
+  {make:'Toyota',model:'RAV4',year:2004,bodyType:'suv'}
+ ]
+ for(const v of examples)assert.ok(resolveVerifiedVehiclePhoto(v),JSON.stringify(v))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Touran',generation:'II (5T)',year:2017}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Mazda',model:'3',year:2018,bodyType:'hatchback'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Hyundai',model:'Tucson',year:2007,bodyType:'sedan'}),null)
+})
+test('vehicle photo cache key changes with body style and aliases',()=>{
+ const hatch=vehiclePhotoKey({make:'Toyota',model:'Auris',year:2008,bodyType:'hatchback'})
+ const wagon=vehiclePhotoKey({make:'Toyota',model:'Auris',year:2008,bodyType:'wagon'})
+ assert.notEqual(hatch,wagon)
+})
+test('unknown photo body is not presented as a verified match for known vehicle body',()=>{
+ const generic={make:'Example',model:'Sedan',from:2010,to:2019,file:'some.jpg',source:'https://commons.wikimedia.org/wiki/File:some.jpg',author:'Tester',license:'CC BY-SA 4.0'}
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Example',model:'Sedan',year:2016,bodyType:'sedan'},[generic]),null)
+})
