@@ -179,3 +179,11 @@ test('new Ibiza, Punto and Accord reference photos are correctly bounded',()=>{
  assert.equal(resolveVerifiedVehiclePhoto({make:'Honda',model:'Accord',year:2015}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'SEAT',model:'Ibiza',year:2022}),null)
 })
+
+test('new Superb II liftback and Mondeo Mk3 wagon match only declared body/year',()=>{
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Superb',year:2010,bodyType:'liftback'}))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Superb',year:2010,bodyType:'wagon'}),null)
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Ford',model:'Mondeo',year:2004,bodyType:'kombi'}))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Ford',model:'Mondeo',year:2004,bodyType:'sedan'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Ford',model:'Mondeo',year:2014,bodyType:'wagon'}),null)
+})
