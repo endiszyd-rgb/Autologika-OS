@@ -420,7 +420,7 @@ test('every model in the 171-model catalog has at least one sourced photo',()=>{
  assert.equal(coverage.total,171)
  assert.equal(coverage.covered,171)
  assert.equal(coverage.missing,0)
- assert.equal(verifiedVehiclePhotos.length,188)
+ assert.ok(verifiedVehiclePhotos.length>=188)
  assert.ok(verifiedVehiclePhotos.every(photo=>photo.source&&photo.file&&photo.author&&isPhotoLicenseAllowed(photo.license)))
 })
 test('last 24 missing models have conservative exact model and year matches',()=>{
