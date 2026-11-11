@@ -53,3 +53,17 @@ Zdjęcia z `Special:FilePath` wymagają łączności z Wikimedia; dotychczasowe 
 - `vite.config.js` rejestruje PWA Workbox CacheFirst dla obrazów Wikimedia Commons, limit 250 wpisów / 30 dni. Zdjęcie może być dostępne offline po pierwszym pobraniu w PWA, zależnie od zachowania pamięci iOS/Safari i statusu Service Workera. Nie gwarantuje to offline w aplikacji Windows/Electron.
 - Zweryfikowane strony źródłowe zdjęć: Volkswagen Golf VII, Škoda Octavia III, Ford Focus Mk3 FL, Audi A4 B8, BMW E46, Toyota Corolla E210. Audyt samych źródeł nie zastępuje testów UI.
 - Po dodaniu panelu licencji należy ponownie sprawdzić aktualny wynik CI, ponieważ poprzedni sukces dotyczył wcześniejszego commita.
+
+## Etap 5 — rzeczywiste fotografie dodane do biblioteki
+Dodano 7 pozycji ze sprawdzonymi stronami plików Wikimedia Commons, opisami pojazdów oraz informacjami o autorach i licencjach: Opel Astra H, Skoda Fabia II, Volkswagen Passat B6, Peugeot 308 II, Ford Fiesta (model 2017), Renault Clio IV i Renault Megane III. Każda pozycja ma datowane dopasowanie do wybranej generacji/wersji, a nie pełne pokrycie całego modelu. Katalog obejmuje obecnie **13 z 171 modeli** co najmniej jednym zdjęciem.
+
+Źródła nowych zdjęć:
+- https://commons.wikimedia.org/wiki/File:Opel_Astra_H_front.jpg
+- https://commons.wikimedia.org/wiki/File:Skoda_Fabia_II_front.jpg
+- https://commons.wikimedia.org/wiki/File:Volkswagen_Passat_B6-1.jpg
+- https://commons.wikimedia.org/wiki/File:2014_Peugeot_308_Access_HDi_1.6_Front.jpg
+- https://commons.wikimedia.org/wiki/File:Ford_Fiesta_MK7.jpg
+- https://commons.wikimedia.org/wiki/File:Renault_Clio_(front_quarter)_red.JPG
+- https://commons.wikimedia.org/wiki/File:Renault-Megane3.jpg
+
+Uzupełniono testy wymagające unikatowych źródeł i kompletnych informacji o autorze/licencji oraz kontrolujące zakresy roczników. Każdy kolejny model powinien otrzymywać analogiczny rekord i testy. Zdjęcia nadal są pobierane z Wikimedia (cache po wczytaniu w PWA), nie zapisano ich binarnych plików w repozytorium.
