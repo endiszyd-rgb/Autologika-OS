@@ -5,6 +5,7 @@ on:
     branches: [feature/vehicle-model-photographs]
     paths:
       - 'scripts/validate-vehicle-photo-sources.mjs'
+      - '.github/workflows/vehicle-photo-source-audit.yml'
 jobs:
   audit:
     runs-on: ubuntu-latest
