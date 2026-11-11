@@ -179,3 +179,16 @@ W tej partii przybyło **17 fotografii** nowych modeli i wariantów:
 **Stan:** 101 fotografii dla 87 z 171 modeli. Pozostało **84 modele bez zweryfikowanego zdjęcia**, a również wiele generacji i wersji nadwozia już częściowo pokrytych modeli nie ma odrębnego zdjęcia.
 
 Wykonano automatyczny audyt źródeł w GitHub Actions `43040183320`: **101/101 zdjęć ma dostępny plik, autora i licencję zgodną z manifestem; 0 brakujących / 0 wymagających przeglądu**. Audyt metadanych nie zastępuje kontroli wizualnej zgodności modelu i nadwozia.
+
+## Etap 14 — pełne pokrycie nazw modeli (11.11.2026)
+Uzupełniono **wszystkie 171 par marka/model** katalogu przynajmniej jednym rekordem referencyjnej fotografii. Łącznie **188 wpisów**, w tym osobne nadwozia dla części modeli. W ostatnich partiach uzupełniono m.in. BMW, Mercedes, dostawcze VW/Ford, Cupra, starsze Peugeot, Renault Laguna, Mazda 2/6, Hyundai, Kia, Volvo, Alfa Romeo, Mitsubishi, Subaru, Suzuki, Jeep i Land Rover.
+
+Ważne: `171/171 modeli ze zdjęciem` **nie jest równoznaczne** z 100% zdjęć każdej generacji, roku modelowego, liftingu i nadwozia. Resolver pozostaje ostrożny i w wielu takich przypadkach pokaże symbol samochodu zamiast niewłaściwej fotografii. Wymagane nadal:
+1. Pokrycie poszczególnych generacji, nadwozi, liftingów i odmian regionalnych (lista generacji w `src/vehicle-photo-inventory.mjs`).
+2. Integracja wiarygodnych danych nadwozia w przyjęciu i trwałej kartotece pojazdów.
+3. Sprawdzenie obrazów na prawdziwych urządzeniach Windows/iOS/Android i offline na Windows.
+4. Kontrola wizualna wszystkich 188 przypisań; audyt Commons zapewnia wyłącznie istnienie pliku i metadane licencji, nie identyfikację modelu.
+
+**Audyt licencji:** przedostatni audyt 188 fotografii wykrył 1 niezgodność licencji `Volvo V70 front 20080801.jpg` (Commons opis `Attribution`, manifest `CC BY-SA`). Ten plik został zastąpiony zgodnym CC BY-SA 4.0 zdjęciem `2002 Volvo V70 S 20V Automatic 2.4 Front.jpg` (model V70 II P2), a testy rocznika zostały zaktualizowane. Nowy audyt po tej korekcie powinien wykazać 188/188, ale wynik musi być zweryfikowany na GitHub Actions.
+
+**PR #2 pozostaje draftem**. Ukończono podstawowy indeks zdjęć i pokrycie wszystkich nazw modeli. Dalsze etapy to zapewnienie pełnego pokrycia generacji, a nie sztuczne zwiększanie licznika 171.
