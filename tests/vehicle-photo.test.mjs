@@ -493,3 +493,20 @@ test('newly verified Tiguan I, Passat B7, Audi A3 8V and BMW G20 generation imag
  assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B7 (36)',year:2012,bodyType:'suv'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 3',generation:'G20/G21',year:2020,bodyType:'wagon'}),null)
 })
+
+test('latest source-confirmed A3 8Y, BMW G30, Mercedes W206 and Seat Leon 1P photos',()=>{
+ const entries=[
+  {make:'Audi',model:'A3',generation:'8Y',year:2021,bodyType:'hatchback'},
+  {make:'BMW',model:'Seria 5',generation:'G30/G31',year:2018,bodyType:'sedan'},
+  {make:'Mercedes-Benz',model:'Klasa C',generation:'W206',year:2022,bodyType:'sedan'},
+  {make:'SEAT',model:'Leon',generation:'1P',year:2008,bodyType:'hatchback'}
+ ]
+ for(const v of entries){
+  const photo=resolveVerifiedVehiclePhoto(v)
+  assert.ok(photo,JSON.stringify(v))
+  assert.equal(photo.generation,v.generation)
+  assert.equal(photo.bodyType,v.bodyType)
+  assert.equal(resolveVerifiedVehiclePhoto({...v,bodyType:'suv'}),null)
+ }
+ assert.equal(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 5',generation:'G30/G31',year:2018,bodyType:'wagon'}),null)
+})
