@@ -107,7 +107,7 @@ export const verifiedVehiclePhotos=[
   licenseUrl:'https://creativecommons.org/licenses/by-sa/3.0/',note:"Golf V hatchback; fotografia z 2004 roku"
  },
  {
-  make:"Opel",model:"Corsa",generation:undefined,from:2006,to:2010,
+  make:"Opel",model:"Corsa",from:2006,to:2010,
   file:"Opel Corsa D front 20070611.jpg",source:"https://commons.wikimedia.org/wiki/File:Opel_Corsa_D_front_20070611.jpg",
   author:"Rudolf Stricker",license:"CC BY-SA 3.0",
   licenseUrl:'https://creativecommons.org/licenses/by-sa/3.0/',note:"Corsa D przed liftingiem, fotografia z 2007 roku"
