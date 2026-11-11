@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/validate-vehicle-photo-sources.mjs'
       - '.github/workflows/vehicle-photo-source-audit.yml'
+      - 'src/vehicle-photo-manifest.mjs'
 jobs:
   audit:
     runs-on: ubuntu-latest
