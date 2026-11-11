@@ -45,3 +45,11 @@ W `.github/workflows/vehicle-photos.yml` skonfigurowano sprawdzenie importów, t
 
 ## Kolejna decyzja techniczna
 Zdjęcia z `Special:FilePath` wymagają łączności z Wikimedia; dotychczasowe wyświetlanie nie zapewnia działania offline. Właściwym kolejnym krokiem jest pobieranie zweryfikowanych miniaturek do lokalnego cache aplikacji i podawanie linków atrybucji w dedykowanym ekranie informacji o fotografiach, bez zagnieżdżonych odnośników w przyciskach.
+
+## Etap 4 — stabilność i atrybucja (2026-11-11)
+- Naprawiono niedopuszczalne dopasowanie licencji `CC BY-NC`. Walidator dopuszcza wyłącznie jasno wskazane licencje CC BY, CC BY-SA, CC0 oraz public domain. Konieczna pozostaje kontrola warunków konkretnego pliku.
+- GitHub Actions: wcześniejszy błąd testu został poprawiony, a uruchomienia 43014912493 i 43015014280 zakończyły się sukcesem.
+- W ustawieniach Windows/iOS PWA dostępna jest sekcja przypisania autorów i źródeł zdjęć (`VehiclePhotoAttributions`). Odnośniki nie są zagnieżdżane w przyciskach kart zleceń.
+- `vite.config.js` rejestruje PWA Workbox CacheFirst dla obrazów Wikimedia Commons, limit 250 wpisów / 30 dni. Zdjęcie może być dostępne offline po pierwszym pobraniu w PWA, zależnie od zachowania pamięci iOS/Safari i statusu Service Workera. Nie gwarantuje to offline w aplikacji Windows/Electron.
+- Zweryfikowane strony źródłowe zdjęć: Volkswagen Golf VII, Škoda Octavia III, Ford Focus Mk3 FL, Audi A4 B8, BMW E46, Toyota Corolla E210. Audyt samych źródeł nie zastępuje testów UI.
+- Po dodaniu panelu licencji należy ponownie sprawdzić aktualny wynik CI, ponieważ poprzedni sukces dotyczył wcześniejszego commita.
