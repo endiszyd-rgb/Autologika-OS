@@ -108,3 +108,17 @@ Dodano 8 zweryfikowanych stron fotografii:
 - Dacia Duster II facelift, 2021–2023, ROCostiTheBunnyCZ, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2021_Dacia_Duster_(facelift)-_front_angle_view.jpg
 
 **Postęp:** 35 wpisów fotografii dla 27 z 171 modeli, pozostały 144 modele bez referencji; liczby dotyczą przynajmniej jednego zdjęcia w modelu, nie pokrycia generacji/wersji nadwozia. Nowe rekordy mają `bodyType` oraz źródło/licencję. Resolver bierze pod uwagę `bodyType`, `body_type` lub `body_style`, jeżeli dane te występują. Brak danych o nadwoziu w starszych wpisach nie pozwala jeszcze odróżniać wszystkich sedanów/kombi; wymaga dalszej integracji w formularzach pojazdu i bazie.
+
+## Etap 9 — siedem kolejnych modeli (11 listopada 2026)
+Nowe, sprawdzone źródła Wikimedia Commons (autor / deklarowana licencja):
+- Volkswagen Touran I 1T, 2003–2010, MPV — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:VW_Touran_front_20070926.jpg
+- Mazda 3 BK, 2004–2008, hatchback — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Mazda_3_front_20070926.jpg
+- Hyundai Tucson JM, 2004–2009, SUV — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Hyundai_Tucson_front_20071004.jpg
+- Toyota RAV4 II po liftingu, 2003–2005, SUV — M 93, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Toyota_Rav4.2_Facelift_front.jpg
+- SEAT Ibiza 6L po liftingu, 2006–2008, hatchback — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Seat_Ibiza_front_20070518.jpg
+- Fiat Punto II przed liftingiem, 1999–2003, hatchback — Rudolf Stricker (zdjęcie), Typ932 (edycja kadru/kontrastu), CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Fiat_Punto_front_20071212.jpg
+- Honda Accord VII Europa, 2003–2007 — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Honda_Accord_front_20070928.jpg
+
+**Stan:** 42 rekordy fotografii, 34 spośród 171 modeli posiadają przynajmniej jedno przypisanie; 137 modeli wciąż bez zdjęcia. To nie oznacza kompletnego pokrycia generacji, wersji nadwozia i rynku. Roczniki dobrano zachowawczo.
+
+**Poprawki jakości:** Cache ID obejmuje typ nadwozia. Jeżeli karta ma podany typ nadwozia, fotografia bez takiej informacji w manifeście nie zostanie użyta. Nadal trzeba dodać pole nadwozia do trwałego modelu danych w osobnej migracji; obecny resolver odczytuje je tylko wtedy, gdy zostało dostarczone w rekordzie.
