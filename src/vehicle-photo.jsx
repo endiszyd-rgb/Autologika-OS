@@ -1,5 +1,6 @@
 import React,{useEffect,useState} from 'react'
 import './vehicle-photo.css'
+import {resolveVerifiedVehiclePhoto} from './vehicle-photo-model.mjs'
 
 // All screens resolve a vehicle from the same model/year/generation identity.
 // Only real photographs with an allowed Commons license are displayed.
@@ -21,6 +22,8 @@ function matchesPhoto(page,vehicle){
  return true
 }
 async function fetchPhoto(vehicle){
+ const verified=resolveVerifiedVehiclePhoto(vehicle)
+ if(verified)return verified
  const query=searchTerms(vehicle)
  if(!vehicle?.make||!vehicle?.model)return null
  const url=new URL('https://commons.wikimedia.org/w/api.php')
@@ -48,7 +51,7 @@ export function VehiclePhoto({vehicle,className='',size='normal'}){
  useEffect(()=>{let mounted=true;setPhoto(null);getVehiclePhoto(vehicle).then(result=>{if(mounted)setPhoto(result)});return()=>{mounted=false}},[key])
  const label=[vehicle?.make,vehicle?.model,vehicle?.generation,vehicle?.year].filter(Boolean).join(' ')
  return <span className={'vehiclePhoto '+(size==='small'?'vehiclePhotoSmall ':'')+className} data-vehicle-photo={photo?'real':'fallback'}>
-  {photo?<img loading="lazy" src={photo.src} alt={label} title={photo.title+' · '+photo.author+' · '+photo.license} referrerPolicy="no-referrer" onError={()=>setPhoto(null)}/>:<span className="vehiclePhotoFallback" aria-label={'Zdjęcie niedostępne: '+label}>🚘</span>}
-  {photo&&<a className="vehiclePhotoCredit" href={photo.source} target="_blank" rel="noopener noreferrer" title={photo.author+' · '+photo.license} onClick={event=>event.stopPropagation()}>©</a>}
+  {photo?<img loading="lazy" src={photo.src} alt={label} title={(photo.title||photo.note||label)+' · '+photo.author+' · '+photo.license} referrerPolicy="no-referrer" onError={()=>setPhoto(null)}/>:<span className="vehiclePhotoFallback" aria-label={'Zdjęcie niedostępne: '+label}>🚘</span>}
+  {photo&&<a className="vehiclePhotoCredit" href={photo.source} target="_blank" rel="noopener noreferrer" title={photo.author+' · '+photo.license} aria-label={'Autor: '+photo.author+', licencja: '+photo.license+', otwórz źródło zdjęcia'} onClick={event=>event.stopPropagation()}>©</a>}
  </span>
 }
