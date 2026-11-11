@@ -1,10 +1,14 @@
 name: Research all missing vehicle model photos
 on:
   workflow_dispatch:
-  pull_request:
+  push:
+    branches: [feature/vehicle-model-photographs]
     paths:
       - 'scripts/research-all-vehicle-photos.mjs'
       - 'src/vehicle-photo-inventory.mjs'
+concurrency:
+  group: vehicle-photo-research
+  cancel-in-progress: true
 jobs:
   research:
     runs-on: ubuntu-latest
