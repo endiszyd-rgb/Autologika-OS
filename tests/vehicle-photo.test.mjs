@@ -251,3 +251,18 @@ test('new generation photographs identify model without inventing a body type',(
  assert.ok(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 3',generation:'F30/F31/F34',year:2015,bodyType:'sedan'}))
  assert.equal(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 3',generation:'F30/F31/F34',year:2015,bodyType:'wagon'}),null)
 })
+
+test('four more verified models match exact years, generation and body style',()=>{
+ const examples=[
+  {make:'BMW',model:'X3',year:2019,bodyType:'suv'},
+  {make:'Mercedes-Benz',model:'Klasa C',generation:'W205',year:2016,bodyType:'sedan'},
+  {make:'Skoda',model:'Scala',year:2020,bodyType:'hatchback'},
+  {make:'Ford',model:'Kuga',year:2009,bodyType:'suv'}
+ ]
+ for(const entry of examples){
+  assert.ok(resolveVerifiedVehiclePhoto(entry),JSON.stringify(entry))
+  assert.equal(resolveVerifiedVehiclePhoto({...entry,bodyType:'wagon'}),null)
+ }
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Mercedes-Benz',model:'Klasa C',generation:'W204',year:2016}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Scala',year:2017}),null)
+})
