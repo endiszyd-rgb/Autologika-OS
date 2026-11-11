@@ -1,14 +1,21 @@
-import {vehicleCatalog,detailedVehicleCatalog} from '../src/vehicle-catalog.js'
-import {photoCoverage,resolveVerifiedVehiclePhoto} from '../src/vehicle-photo-model.mjs'
-const coverage=photoCoverage(vehicleCatalog)
-const generations=Object.entries(detailedVehicleCatalog).flatMap(([make,models])=>Object.entries(models).flatMap(([model,rows])=>rows.map(({generation,from,to})=>({make,model,generation,from,to}))))
-const generationCovered=generations.filter(({make,model,generation,from,to})=>resolveVerifiedVehiclePhoto({make,model,generation,year:Math.ceil((from+to)/2)}))
-console.log('AutoLogika - weryfikacja biblioteki fotografii')
+import {vehicleCatalog} from '../src/vehicle-catalog.js'
+import {photoCoverage} from '../src/vehicle-photo-model.mjs'
+import {vehiclePhotoInventory,vehiclePhotoInventorySummary} from '../src/vehicle-photo-inventory.mjs'
+const coverage=photoCoverage(vehicleCatalog),summary=vehiclePhotoInventorySummary
+console.log('AutoLogika — audyt zdjęć modeli i generacji (rocznik po roczniku)')
 console.log('Modele z katalogu:',coverage.total)
 console.log('Modele z co najmniej jednym zdjęciem:',coverage.covered)
 console.log('Modele bez zdjęcia:',coverage.missing)
-console.log('Zdefiniowane generacje:',generations.length)
-console.log('Generacje z dopasowaną fotografią:',generationCovered.length)
-console.log('UWAGA: pokrycie modelu nie oznacza pokrycia wszystkich generacji.')
+console.log('Fotografie:',summary.referencedImages)
+console.log('Zdefiniowane generacje:',summary.generationCount)
+console.log('Generacje z fotografią w co najmniej jednym roku:',summary.generationWithPhotos)
+console.log('Generacje z fotografią we wszystkich latach katalogu:',summary.generationFullyCovered)
+console.log('Generacje ze zdjęciami tylko w części lat:',summary.generationPartial)
+console.log('Generacje bez dopasowania w żadnym roku:',summary.generationMissing)
+console.log('Uwaga: zgodność lat nie gwarantuje pokrycia każdego typu nadwozia.')
 console.log('\nBrakujące modele:')
 for(const item of coverage.missingModels)console.log(' - '+item.make+' '+item.model)
+console.log('\nLuki szczegółowych generacji:')
+for(const model of vehiclePhotoInventory)for(const g of model.generations.filter(g=>g.status!=='covered'))
+ console.log(' - '+model.make+' '+model.model+' '+g.generation+
+  ': '+(g.status==='missing'?'brak zdjęcia':'brakuje roczników '+g.missingYears.join(',')))
