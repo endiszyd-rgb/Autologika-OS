@@ -19,7 +19,7 @@ export function resolveVerifiedVehiclePhoto(vehicle,records=verifiedVehiclePhoto
   &&Number.isInteger(p.from)&&Number.isInteger(p.to)&&year>=p.from&&year<=p.to)
  const knownForYear=matchingGenerationForYear(vehicle.make,vehicle.model,year)
  const requestedBody=norm(vehicle.bodyType||vehicle.body_type||vehicle.body_style||'')
- const bodyAliases={estate:'wagon',combi:'wagon',kombi:'wagon',touring:'wagon',sedan:'sedan',limousine:'sedan',hatch:'hatchback',hatchback:'hatchback',suv:'suv',mpv:'mpv',van:'mpv'}
+ const bodyAliases={estate:'wagon',combi:'wagon',kombi:'wagon',touring:'wagon',sedan:'sedan',limousine:'sedan',hatch:'hatchback',hatchback:'hatchback',suv:'suv',mpv:'mpv',minivan:'mpv',van:'van'}
  const canonicalBody=value=>bodyAliases[norm(value)]||norm(value)
  const compatible=candidates.filter(p=>{
   if(requestedBody&&(!p.bodyType||canonicalBody(requestedBody)!==canonicalBody(p.bodyType)))return false
@@ -32,6 +32,9 @@ export function resolveVerifiedVehiclePhoto(vehicle,records=verifiedVehiclePhoto
   if(knownForYear.length===1&&p.generation&&norm(p.generation)!==norm(knownForYear[0].generation))return false
   return true
  })
+ // If one model/year has both wagon and sedan photos, a missing body type is not evidence
+ // to choose either one. Require body selection to avoid a misleading picture.
+ if(!requestedBody&&new Set(compatible.map(p=>canonicalBody(p.bodyType||'unknown'))).size>1)return null
  compatible.sort((a,b)=>Number(Boolean(b.generation))-Number(Boolean(a.generation))||(a.to-a.from)-(b.to-b.from))
  const photo=compatible[0]
  return photo?{...photo,src:'https://commons.wikimedia.org/wiki/Special:FilePath/'+encodeURIComponent(photo.file)}:null
