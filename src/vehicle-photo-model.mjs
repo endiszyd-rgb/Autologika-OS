@@ -18,7 +18,11 @@ export function resolveVerifiedVehiclePhoto(vehicle,records=verifiedVehiclePhoto
   &&isPhotoLicenseAllowed(p.license)&&p.file&&p.source&&p.author
   &&Number.isInteger(p.from)&&Number.isInteger(p.to)&&year>=p.from&&year<=p.to)
  const knownForYear=matchingGenerationForYear(vehicle.make,vehicle.model,year)
+ const requestedBody=norm(vehicle.bodyType||vehicle.body_type||vehicle.body_style||'')
+ const bodyAliases={estate:'wagon',combi:'wagon',kombi:'wagon',touring:'wagon',sedan:'sedan',limousine:'sedan',hatch:'hatchback',hatchback:'hatchback',suv:'suv',mpv:'mpv',van:'mpv'}
+ const canonicalBody=value=>bodyAliases[norm(value)]||norm(value)
  const compatible=candidates.filter(p=>{
+  if(requestedBody&&p.bodyType&&canonicalBody(requestedBody)!==canonicalBody(p.bodyType))return false
   if(generation){
    // Do not present a generation-specific image for a different generation.
    return !p.generation||norm(p.generation)===generation
