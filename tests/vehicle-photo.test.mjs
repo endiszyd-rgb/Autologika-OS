@@ -167,3 +167,15 @@ test('unknown photo body is not presented as a verified match for known vehicle 
  const generic={make:'Example',model:'Sedan',from:2010,to:2019,file:'some.jpg',source:'https://commons.wikimedia.org/wiki/File:some.jpg',author:'Tester',license:'CC BY-SA 4.0'}
  assert.equal(resolveVerifiedVehiclePhoto({make:'Example',model:'Sedan',year:2016,bodyType:'sedan'},[generic]),null)
 })
+
+test('new Ibiza, Punto and Accord reference photos are correctly bounded',()=>{
+ const examples=[
+  {make:'SEAT',model:'Ibiza',year:2007,bodyType:'hatchback'},
+  {make:'Fiat',model:'Punto',year:2001,bodyType:'hatchback'},
+  {make:'Honda',model:'Accord',year:2006}
+ ]
+ for(const vehicle of examples)assert.ok(resolveVerifiedVehiclePhoto(vehicle),JSON.stringify(vehicle))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Fiat',model:'Punto',year:2007}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Honda',model:'Accord',year:2015}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'SEAT',model:'Ibiza',year:2022}),null)
+})
