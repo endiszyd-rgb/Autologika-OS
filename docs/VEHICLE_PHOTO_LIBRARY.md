@@ -80,3 +80,18 @@ Dodano sześć źródłowych fotografii z Wikimedia Commons po sprawdzeniu opis�
 **Stan manifestu:** 19 rekordów fotografii obejmujących 16 różnych modeli z 171 (około 9,4% podstawowych modeli). Wciąż brakuje zdjęć 155 modeli, a dla wielu istniejących modeli nie są pokryte wszystkie generacje i wersje nadwozia. Przy zdjęciach BMW E60 i Octavii Combi zapisano rzeczywisty typ nadwozia; obecny resolver nie uwzględnia nadwozia z danych pojazdu, więc w przyszłości należy rozszerzyć tę identyfikację (sedan/kombi/hatchback), zamiast obiecywać wierność konkretnej wersji klienta.
 
 **Uwaga:** zdjęcia są linkowane przez Special:FilePath, nie zapisane jako pliki JPG w repozytorium. Weryfikacja licencji odbywała się na stronach źródłowych; ważność linków i warunki atrybucji należy ponownie sprawdzić przed redystrybucją instalatora.
+
+## Etap 7 — kolejna partia 8 fotografii (2026-11-11)
+Dodano kolejne osiem referencyjnych plików Wikimedia Commons z przypisanymi autorami, licencjami i celowo ograniczonymi rocznikami:
+- VW Golf VI TSI 2008 (Golf VI, 2009–2012) — Lothar Spurzem, CC BY-SA 2.0 DE — https://commons.wikimedia.org/wiki/File:VW_Golf_VI_TSI_am_2008-10-11.jpg
+- Opel Astra J po lifcie, model 2015 (2013–2015) — Nordenfan, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Opel_Astra_J_Modellpflege_Front.jpg
+- Ford Focus II facelift (2008–2010) — M 93, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Ford_Focus_II_(Modellpflege,_seit_2008)_front_MJ.JPG
+- Ford Focus Mk3 przed faceliftingiem (2011–2014) — Mike Peel, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ford_Focus,_Highway_1.jpg
+- BMW serii 3 E90 sedan przed liftingiem (2005–2008) — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:BMW_E90_front_20070831.jpg
+- Kia cee'd ED hatchback przed liftingiem (2007–2009) — Thomas doerfer, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Kia_cee%27d_Front.JPG
+- Hyundai i30 GD hatchback (2012–2014) — Overlaet, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Hyundai_i30_(front).jpg
+- Toyota Yaris XP130 przed liftingiem (2011–2014) — M 93, CC BY-SA 3.0 DE — https://commons.wikimedia.org/wiki/File:Toyota_Yaris_(XP130)_–_Frontansicht,_21._Juli_2012,_Heiligenhaus.jpg
+
+**Stan:** 27 przypisań zdjęć, 19 modeli z co najmniej jedną referencyjną fotografią, 152/171 modeli bez ręcznego przypisania. Roczniki są orientacyjnymi oknami doboru zdjęć, wymagają dalszego audytu w odniesieniu do wersji nadwoziowych i liftingów; nie utożsamiaj daty wykonania fotografii z rocznikiem auta. Przykładowo E90 w manifeście to sedan, choć nazwa generacji w katalogu obejmuje także E91/E92/E93. Po dodaniu pól wersji nadwozia resolver powinien wymagać zgodności nadwozia.
+
+**Licencje regionalne:** poprawiono walidację tak, by dopuszczała jawnie wariant `DE` (niemiecką jurysdykcję dla wybranych starszych CC BY-SA), bez błędnego dopuszczania `NC`/`ND`.
