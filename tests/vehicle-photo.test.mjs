@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {resolveVerifiedVehiclePhoto,isPhotoLicenseAllowed,photoCoverage,vehiclePhotoKey} from '../src/vehicle-photo-model.mjs'
 import {vehicleCatalog} from '../src/vehicle-catalog.js'
+import {verifiedVehiclePhotos} from '../src/vehicle-photo-manifest.mjs'
 
 test('verified photo matches exact make, model and year',()=>{
  const photo=resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Golf',year:2018,generation:'VII (5G)'})
@@ -53,4 +54,34 @@ test('do not infer Golf from the same name of another manufacturer',()=>{
 test('curated photo cannot show wrong generation',()=>{
  assert.equal(resolveVerifiedVehiclePhoto({make:'Audi',model:'A4',generation:'B9 (8W)',year:2014}),null)
  assert.ok(resolveVerifiedVehiclePhoto({make:'Audi',model:'A4',generation:'B8 (8K)',year:2014}))
+})
+
+test('every curated image has complete attribution and a unique source',()=>{
+ const seen=new Set()
+ for(const item of verifiedVehiclePhotos){
+  assert.ok(vehicleCatalog[item.make]?.[item.model], 'Unknown model '+item.make+' '+item.model)
+  assert.ok(item.file&&item.source&&item.author&&item.license&&item.licenseUrl)
+  assert.equal(isPhotoLicenseAllowed(item.license),true,'Not permitted: '+item.license)
+  assert.ok(item.source.startsWith('https://commons.wikimedia.org/wiki/File:'))
+  assert.ok(item.licenseUrl.startsWith('https://creativecommons.org/licenses/')||item.license==='Public domain')
+  assert.ok(Number.isInteger(item.from)&&Number.isInteger(item.to)&&item.from<=item.to)
+  assert.ok(!seen.has(item.source),'Duplicate source '+item.source)
+  seen.add(item.source)
+ }
+})
+test('new workshop models resolve only within their photo generation year ranges',()=>{
+ const examples=[
+  ['Opel','Astra',2008,1998],
+  ['Skoda','Fabia',2008,2022],
+  ['Peugeot','308',2014,2009],
+  ['Renault','Clio',2014,2001],
+  ['Renault','Megane',2009,2018],
+  ['Ford','Fiesta',2019,2006]
+ ]
+ for(const [make,model,correctYear,wrongYear] of examples){
+  assert.ok(resolveVerifiedVehiclePhoto({make,model,year:correctYear}),make+' '+model)
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,year:wrongYear}),null,make+' '+model)
+ }
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B6 (3C)',year:2008}))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B7 (36)',year:2012}),null)
 })
