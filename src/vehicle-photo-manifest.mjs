@@ -22,5 +22,27 @@ export const verifiedVehiclePhotos=[
   source:'https://commons.wikimedia.org/wiki/File:Ford_Focus_Mk3_Facelift_F.jpg',
   author:'KGC626',license:'CC BY-SA 4.0',
   licenseUrl:'https://creativecommons.org/licenses/by-sa/4.0/',note:'Focus Mk3 po faceliftingu'
+ } ,
+ {
+  make:'Audi',model:'A4',generation:'B8 (8K)',from:2007,to:2015,
+  file:'Audi A4 B8 front.jpg',
+  source:'https://commons.wikimedia.org/wiki/File:Audi_A4_B8_front.jpg',
+  author:'M 93',license:'CC BY-SA 3.0',
+  licenseUrl:'https://creativecommons.org/licenses/by-sa/3.0/',note:'Audi A4 B8 sedan'
+ },
+ {
+  make:'BMW',model:'Seria 3',generation:'E46',from:1998,to:2006,
+  file:'BMW E46 front.jpg',
+  source:'https://commons.wikimedia.org/wiki/File:BMW_E46_front.jpg',
+  author:'Rudolf Stricker',license:'Public domain',
+  licenseUrl:'https://commons.wikimedia.org/wiki/File:BMW_E46_front.jpg',note:'BMW Seria 3 E46 sedan'
+ },
+ {
+  make:'Toyota',model:'Corolla',from:2019,to:2022,
+  file:'2019 Toyota Corolla Design VVT-i HEV 1.8 Front.jpg',
+  source:'https://commons.wikimedia.org/wiki/File:2019_Toyota_Corolla_Design_VVT-i_HEV_1.8_Front.jpg',
+  author:'Vauxford',license:'CC BY-SA 4.0',
+  licenseUrl:'https://creativecommons.org/licenses/by-sa/4.0/',note:'Toyota Corolla E210 hatchback'
  }
+
 ]
