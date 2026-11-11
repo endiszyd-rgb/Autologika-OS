@@ -1,6 +1,5 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react'
 import {VehiclePhoto} from './vehicle-photo.jsx'
-import {VehiclePhoto} from './vehicle-photo.jsx'
 import {WORK_CATALOG} from './work-catalog.js'
 import {procedureFor} from './work-procedures.js'
 import {LoadingState} from './ui.jsx'
