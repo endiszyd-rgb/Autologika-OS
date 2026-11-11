@@ -216,3 +216,18 @@ test('Tiguan II, Kodiaq I, Captur I and XC60 II photos respect year and body',()
  assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Tiguan',generation:'I (5N)',year:2018,bodyType:'suv'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Renault',model:'Captur',year:2023,bodyType:'suv'}),null)
 })
+
+test('Sportage QL, Mazda CX-5 KF and Peugeot 3008 II use conservative year ranges',()=>{
+ const vehicles=[
+  {make:'Kia',model:'Sportage',year:2019,bodyType:'suv'},
+  {make:'Mazda',model:'CX-5',year:2018,bodyType:'suv'},
+  {make:'Peugeot',model:'3008',year:2018,bodyType:'suv'}
+ ]
+ for(const vehicle of vehicles){
+  assert.ok(resolveVerifiedVehiclePhoto(vehicle),JSON.stringify(vehicle))
+  assert.equal(resolveVerifiedVehiclePhoto({...vehicle,bodyType:'hatchback'}),null)
+ }
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Kia',model:'Sportage',year:2007,bodyType:'suv'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Mazda',model:'CX-5',year:2014,bodyType:'suv'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Peugeot',model:'3008',year:2013,bodyType:'suv'}),null)
+})
