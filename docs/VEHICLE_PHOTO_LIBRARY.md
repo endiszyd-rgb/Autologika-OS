@@ -160,3 +160,8 @@ Wdrożono:
 **Stan po nowej partii:** 84 wpisy zdjęć / 72 modele spośród 171; pozostało 99 modeli bez zatwierdzonej referencji. Indeks jest kompletny, ale BIBLIOTEKA ZDJĘĆ NIE JEST jeszcze kompletna: pokrycie pojedynczego modelu nie oznacza wszystkich generacji/roczników/nadwozi.
 
 **Ograniczenia pierwszej próby automatycznych badań:** raport z Actions `43031445608` przetworzył 125 brakujących wówczas modeli, ale tylko 25 miało kandydata po filtracji, a 95 zapytań zakończyło się HTTP 429 (przekroczony limit API). Poprawiono kod o pojedynczą kolejkę z odstępem i retry. Do ukończenia weryfikacji nie wystarcza samo pomyślne wykonanie Actions; potrzebna jest analiza wynikowych zdjęć i praw licencyjnych.
+
+## Kontrola zewnętrznych źródeł — wyniki GitHub Actions
+Audyt plików Wikimedia Commons uruchomiony jako `43033254809` sprawdził wszystkie 84 odwołania w manifeście bezpośrednio w API Commons. Wynik początkowy: **83 poprawne, 1 do przeglądu, 0 brakujących, 0 bez odpowiedzi**. Jedyną niezgodnością była licencja fotografii Passata B6: w manifeście `CC BY-SA 2.5`, na Commons `CC BY-SA 3.0`. Poprawiono ten wpis w commicie `532095d6`. Kolejny audyt będzie uruchamiany po zmianach manifestu; należy sprawdzić jego wynik przed ostatecznym scaleniem.
+
+Audyt potwierdza istnienie pliku, odczyt licencji i autora — nie zastępuje wizualnej inspekcji dopasowania do generacji. Nie należy opisywać wszystkich 171 modeli jako posiadających fotografie, dopóki status `missing` nie spadnie do zera.
