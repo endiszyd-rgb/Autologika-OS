@@ -16,7 +16,8 @@ function matchesPhoto(page,vehicle){
  // If a generation is specified, a photo without it is not a proven match.
  if(generation&&!tokenMatch(name,generation))return false
  const year=String(vehicle.year||'').trim()
- if(year && /\b(?:19|20)\d{2}\b/.test(name) && !name.includes(year))return false
+ if(year && !generation && !name.includes(year))return false
+ if(year && generation && /\b(?:19|20)\d{2}\b/.test(name) && !name.includes(year))return false
  return true
 }
 async function fetchPhoto(vehicle){
