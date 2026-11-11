@@ -187,3 +187,17 @@ test('new Superb II liftback and Mondeo Mk3 wagon match only declared body/year'
  assert.equal(resolveVerifiedVehiclePhoto({make:'Ford',model:'Mondeo',year:2004,bodyType:'sedan'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Ford',model:'Mondeo',year:2014,bodyType:'wagon'}),null)
 })
+
+test('new C4, Swift and Insignia B photos match model and conservative year limits',()=>{
+ const examples=[
+  {make:'Citroen',model:'C4',year:2006,bodyType:'hatchback'},
+  {make:'Suzuki',model:'Swift',year:2007,bodyType:'hatchback'},
+  {make:'Opel',model:'Insignia',year:2018}
+ ]
+ for(const v of examples)assert.ok(resolveVerifiedVehiclePhoto(v),JSON.stringify(v))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Citroen',model:'C4',year:2017}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Suzuki',model:'Swift',year:2021}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Opel',model:'Insignia',year:2010}),null)
+ // Metadata does not prove the Insignia's body type: no body-specific match allowed.
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Opel',model:'Insignia',year:2018,bodyType:'wagon'}),null)
+})
