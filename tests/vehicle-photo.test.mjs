@@ -472,3 +472,24 @@ test('confirmed generation photos distinguish wagon sedan from unknown body type
  assert.equal(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 5',generation:'F10/F11',year:2013,bodyType:'wagon'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B8 (3G)',year:2016}),null)
 })
+
+test('newly verified Tiguan I, Passat B7, Audi A3 8V and BMW G20 generation images',()=>{
+ const examples=[
+  {make:'Volkswagen',model:'Tiguan',generation:'I (5N)',year:2009,bodyType:'suv'},
+  {make:'Volkswagen',model:'Passat',generation:'B7 (36)',year:2012,bodyType:'sedan'},
+  {make:'Volkswagen',model:'Passat',generation:'B7 (36)',year:2012,bodyType:'wagon'},
+  {make:'Audi',model:'A3',generation:'8V',year:2014,bodyType:'sedan'},
+  {make:'BMW',model:'Seria 3',generation:'G20/G21',year:2020,bodyType:'sedan'}
+ ]
+ for(const entry of examples){
+  const photo=resolveVerifiedVehiclePhoto(entry)
+  assert.ok(photo,JSON.stringify(entry))
+  assert.equal(photo.generation,entry.generation)
+  assert.equal(photo.bodyType,entry.bodyType)
+ }
+ const sedan=resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B7 (36)',year:2012,bodyType:'sedan'})
+ const wagon=resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B7 (36)',year:2012,bodyType:'wagon'})
+ assert.notEqual(sedan.file,wagon.file)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B7 (36)',year:2012,bodyType:'suv'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 3',generation:'G20/G21',year:2020,bodyType:'wagon'}),null)
+})
