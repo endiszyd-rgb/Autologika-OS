@@ -197,3 +197,19 @@ Ważne: `171/171 modeli ze zdjęciem` **nie jest równoznaczne** z 100% zdjęć 
 GitHub Actions `43079435743`: **40/40 testów, 0 błędów; build Vite poprawny**. Skrypt audytu podaje **171/171 modeli**, **0 brakujących modeli**, ale tylko **17 z 48 zdefiniowanych szczegółowych generacji** dopasowanych według wybranego punktu roku (audyt bada środek okresu generacji, zatem nie jest pełną statystyką każdej wersji). Zewnętrzna kontrola Wikimedia Commons `43079402058`: **188/188 plików zgodnych z licencją i obecnych**, 0 brakujących, 0 do przeglądu.
 
 **Zakres tego ukończenia:** 100% par marka/model ma co najmniej jedno źródłowe zdjęcie; zdjęcia poszczególnych generacji (aktualnie niekompletne), wersji i nadwozi nadal wymagają dalszego kuratorowania.
+
+## Etap 15 — identyfikacja zdjęć według generacji i rocznika (11.11.2026)
+Dodano **7 dodatkowych, jednoznacznie opisanych zdjęć** generacji:
+- Škoda Octavia I (1U) Combi, roczniki 1997–2009 — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Skoda_Octavia_front_20071007.jpg
+- BMW serii 5 F10 sedan, 2010–2016 — Renée Kools, CC BY 4.0 — https://commons.wikimedia.org/wiki/File:White_BMW_5_Series_F10_front_view.jpg
+- Mercedes-Benz Klasa C W204 sedan po liftingu, 2011–2014 — M 93, CC BY-SA 3.0 DE — https://commons.wikimedia.org/wiki/File:Mercedes-Benz_C_220_CDI_BlueEFFICIENCY_Avantgarde_(W_204,_Facelift)_–_Frontansicht_(1),_17._April_2011,_Düsseldorf.jpg
+- VW Passat B8 (3G) sedan, 2015–2018 — KGC626, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:VW_Passat_B8_Sedan.jpg
+- VW Passat B8 (3G) Variant, 2015–2018 — Tomáš Meňuš, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Passat_B8_Variant.jpg
+- Audi A4 B9 (8W), 2016–2019 — KGC626, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Audi_A4_B9.jpg
+- Audi A4 B9 (8W) Avant kombi, 2016–2019 — Alexander Migl, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Audi_A4_Avant_B9_IMG_1973.jpg
+
+**Stan:** 195 wpisów fotografii, 171/171 modeli z co najmniej jednym zdjęciem. Audyt zewnętrzny Wikimedia Commons `43082833845`: 195 poprawnych plików i metadanych licencji, 0 wymagających przeglądu i 0 brakujących. Fotografie generacji nie oznaczają pełnego pokrycia nadwozi, liftingów czy wszystkich rynków.
+
+Poprawiono raportowanie pokrycia szczegółowych generacji: dotychczasowy audyt sprawdzał tylko środkowy rok każdej generacji. Nowy `src/vehicle-photo-inventory.mjs` i `scripts/audit-vehicle-photos.mjs` sprawdzają **każdy rok** w każdej generacji, uwzględniają dopasowanie typu nadwozia i pokazują brakujące lata. Gdy jednego modelu/roku dotyczą dwie wersje nadwoziowe, rocznik jest liczony jako pokryty, jeśli istnieje poprawna fotografia co najmniej jednego nadwozia — to nie znaczy, że są zdjęcia wszystkich wersji.
+
+Ustawienia → Biblioteka zdjęć pojazdów: wyszukiwalna lista samochodów pokazuje teraz częściowo pokryte generacje i konkretne roczniki do uzupełnienia. Naprawiono także test z zakodowaną na stałe liczbą 188; każdy następny przyrost liczby źródeł nie powinien powodować fałszywej awarii testu.
