@@ -325,3 +325,20 @@ test('Hyundai i20, Dacia Logan MCV and Mitsubishi ASX reflect correct body and y
   assert.equal(resolveVerifiedVehiclePhoto({make,model,year:2003,bodyType}),null)
  }
 })
+
+test('Leon hatchback vs ST and Peugeot 508 sedan vs SW never cross-match',()=>{
+ const pairs=[
+  ['SEAT','Leon',2018],
+  ['Peugeot','508',2017]
+ ]
+ for(const [make,model,year] of pairs){
+  const hatch=resolveVerifiedVehiclePhoto({make,model,year,bodyType:make==='SEAT'?'hatchback':'sedan'})
+  const wagon=resolveVerifiedVehiclePhoto({make,model,year,bodyType:'wagon'})
+  assert.ok(hatch,make+' '+model+' base body')
+  assert.ok(wagon,make+' '+model+' wagon body')
+  assert.notEqual(hatch.file,wagon.file,'Photos for different bodies must differ')
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,year,bodyType:'suv'}),null)
+ }
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Citroen',model:'Berlingo',year:2017,bodyType:'van'}))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Citroen',model:'Berlingo',year:2017,bodyType:'wagon'}),null)
+})
