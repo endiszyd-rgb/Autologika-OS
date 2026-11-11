@@ -44,5 +44,54 @@ export const verifiedVehiclePhotos=[
   author:'Vauxford',license:'CC BY-SA 4.0',
   licenseUrl:'https://creativecommons.org/licenses/by-sa/4.0/',note:'Toyota Corolla E210 hatchback'
  }
-
+,
+  {
+    make:"Opel",model:"Astra",from:2004,to:2009,
+    file:"Opel Astra H front.jpg",
+    source:"https://commons.wikimedia.org/wiki/File:Opel_Astra_H_front.jpg",
+    author:"M 93",license:"CC BY-SA 3.0",
+    licenseUrl:"https://creativecommons.org/licenses/by-sa/3.0/",note:"Astra H hatchback; zdjęcie z 2008 r."
+  },
+  {
+    make:"Skoda",model:"Fabia",from:2007,to:2010,
+    file:"Skoda Fabia II front.jpg",
+    source:"https://commons.wikimedia.org/wiki/File:Skoda_Fabia_II_front.jpg",
+    author:"M 93",license:"CC BY-SA 3.0",
+    licenseUrl:"https://creativecommons.org/licenses/by-sa/3.0/",note:"Fabia II przed liftingiem; zdjęcie z 2008 r."
+  },
+  {
+    make:"Volkswagen",model:"Passat",generation:"B6 (3C)",from:2005,to:2010,
+    file:"Volkswagen Passat B6-1.jpg",
+    source:"https://commons.wikimedia.org/wiki/File:Volkswagen_Passat_B6-1.jpg",
+    author:"M62",license:"CC BY-SA 2.5",
+    licenseUrl:"https://creativecommons.org/licenses/by-sa/2.5/",note:"Passat B6; zdjęcie z 2007 r."
+  },
+  {
+    make:"Peugeot",model:"308",from:2013,to:2017,
+    file:"2014 Peugeot 308 Access HDi 1.6 Front.jpg",
+    source:"https://commons.wikimedia.org/wiki/File:2014_Peugeot_308_Access_HDi_1.6_Front.jpg",
+    author:"Vauxford",license:"CC BY-SA 4.0",
+    licenseUrl:"https://creativecommons.org/licenses/by-sa/4.0/",note:"Peugeot 308 II T9 hatchback przed liftingiem; wersja 2014"
+  },
+  {
+    make:"Ford",model:"Fiesta",from:2017,to:2021,
+    file:"Ford Fiesta MK7.jpg",
+    source:"https://commons.wikimedia.org/wiki/File:Ford_Fiesta_MK7.jpg",
+    author:"Alexander Migl",license:"CC BY-SA 4.0",
+    licenseUrl:"https://creativecommons.org/licenses/by-sa/4.0/",note:"Ford Fiesta generacji 2017, przed liftingiem; nazewnictwo Mk7 różni się między rynkami"
+  },
+  {
+    make:"Renault",model:"Clio",from:2012,to:2016,
+    file:"Renault Clio (front quarter) red.JPG",
+    source:"https://commons.wikimedia.org/wiki/File:Renault_Clio_(front_quarter)_red.JPG",
+    author:"Overlaet",license:"CC BY-SA 3.0",
+    licenseUrl:"https://creativecommons.org/licenses/by-sa/3.0/",note:"Clio IV hatchback, wersja premierowa 2012; przed liftingiem"
+  },
+  {
+    make:"Renault",model:"Megane",from:2008,to:2011,
+    file:"Renault-Megane3.jpg",
+    source:"https://commons.wikimedia.org/wiki/File:Renault-Megane3.jpg",
+    author:"Mausmaus",license:"CC BY-SA 3.0",
+    licenseUrl:"https://creativecommons.org/licenses/by-sa/3.0/",note:"Megane III hatchback przed liftingiem; fotografia z 2008 r."
+  }
 ]
