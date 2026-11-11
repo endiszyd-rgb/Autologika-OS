@@ -213,3 +213,19 @@ Dodano **7 dodatkowych, jednoznacznie opisanych zdjęć** generacji:
 Poprawiono raportowanie pokrycia szczegółowych generacji: dotychczasowy audyt sprawdzał tylko środkowy rok każdej generacji. Nowy `src/vehicle-photo-inventory.mjs` i `scripts/audit-vehicle-photos.mjs` sprawdzają **każdy rok** w każdej generacji, uwzględniają dopasowanie typu nadwozia i pokazują brakujące lata. Gdy jednego modelu/roku dotyczą dwie wersje nadwoziowe, rocznik jest liczony jako pokryty, jeśli istnieje poprawna fotografia co najmniej jednego nadwozia — to nie znaczy, że są zdjęcia wszystkich wersji.
 
 Ustawienia → Biblioteka zdjęć pojazdów: wyszukiwalna lista samochodów pokazuje teraz częściowo pokryte generacje i konkretne roczniki do uzupełnienia. Naprawiono także test z zakodowaną na stałe liczbą 188; każdy następny przyrost liczby źródeł nie powinien powodować fałszywej awarii testu.
+
+## Etap 16 — dziewięć przypisań do konkretnych generacji (2026-11-11)
+Dodano kolejne **9 fotografii** dla generacji z wcześniejszymi lukami:
+- Volkswagen Tiguan I (5N) SUV, 2008–2010 — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:VW_Tiguan_front_20071228.jpg
+- Volkswagen Passat B7 (36) sedan, 2011–2014 — Bene Riobó, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Volkswagen_Passat_B7.jpg
+- Volkswagen Passat B7 (36) Variant kombi, 2011–2014 — M 93, CC BY-SA 3.0 DE — https://commons.wikimedia.org/wiki/File:VW_Passat_Variant_(B7)_–_Frontansicht,_10._Juli_2011,_Velbert.jpg
+- Audi A3 8V sedan, 2013–2016 — Tokumeigakarinoaoshima, CC0 1.0 — https://commons.wikimedia.org/wiki/File:Audi_A3_Sedan_(8V)_front.JPG
+- BMW serii 3 G20/G21 (zdjęcie G20 sedan), 2019–2022 — Tokumeigakarinoaoshima, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:BMW_320i_M_Sport_(G20)_front.jpg
+- Audi A3 8Y hatchback, 2020–2023 — Alexander Migl, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Audi_A3_8Y_IMG_3386.jpg
+- BMW serii 5 G30/G31 (zdjęcie G30 sedan), 2017–2020 — Ivomachielse, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:BMW_G30.jpg
+- Mercedes-Benz Klasa C W206 sedan, 2021–2024 — Tokumeigakarinoaoshima, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mercedes-Benz_C_200_AVANTGARDE_(W206)_front.jpg
+- SEAT Leon 1P hatchback, 2006–2009 — Thomas doerfer, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Seat_Leon_1P_1.9_TDI_Stylance_Magicoschwarz_Front.JPG
+
+**Stan manifestu:** 204 fotografie dla 171 modeli. Wspólny resolver nadal wymaga odpowiedniej generacji, rocznika i — gdy znane — typu nadwozia. Nie należy interpretować zdjęcia sedana G20 jako pokrycia G21 Touring ani sedana G30 jako pokrycia G31.
+
+**Do sprawdzenia:** wyniki ponownego audytu Wikimedia (204 pliki), pełna liczba generacji z pokryciem każdego roku, uruchomienie interfejsu na rzeczywistych urządzeniach. Projekt nie został scalony do `main`.
