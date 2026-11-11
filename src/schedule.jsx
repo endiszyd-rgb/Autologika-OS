@@ -1,7 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react'
 import {Icon} from './ui.jsx'
 import {VehiclePhoto} from './vehicle-photo.jsx'
-import {VehiclePhoto} from './vehicle-photo.jsx'
 import {notifyFeedback} from './feedback.js'
 import {VoiceTextarea} from './voice-entry.jsx'
 import {addDays,startOfWeek,dayKey,localInput,onDay,segmentOnDay,moveToDay,conflicts,overlappingAppointments} from './schedule-model.mjs'
