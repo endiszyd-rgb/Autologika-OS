@@ -510,3 +510,19 @@ test('latest source-confirmed A3 8Y, BMW G30, Mercedes W206 and Seat Leon 1P pho
  }
  assert.equal(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 5',generation:'G30/G31',year:2018,bodyType:'wagon'}),null)
 })
+
+test('Audi A4 B6 has distinct sedan/Avant images and W211 facelift is not W212',()=>{
+ const cases=[
+  {make:'Audi',model:'A4',generation:'B6 (8E)',year:2003,bodyType:'sedan'},
+  {make:'Audi',model:'A4',generation:'B6 (8E)',year:2003,bodyType:'wagon'},
+  {make:'Mercedes-Benz',model:'Klasa E',generation:'W211',year:2007,bodyType:'sedan'}
+ ]
+ const urls=cases.map(v=>{
+  const photo=resolveVerifiedVehiclePhoto(v)
+  assert.ok(photo,JSON.stringify(v))
+  assert.equal(photo.generation,v.generation)
+  return photo.file
+ })
+ assert.notEqual(urls[0],urls[1])
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Mercedes-Benz',model:'Klasa E',generation:'W212',year:2007,bodyType:'sedan'}),null)
+})
