@@ -342,3 +342,10 @@ test('Leon hatchback vs ST and Peugeot 508 sedan vs SW never cross-match',()=>{
  assert.ok(resolveVerifiedVehiclePhoto({make:'Citroen',model:'Berlingo',year:2017,bodyType:'van'}))
  assert.equal(resolveVerifiedVehiclePhoto({make:'Citroen',model:'Berlingo',year:2017,bodyType:'wagon'}),null)
 })
+
+test('ambiguous wagon/sedan cars require body style before picking a photograph',()=>{
+ assert.equal(resolveVerifiedVehiclePhoto({make:'SEAT',model:'Leon',year:2018}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Peugeot',model:'508',year:2017}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Audi',model:'A6',year:2019}),null)
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Audi',model:'A6',year:2019,bodyType:'wagon'}))
+})
