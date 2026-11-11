@@ -10,7 +10,14 @@ const yearsForGeneration=(from,to)=>Array.from(
 )
 const generationStatus=({make,model,generation,from,to})=>{
  const years=yearsForGeneration(from,to)
- const matchedYears=years.filter(year=>Boolean(resolveVerifiedVehiclePhoto({make,model,generation,year})))
+ const matchedYears=years.filter(year=>{
+  const candidates=verifiedVehiclePhotos.filter(p=>norm(p.make)===norm(make)&&norm(p.model)===norm(model)&&
+   Number(p.from)<=year&&Number(p.to)>=year)
+  const knownBodies=[...new Set(candidates.map(p=>p.bodyType).filter(Boolean))]
+  // A photo exists for this generation/year if at least ONE known body can
+  // resolve. This does not imply coverage of all possible body types.
+  return [undefined,...knownBodies].some(bodyType=>Boolean(resolveVerifiedVehiclePhoto({make,model,generation,year,bodyType})))
+ })
  const photoCount=verifiedVehiclePhotos.filter(photo=>
   norm(photo.make)===norm(make)&&norm(photo.model)===norm(model)&&
   (!photo.generation||norm(photo.generation)===norm(generation))&&
