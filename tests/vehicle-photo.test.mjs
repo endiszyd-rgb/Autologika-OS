@@ -283,3 +283,18 @@ test('all reviewed discovery models appear with correct make and bounded year',(
  assert.equal(resolveVerifiedVehiclePhoto({make:'Audi',model:'A7',year:2019,bodyType:'wagon'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Audi',model:'A5',generation:'8T/8F',year:2021}),null)
 })
+
+test('five new Fiat Honda Toyota entries have right years and body types',()=>{
+ const examples=[
+  ['Fiat','Tipo',2017,'hatchback'],
+  ['Fiat','500',2017,'hatchback'],
+  ['Fiat','Ducato',2011,'van'],
+  ['Honda','Jazz',2016,'hatchback'],
+  ['Toyota','Land Cruiser',2018,'suv']
+ ]
+ for(const [make,model,year,bodyType] of examples){
+  assert.ok(resolveVerifiedVehiclePhoto({make,model,year,bodyType}),make+' '+model)
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,year,bodyType:'sedan'}),null,make+' '+model+' wrong body')
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,year:1995,bodyType}),null,make+' '+model+' wrong year')
+ }
+})
