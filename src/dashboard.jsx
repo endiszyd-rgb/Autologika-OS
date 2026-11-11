@@ -1,5 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react'
 import {VehiclePhoto} from './vehicle-photo.jsx'
+import {VehiclePhoto} from './vehicle-photo.jsx'
 import {Icon,StatusBadge} from './ui.jsx'
 import {effectiveHourlyRate,workLogTimestamp} from './workshop-metrics.mjs'
 
