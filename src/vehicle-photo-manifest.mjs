@@ -63,8 +63,8 @@ export const verifiedVehiclePhotos=[
     make:"Volkswagen",model:"Passat",generation:"B6 (3C)",from:2005,to:2010,
     file:"Volkswagen Passat B6-1.jpg",
     source:"https://commons.wikimedia.org/wiki/File:Volkswagen_Passat_B6-1.jpg",
-    author:"M62",license:"CC BY-SA 2.5",
-    licenseUrl:"https://creativecommons.org/licenses/by-sa/2.5/",note:"Passat B6; zdjęcie z 2007 r."
+    author:"M62",license:"CC BY-SA 3.0",
+    licenseUrl:"https://creativecommons.org/licenses/by-sa/3.0/",note:"Passat B6; zdjęcie z 2007 r."
   },
   {
     make:"Peugeot",model:"308",from:2013,to:2017,
