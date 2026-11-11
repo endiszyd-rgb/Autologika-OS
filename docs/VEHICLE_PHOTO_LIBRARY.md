@@ -122,3 +122,13 @@ Nowe, sprawdzone źródła Wikimedia Commons (autor / deklarowana licencja):
 **Stan:** 42 rekordy fotografii, 34 spośród 171 modeli posiadają przynajmniej jedno przypisanie; 137 modeli wciąż bez zdjęcia. To nie oznacza kompletnego pokrycia generacji, wersji nadwozia i rynku. Roczniki dobrano zachowawczo.
 
 **Poprawki jakości:** Cache ID obejmuje typ nadwozia. Jeżeli karta ma podany typ nadwozia, fotografia bez takiej informacji w manifeście nie zostanie użyta. Nadal trzeba dodać pole nadwozia do trwałego modelu danych w osobnej migracji; obecny resolver odczytuje je tylko wtedy, gdy zostało dostarczone w rekordzie.
+
+## Etap 10 — pięć nowych modeli (11.11.2026)
+Wpisy z bezpośrednio sprawdzonymi stronami Commons:
+- Škoda Superb II 3T, 2008–2012, liftback — M 93, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Skoda_Superb_front.JPG
+- Ford Mondeo Mk3 Turnier, 2001–2006, kombi — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Ford_Mondeo_front_20071203.jpg
+- Citroën C4 I, 2004–2008, hatchback — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Citroen_C4_front_20070926.jpg
+- Suzuki Swift (2004), 2005–2009, hatchback — Luftfahrrad, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Suzuki_Swift_front-1.jpg
+- Opel Insignia B, 2017–2019, nadwozie niezweryfikowane — Alexander Migl, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Opel_Insignia_B.jpg
+
+**Stan po aktualizacji:** 47 fotografii / 39 różnych modeli spośród 171, czyli 132 modele bez ręcznego zdjęcia. Lata dopasowania są konserwatywne i nie oznaczają pełnych okresów produkcji. Dla Insignii nie wpisano typu nadwozia, aby nie przypisywać niezweryfikowanej wersji sedan/kombi. Testy obejmują również ten przypadek. Nadal potrzebne są kontrola wszystkich źródeł w automatycznym audycie i trwały zapis nadwozia w bazie danych, zanim uznamy pokrycie poszczególnych wersji za pełne.
