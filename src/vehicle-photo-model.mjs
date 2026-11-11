@@ -8,6 +8,8 @@ export function resolveVerifiedVehiclePhoto(vehicle,records=verifiedVehiclePhoto
  if(!vehicle?.make||!vehicle?.model)return null
  const year=Number(vehicle.year)
  const generation=norm(vehicle.generation)
+ // A year is mandatory: facelift-only photographs must not represent an unknown model year.
+ if(!Number.isInteger(year)||year<1900||year>2100)return null
  const candidates=records.filter(p=>norm(p.make)===norm(vehicle.make)&&norm(p.model)===norm(vehicle.model)&&isPhotoLicenseAllowed(p.license)&&p.file&&p.source&&p.author)
   .filter(p=>{
    if(generation){if(!matchesGeneration(vehicle.generation,p.generation))return false}
