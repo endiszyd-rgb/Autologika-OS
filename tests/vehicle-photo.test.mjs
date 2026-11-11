@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {resolveVerifiedVehiclePhoto,isPhotoLicenseAllowed,photoCoverage,vehiclePhotoKey} from '../src/vehicle-photo-model.mjs'
 import {vehicleCatalog} from '../src/vehicle-catalog.js'
 import {verifiedVehiclePhotos} from '../src/vehicle-photo-manifest.mjs'
+import {vehiclePhotoInventory,vehiclePhotoInventorySummary} from '../src/vehicle-photo-inventory.mjs'
 
 test('verified photo matches exact make, model and year',()=>{
  const photo=resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Golf',year:2018,generation:'VII (5G)'})
@@ -230,4 +231,23 @@ test('Sportage QL, Mazda CX-5 KF and Peugeot 3008 II use conservative year range
  assert.equal(resolveVerifiedVehiclePhoto({make:'Kia',model:'Sportage',year:2007,bodyType:'suv'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Mazda',model:'CX-5',year:2014,bodyType:'suv'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Peugeot',model:'3008',year:2013,bodyType:'suv'}),null)
+})
+
+test('all 171 model pairs are in the photo inventory with no duplicates',()=>{
+ const catalogPairs=Object.entries(vehicleCatalog).flatMap(([make,models])=>Object.keys(models).map(model=>make+'::'+model))
+ const indexedPairs=vehiclePhotoInventory.map(row=>row.key)
+ assert.deepEqual(indexedPairs.slice().sort(),catalogPairs.slice().sort())
+ assert.equal(indexedPairs.length,new Set(indexedPairs).size)
+ assert.equal(vehiclePhotoInventorySummary.total,indexedPairs.length)
+ assert.equal(vehiclePhotoInventorySummary.withPhotos+vehiclePhotoInventorySummary.withoutPhotos,indexedPairs.length)
+ assert.equal(vehiclePhotoInventorySummary.referencedImages,verifiedVehiclePhotos.length)
+})
+test('new generation photographs identify model without inventing a body type',()=>{
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Golf',generation:'VIII (CD)',year:2021,bodyType:'hatchback'}))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Golf',generation:'VII (5G)',year:2021,bodyType:'hatchback'}),null)
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Octavia',generation:'IV (NX)',year:2021}))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Octavia',generation:'III (5E)',year:2021}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Octavia',generation:'IV (NX)',year:2021,bodyType:'wagon'}),null)
+ assert.ok(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 3',generation:'F30/F31/F34',year:2015,bodyType:'sedan'}))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 3',generation:'F30/F31/F34',year:2015,bodyType:'wagon'}),null)
 })
