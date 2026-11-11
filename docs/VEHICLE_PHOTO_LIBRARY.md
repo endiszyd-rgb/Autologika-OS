@@ -132,3 +132,15 @@ Wpisy z bezpośrednio sprawdzonymi stronami Commons:
 - Opel Insignia B, 2017–2019, nadwozie niezweryfikowane — Alexander Migl, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Opel_Insignia_B.jpg
 
 **Stan po aktualizacji:** 47 fotografii / 39 różnych modeli spośród 171, czyli 132 modele bez ręcznego zdjęcia. Lata dopasowania są konserwatywne i nie oznaczają pełnych okresów produkcji. Dla Insignii nie wpisano typu nadwozia, aby nie przypisywać niezweryfikowanej wersji sedan/kombi. Testy obejmują również ten przypadek. Nadal potrzebne są kontrola wszystkich źródeł w automatycznym audycie i trwały zapis nadwozia w bazie danych, zanim uznamy pokrycie poszczególnych wersji za pełne.
+
+## Etap 11 — siedem zweryfikowanych fotografii nowszych SUV-ów (11.11.2026)
+Zapisano 7 kolejnych przypisań w `src/vehicle-photo-manifest.mjs`:
+- Volkswagen Tiguan II (AD/BW), 2017–2020, Vauxford, CC BY-SA 4.0: https://commons.wikimedia.org/wiki/File:2017_Volkswagen_Tiguan_SE_TDi_4MOTION_2.0.jpg
+- Škoda Kodiaq I, 2017–2019, KGC626, CC BY-SA 4.0: https://commons.wikimedia.org/wiki/File:2018_Škoda_Kodiaq_Style.jpg
+- Renault Captur I po lifcie, 2017–2019, Vauxford, CC BY-SA 4.0: https://commons.wikimedia.org/wiki/File:2018_Renault_Captur_Iconic_TCE_900cc.jpg
+- Volvo XC60 II (SPA), 2018–2020, Vauxford, CC BY-SA 4.0: https://commons.wikimedia.org/wiki/File:2019_Volvo_XC60_T8_Inscription_Hybrid_2.0.jpg
+- Kia Sportage IV (QL) po lifcie, 2018–2020, Vauxford, CC BY-SA 4.0: https://commons.wikimedia.org/wiki/File:2018_Kia_Sportage_facelift_1.6.jpg
+- Mazda CX-5 II (KF), 2017–2020, Vauxford, CC BY-SA 4.0: https://commons.wikimedia.org/wiki/File:2018_Mazda_CX-5_Sport_NAV_Diesel_Automatic_2.2.jpg
+- Peugeot 3008 II, 2017–2020, Bindydad123, CC BY-SA 4.0: https://commons.wikimedia.org/wiki/File:2018_Peugeot_3008_1.6_Allure_(1).jpg
+
+**Stan po etapie 11:** 54 wpisy fotografii dla 46 modeli spośród 171; 125 modeli bez zdjęcia referencyjnego. Zakresy lat opisują okno bezpiecznego dopasowania do zdjęć, nie wszystkie warianty produkcyjne; nie wolno uznawać tego za pełne pokrycie roczników, nadwozi ani liftingów. Testy uwzględniają różnice nadwozi i generacji. Każda fotografia jest nadal odnośnikiem do Wikimedia Commons, a nie plikiem binarnym w repozytorium.
