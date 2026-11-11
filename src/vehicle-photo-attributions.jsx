@@ -15,21 +15,22 @@ export function VehiclePhotoAttributions(){
   <p>Indeks obejmuje wszystkie modele katalogu. Zdjęcie pojawia się dopiero po weryfikacji konkretnej generacji i rocznika. Brak zdjęcia nigdy nie oznacza braku pojazdu w bazie.</p>
   <div className="vehiclePhotoStats" role="status">
    <strong>{summary.withPhotos} / {summary.total} modeli ze zdjęciem</strong>
-   <span>{summary.withoutPhotos} modeli bez fotografii · {summary.referencedImages} zatwierdzonych przypisań</span>
+   <span>{summary.withoutPhotos} modeli bez fotografii · {summary.referencedImages} przypisań · {summary.generationFullyCovered}/{summary.generationCount} generacji z pokryciem całego okresu</span>
    <progress max={summary.total} value={summary.withPhotos} aria-label="Pokrycie katalogu zdjęciami"/>
   </div>
   <details>
    <summary>Pełny indeks modeli i braki fotografii</summary>
    <div className="vehiclePhotoInventoryToolbar">
     <label>Szukaj marki lub modelu <input value={filter} onChange={e=>setFilter(e.target.value)} placeholder="np. Audi A6"/></label>
-    <label><input type="checkbox" checked={onlyMissing} onChange={e=>setOnlyMissing(e.target.checked)}/> Tylko brakujące</label>
+    <label><input type="checkbox" checked={onlyMissing} onChange={e=>setOnlyMissing(e.target.checked)}/> Tylko modele z brakami generacji</label>
    </div>
    <p>Wyniki: {visible.length}. Modele ze zdjęciem mogą nadal mieć brakujące generacje lub odmiany nadwozia.</p>
    <ul className="vehiclePhotoInventoryRows">
     {visible.map(item=><li key={item.key}>
      <b>{item.make} {item.model}</b>
      <span>{item.photoCount?item.photoCount+' zdjęć referencyjnych':'Brak fotografii'}</span>
-     {item.generationCount>0&&<small>{item.generations.filter(g=>g.photoCount>0).length} z {item.generationCount} generacji szczegółowych z fotografią</small>}
+     {item.generationCount>0&&<small>{item.generations.filter(g=>g.status==='covered').length} z {item.generationCount} generacji pokrytych w pełnym zakresie lat</small>}
+     {item.generations.some(g=>g.status!=='covered')&&<small>Braki: {item.generations.filter(g=>g.status!=='covered').map(g=>`${g.generation} (${g.status==='missing'?'brak zdjęcia':`brak lat: ${g.missingYears.join(', ')}`})`).join('; ')}</small>}
     </li>)}
    </ul>
   </details>
