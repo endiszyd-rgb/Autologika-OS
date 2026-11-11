@@ -192,3 +192,8 @@ Ważne: `171/171 modeli ze zdjęciem` **nie jest równoznaczne** z 100% zdjęć 
 **Audyt licencji:** przedostatni audyt 188 fotografii wykrył 1 niezgodność licencji `Volvo V70 front 20080801.jpg` (Commons opis `Attribution`, manifest `CC BY-SA`). Ten plik został zastąpiony zgodnym CC BY-SA 4.0 zdjęciem `2002 Volvo V70 S 20V Automatic 2.4 Front.jpg` (model V70 II P2), a testy rocznika zostały zaktualizowane. Nowy audyt po tej korekcie powinien wykazać 188/188, ale wynik musi być zweryfikowany na GitHub Actions.
 
 **PR #2 pozostaje draftem**. Ukończono podstawowy indeks zdjęć i pokrycie wszystkich nazw modeli. Dalsze etapy to zapewnienie pełnego pokrycia generacji, a nie sztuczne zwiększanie licznika 171.
+
+### Wynik finalnego CI po poprawce (11.11.2026)
+GitHub Actions `43079435743`: **40/40 testów, 0 błędów; build Vite poprawny**. Skrypt audytu podaje **171/171 modeli**, **0 brakujących modeli**, ale tylko **17 z 48 zdefiniowanych szczegółowych generacji** dopasowanych według wybranego punktu roku (audyt bada środek okresu generacji, zatem nie jest pełną statystyką każdej wersji). Zewnętrzna kontrola Wikimedia Commons `43079402058`: **188/188 plików zgodnych z licencją i obecnych**, 0 brakujących, 0 do przeglądu.
+
+**Zakres tego ukończenia:** 100% par marka/model ma co najmniej jedno źródłowe zdjęcie; zdjęcia poszczególnych generacji (aktualnie niekompletne), wersji i nadwozi nadal wymagają dalszego kuratorowania.
