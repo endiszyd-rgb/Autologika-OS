@@ -20,7 +20,7 @@ async function queryCommons(item){
   gsrnamespace:'6',gsrlimit:'24',prop:'imageinfo',
   iiprop:'url|extmetadata|size',iiurlwidth:'420'
  }).toString()
- for(let attempt=0;attempt<3;attempt++){
+ for(let attempt=0;attempt<4;attempt++){
   const controller=new AbortController()
   const timeout=setTimeout(()=>controller.abort(),15000)
   try{
@@ -46,8 +46,8 @@ async function queryCommons(item){
    }).filter(candidate=>candidate.source&&candidate.thumbnail&&candidate.titleMatchesMakeModel&&candidate.licensePossiblyReusable)
    return {make:item.make,model:item.model,status:'researched',candidates:candidates.slice(0,12)}
   }catch(error){
-   if(attempt===2)return {make:item.make,model:item.model,status:'error',error:String(error.message||error),candidates:[]}
-   await sleep(900*(attempt+1))
+   if(attempt===3)return {make:item.make,model:item.model,status:'error',error:String(error.message||error),candidates:[]}
+   await sleep(2500*Math.pow(2,attempt))
   }finally{clearTimeout(timeout)}
  }
 }
@@ -59,10 +59,11 @@ async function worker(){
   if(i>=pending.length)return
   records[i]=await queryCommons(pending[i])
   if(i%10===0)console.log('Photo research:',i+1,'/',pending.length)
-  await sleep(300)
+  await sleep(1350)
  }
 }
-await Promise.all(Array.from({length:3},worker))
+// Sequential Commons requests: parallel bursts previously caused substantial API failures.
+await worker()
 const report={
  generatedAt:new Date().toISOString(),
  catalog:vehiclePhotoInventorySummary,
@@ -77,3 +78,5 @@ const report={
 await writeFile(destination,JSON.stringify(report,null,2),'utf8')
 console.log('Saved candidate research:',destination)
 console.log('Models with candidates:',report.modelsWithCandidate,'/ '+pending.length,'; errors:',report.errors)
+const byError=Object.groupBy(records.filter(row=>row.error),row=>row.error)
+for(const [error,rows] of Object.entries(byError))console.log('ERROR SUMMARY:',error,rows.length)
