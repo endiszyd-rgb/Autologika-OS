@@ -298,3 +298,17 @@ test('five new Fiat Honda Toyota entries have right years and body types',()=>{
   assert.equal(resolveVerifiedVehiclePhoto({make,model,year:1995,bodyType}),null,make+' '+model+' wrong year')
  }
 })
+
+test('C3, 208, Vitara and A-Class W176 have conservative photo matching',()=>{
+ const values=[
+  ['Citroen','C3',2018,'hatchback'],
+  ['Peugeot','208',2018,'hatchback'],
+  ['Suzuki','Vitara',2017,'suv'],
+  ['Mercedes-Benz','Klasa A',2014,'hatchback']
+ ]
+ for(const [make,model,year,bodyType] of values){
+  assert.ok(resolveVerifiedVehiclePhoto({make,model,year,bodyType}),make+' '+model)
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,year,bodyType:'wagon'}),null,make+' '+model+' mismatch')
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,year:2001,bodyType}),null,make+' '+model+' ancient model')
+ }
+})
