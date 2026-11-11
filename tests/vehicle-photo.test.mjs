@@ -100,3 +100,25 @@ test('new historical generation photos match the intended catalog entries',()=>{
  assert.equal(resolveVerifiedVehiclePhoto({make:'Audi',model:'A3',generation:'8V',year:2006}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Octavia',generation:'III (5E)',year:2006}),null)
 })
+
+test('country-specific CC BY-SA licenses are accepted without accepting NC or ND',()=>{
+ assert.equal(isPhotoLicenseAllowed('CC BY-SA 2.0 DE'),true)
+ assert.equal(isPhotoLicenseAllowed('CC BY-SA 3.0 DE'),true)
+ assert.equal(isPhotoLicenseAllowed('CC BY-SA 3.0 ND'),false)
+ assert.equal(isPhotoLicenseAllowed('CC BY-SA 4.0 NC'),false)
+})
+test('new reference photos match their year and generation',()=>{
+ const yes=[
+  {make:'Volkswagen',model:'Golf',generation:'VI (5K)',year:2010},
+  {make:'Opel',model:'Astra',year:2014},
+  {make:'Ford',model:'Focus',year:2009},
+  {make:'Ford',model:'Focus',year:2012},
+  {make:'BMW',model:'Seria 3',generation:'E90/E91/E92/E93',year:2007},
+  {make:'Kia',model:'Ceed',year:2008},
+  {make:'Hyundai',model:'i30',year:2013},
+  {make:'Toyota',model:'Yaris',year:2012}
+ ]
+ for(const v of yes)assert.ok(resolveVerifiedVehiclePhoto(v),JSON.stringify(v))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Golf',generation:'VIII (CD)',year:2010}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 3',generation:'G20/G21',year:2007}),null)
+})
