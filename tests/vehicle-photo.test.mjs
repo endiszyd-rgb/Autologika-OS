@@ -39,3 +39,18 @@ test('coverage report includes every model defined in catalog',()=>{
  assert.ok(coverage.covered>0)
  assert.equal(coverage.covered+coverage.missing,coverage.total)
 })
+
+test('reject ambiguous overlap of generations if generation was not supplied',()=>{
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Golf',year:2019}),null)
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Golf',generation:'VII (5G)',year:2019}))
+})
+test('unknown year never silently matches the photo',()=>{
+ for(const year of ['',null,'unknown',0,2101])assert.equal(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 3',generation:'E46',year}),null)
+})
+test('do not infer Golf from the same name of another manufacturer',()=>{
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Toyota',model:'Golf',generation:'VII (5G)',year:2018}),null)
+})
+test('curated photo cannot show wrong generation',()=>{
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Audi',model:'A4',generation:'B9 (8W)',year:2014}),null)
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Audi',model:'A4',generation:'B8 (8K)',year:2014}))
+})
