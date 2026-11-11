@@ -429,7 +429,7 @@ test('last 24 missing models have conservative exact model and year matches',()=
   ['Mazda','6',2006,'sedan'],['Hyundai','i10',2022,'hatchback'],
   ['Hyundai','Santa Fe',2002,'suv'],['Kia','Picanto',2018,'hatchback'],
   ['Volvo','S40',2009,'sedan'],['Volvo','S60',2020,'sedan'],
-  ['Volvo','S80',2007,'sedan'],['Volvo','V70',2009,'wagon'],
+  ['Volvo','S80',2007,'sedan'],['Volvo','V70',2002,'wagon'],
   ['Volvo','XC90',2021,'suv'],['Alfa Romeo','159',2009,'wagon'],
   ['Mitsubishi','Colt',2007,'hatchback'],['Mitsubishi','Lancer',2010,'sedan'],
   ['Subaru','Impreza',2004,'sedan'],['Subaru','Forester',2012,'suv'],
