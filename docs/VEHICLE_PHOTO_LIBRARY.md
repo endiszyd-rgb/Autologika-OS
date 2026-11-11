@@ -229,3 +229,22 @@ Dodano kolejne **9 fotografii** dla generacji z wcześniejszymi lukami:
 **Stan manifestu:** 204 fotografie dla 171 modeli. Wspólny resolver nadal wymaga odpowiedniej generacji, rocznika i — gdy znane — typu nadwozia. Nie należy interpretować zdjęcia sedana G20 jako pokrycia G21 Touring ani sedana G30 jako pokrycia G31.
 
 **Do sprawdzenia:** wyniki ponownego audytu Wikimedia (204 pliki), pełna liczba generacji z pokryciem każdego roku, uruchomienie interfejsu na rzeczywistych urządzeniach. Projekt nie został scalony do `main`.
+
+## Etap 16 — kolejna partia generacji (11.11.2026)
+Wprowadzono **12 zdjęć** z ręcznie sprawdzonych stron Wikimedia Commons (marka/model/generacja/rocznik/nadwozie):
+- VW Tiguan I (5N), SUV, 2008–2010 — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:VW_Tiguan_front_20071228.jpg
+- VW Passat B7 (36), sedan, 2011–2014 — Bene Riobó, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Volkswagen_Passat_B7.jpg
+- VW Passat B7 (36), Variant, 2011–2014 — M 93, CC BY-SA 3.0 DE — https://commons.wikimedia.org/wiki/File:VW_Passat_Variant_(B7)_–_Frontansicht,_10._Juli_2011,_Velbert.jpg
+- Audi A3 8V, sedan, 2013–2016 — Tokumeigakarinoaoshima, CC0 1.0 — https://commons.wikimedia.org/wiki/File:Audi_A3_Sedan_(8V)_front.JPG
+- BMW Seria 3 G20, sedan, 2019–2022 — Tokumeigakarinoaoshima, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:BMW_320i_M_Sport_(G20)_front.jpg
+- Audi A3 8Y, hatchback, 2020–2023 — Alexander Migl, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Audi_A3_8Y_IMG_3386.jpg
+- BMW Seria 5 G30, sedan, 2017–2020 — Ivomachielse, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:BMW_G30.jpg
+- Mercedes Klasa C W206, sedan, 2021–2024 — Tokumeigakarinoaoshima, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mercedes-Benz_C_200_AVANTGARDE_(W206)_front.jpg
+- SEAT Leon 1P, hatchback, 2006–2009 — Thomas doerfer, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Seat_Leon_1P_1.9_TDI_Stylance_Magicoschwarz_Front.JPG
+- Audi A4 B6, sedan, 2001–2004 — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Audi_A4_B6_front_20071030.jpg
+- Audi A4 B6, Avant kombi, 2001–2004 — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Audi_A4_B6_Kombi_front_20071115.jpg
+- Mercedes Klasa E W211, sedan po liftingu, 2006–2009 — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Mercedes_W211_front_20080127.jpg
+
+Łącznie **207 przypisań fotografii, 171/171 nazw modeli w katalogu**. Nowa partia uzupełnia 10 kombinacji marka/model/generacja, ale nie wszystkie roczniki i typy nadwozi każdej generacji.
+
+**Status w chwili zapisu:** audyty źródeł i testy po ostatnich zmianach uruchomione przez GitHub Actions, ale wykonanie w kolejce; nie wolno uznawać ich za zaliczone bez wyniku. Ostatni w pełni zaliczony audyt przed tymi 12 zdjęciami dotyczył 195 plików.
