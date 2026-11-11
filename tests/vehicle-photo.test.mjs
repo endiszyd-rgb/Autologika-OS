@@ -201,3 +201,18 @@ test('new C4, Swift and Insignia B photos match model and conservative year limi
  // Metadata does not prove the Insignia's body type: no body-specific match allowed.
  assert.equal(resolveVerifiedVehiclePhoto({make:'Opel',model:'Insignia',year:2018,bodyType:'wagon'}),null)
 })
+
+test('Tiguan II, Kodiaq I, Captur I and XC60 II photos respect year and body',()=>{
+ const entries=[
+  {make:'Volkswagen',model:'Tiguan',generation:'II (AD/BW)',year:2018,bodyType:'suv'},
+  {make:'Skoda',model:'Kodiaq',year:2018,bodyType:'suv'},
+  {make:'Renault',model:'Captur',year:2018,bodyType:'suv'},
+  {make:'Volvo',model:'XC60',year:2019,bodyType:'suv'}
+ ]
+ for(const entry of entries){
+  assert.ok(resolveVerifiedVehiclePhoto(entry),'No photograph for '+JSON.stringify(entry))
+  assert.equal(resolveVerifiedVehiclePhoto({...entry,bodyType:'sedan'}),null,'Wrong body should not match')
+ }
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Tiguan',generation:'I (5N)',year:2018,bodyType:'suv'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Renault',model:'Captur',year:2023,bodyType:'suv'}),null)
+})
