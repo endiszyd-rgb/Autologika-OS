@@ -67,3 +67,16 @@ Dodano 7 pozycji ze sprawdzonymi stronami plików Wikimedia Commons, opisami poj
 - https://commons.wikimedia.org/wiki/File:Renault-Megane3.jpg
 
 Uzupełniono testy wymagające unikatowych źródeł i kompletnych informacji o autorze/licencji oraz kontrolujące zakresy roczników. Każdy kolejny model powinien otrzymywać analogiczny rekord i testy. Zdjęcia nadal są pobierane z Wikimedia (cache po wczytaniu w PWA), nie zapisano ich binarnych plików w repozytorium.
+
+## Etap 6 — rozszerzenie generacji i katalogu (11.11.2026)
+Dodano sześć źródłowych fotografii z Wikimedia Commons po sprawdzeniu opisów i licencji na stronach plików:
+- Volkswagen Golf IV (1J), hatchback, CC BY-SA 3.0, Rudolf Stricker — https://commons.wikimedia.org/wiki/File:VW_Golf_IV_front_20071205.jpg
+- Volkswagen Golf V (1K), hatchback, CC BY-SA 3.0, pierwotny autor Stahlkocher (późniejsze wersje: Head) — https://commons.wikimedia.org/wiki/File:VW_golf_V.jpg
+- Opel Corsa D, przed liftingiem, CC BY-SA 3.0, Rudolf Stricker — https://commons.wikimedia.org/wiki/File:Opel_Corsa_D_front_20070611.jpg
+- Audi A3 8P/8PA Sportback, CC BY-SA 3.0, Bárdos Dezső (Sóhivatal) — https://commons.wikimedia.org/wiki/File:AUDI_A3.jpg
+- BMW serii 5 E60 sedan, CC BY-SA 3.0, Rudolf Stricker — https://commons.wikimedia.org/wiki/File:BMW_E60_front_20080515.jpg
+- Škoda Octavia II Combi, CC BY-SA 3.0, Rudolf Stricker — https://commons.wikimedia.org/wiki/File:Skoda_Octavia_front_20071001.jpg
+
+**Stan manifestu:** 19 rekordów fotografii obejmujących 16 różnych modeli z 171 (około 9,4% podstawowych modeli). Wciąż brakuje zdjęć 155 modeli, a dla wielu istniejących modeli nie są pokryte wszystkie generacje i wersje nadwozia. Przy zdjęciach BMW E60 i Octavii Combi zapisano rzeczywisty typ nadwozia; obecny resolver nie uwzględnia nadwozia z danych pojazdu, więc w przyszłości należy rozszerzyć tę identyfikację (sedan/kombi/hatchback), zamiast obiecywać wierność konkretnej wersji klienta.
+
+**Uwaga:** zdjęcia są linkowane przez Special:FilePath, nie zapisane jako pliki JPG w repozytorium. Weryfikacja licencji odbywała się na stronach źródłowych; ważność linków i warunki atrybucji należy ponownie sprawdzić przed redystrybucją instalatora.
