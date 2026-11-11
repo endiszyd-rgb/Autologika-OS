@@ -1,7 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react'
 import {VoiceTextarea} from './voice-entry.jsx'
 import {VehiclePhoto} from './vehicle-photo.jsx'
-import {VehiclePhoto} from './vehicle-photo.jsx'
 import {vehicleMakes,vehicleModels} from './vehicle-catalog.js'
 import {applyIntakeScan,clearIntakeCustomer,clearIntakeVehicle,filterIntakeCustomers,findActiveIntakeOrder,findScannedIntakeVehicle,intakeCustomerLabel,intakeMileageState,selectIntakeCustomer,selectIntakeVehicle,vehiclesForIntakeCustomer} from './quick-intake-model.js'
 
