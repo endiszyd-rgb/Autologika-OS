@@ -122,3 +122,26 @@ test('new reference photos match their year and generation',()=>{
  assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Golf',generation:'VIII (CD)',year:2010}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 3',generation:'G20/G21',year:2007}),null)
 })
+
+test('eight newly verified models resolve for intended conservative model years',()=>{
+ const rows=[
+ ['Toyota','Auris',2008,2001],
+ ['Honda','Civic',2013,2004],
+ ['Peugeot','207',2008,2016],
+ ['Volkswagen','Polo',2022,2017],
+ ['Nissan','Qashqai',2008,2018],
+ ['Fiat','Panda',2014,2005],
+ ['Renault','Scenic',2008,2018],
+ ['Dacia','Duster',2022,2010]
+ ]
+ for(const [make,model,year,wrongYear] of rows){
+  assert.ok(resolveVerifiedVehiclePhoto({make,model,year}),make+' '+model+' '+year)
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,year:wrongYear}),null,make+' '+model+' '+wrongYear)
+ }
+})
+test('photo with declared body style must not match a conflicting known body style',()=>{
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Toyota',model:'Auris',year:2008,bodyType:'hatchback'}))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Toyota',model:'Auris',year:2008,bodyType:'wagon'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Dacia',model:'Duster',year:2022,bodyType:'sedan'}),null)
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Dacia',model:'Duster',year:2022,bodyType:'suv'}))
+})
