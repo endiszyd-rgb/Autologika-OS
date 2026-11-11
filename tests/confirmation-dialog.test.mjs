@@ -26,8 +26,8 @@ test('confirmation queue sends string messages to an active host',async()=>{
  unsubscribe()
 })
 
-test('native confirmation debt cannot grow while screens migrate to the shared dialog',()=>{
+test('desktop destructive actions no longer use native confirmation',()=>{
  const files=['main.jsx','operations-screens.jsx','parts-workspace.jsx','technical-manual.jsx']
  const nativeCount=files.reduce((sum,file)=>sum+(readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8').match(/\bconfirm\(/g)||[]).length,0)
- assert.ok(nativeCount<=7,`Pozostało ${nativeCount} natywnych potwierdzeń; dozwolony limit migracji to 7.`)
+ assert.equal(nativeCount,0)
 })

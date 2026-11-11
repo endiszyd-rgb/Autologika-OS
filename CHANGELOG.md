@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.5 — 2026-11-11
+
+### Bezpieczniejsze operacje i wiarygodny licznik „Do uwagi”
+
+- Wszystkie operacje usuwania w wersji PC korzystają teraz ze wspólnego, nieblokującego okna potwierdzenia z nazwą rekordu i opisem skutków.
+- Ujednolicono usuwanie części zamówionych i naliczonych, plików zlecenia, parametrów technicznych, własnych szablonów oraz stron i kroków dokumentacji.
+- Okno potwierdzenia pozostaje otwarte podczas zapisu i pokazuje błąd operacji bez utraty kontekstu.
+- Licznik „Do uwagi” zachowuje ostatni poprawny wynik, a po błędzie odświeżenia oznacza go dyskretną bursztynową kropką i informacją o możliwie nieaktualnych danych.
+- Rozszerzono test Electron o obsługę nowych potwierdzeń przy rozliczaniu i usuwaniu części oraz dodano test blokujący powrót natywnych okien `confirm()`.
+
 ## 1.1.4 — 2026-11-10
 
 ### Nowy wygląd w odcieniach bordo
