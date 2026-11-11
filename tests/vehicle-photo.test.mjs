@@ -85,3 +85,18 @@ test('new workshop models resolve only within their photo generation year ranges
  assert.ok(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B6 (3C)',year:2008}))
  assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B7 (36)',year:2012}),null)
 })
+
+test('new historical generation photos match the intended catalog entries',()=>{
+ const examples=[
+  {make:'Volkswagen',model:'Golf',generation:'IV (1J)',year:2001},
+  {make:'Volkswagen',model:'Golf',generation:'V (1K)',year:2006},
+  {make:'Audi',model:'A3',generation:'8P',year:2006},
+  {make:'BMW',model:'Seria 5',generation:'E60/E61',year:2008},
+  {make:'Skoda',model:'Octavia',generation:'II (1Z)',year:2006},
+  {make:'Opel',model:'Corsa',year:2008}
+ ]
+ for(const vehicle of examples)assert.ok(resolveVerifiedVehiclePhoto(vehicle),'Missing photo for '+JSON.stringify(vehicle))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Golf',generation:'IV (1J)',year:2018}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Audi',model:'A3',generation:'8V',year:2006}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Octavia',generation:'III (5E)',year:2006}),null)
+})
