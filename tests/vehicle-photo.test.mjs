@@ -414,3 +414,33 @@ test('BMW 2/6/7/X7 and Mercedes B/S/CLS/Sprinter photos use conservative identit
  assert.equal(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 2',year:2018,bodyType:'coupe'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Mercedes-Benz',model:'Sprinter',year:2016,bodyType:'sedan'}),null)
 })
+
+test('every model in the 171-model catalog has at least one sourced photo',()=>{
+ const coverage=photoCoverage(vehicleCatalog)
+ assert.equal(coverage.total,171)
+ assert.equal(coverage.covered,171)
+ assert.equal(coverage.missing,0)
+ assert.equal(verifiedVehiclePhotos.length,188)
+ assert.ok(verifiedVehiclePhotos.every(photo=>photo.source&&photo.file&&photo.author&&isPhotoLicenseAllowed(photo.license)))
+})
+test('last 24 missing models have conservative exact model and year matches',()=>{
+ const cars=[
+  ['Renault','Laguna',2006,'hatchback'],['Mazda','2',2009,'hatchback'],
+  ['Mazda','6',2006,'sedan'],['Hyundai','i10',2022,'hatchback'],
+  ['Hyundai','Santa Fe',2002,'suv'],['Kia','Picanto',2018,'hatchback'],
+  ['Volvo','S40',2009,'sedan'],['Volvo','S60',2020,'sedan'],
+  ['Volvo','S80',2007,'sedan'],['Volvo','V70',2009,'wagon'],
+  ['Volvo','XC90',2021,'suv'],['Alfa Romeo','159',2009,'wagon'],
+  ['Mitsubishi','Colt',2007,'hatchback'],['Mitsubishi','Lancer',2010,'sedan'],
+  ['Subaru','Impreza',2004,'sedan'],['Subaru','Forester',2012,'suv'],
+  ['Subaru','Legacy',2008,'wagon'],['Subaru','Outback',2018,'wagon'],
+  ['Suzuki','SX4',2018,'suv'],['Jeep','Cherokee',1999,'suv'],
+  ['Jeep','Grand Cherokee',2018,'suv'],['Land Rover','Freelander',2013,'suv'],
+  ['Land Rover','Range Rover Evoque',2020,'suv'],
+  ['Land Rover','Range Rover Sport',2019,'suv']
+ ]
+ for(const [make,model,year,bodyType] of cars){
+  assert.ok(resolveVerifiedVehiclePhoto({make,model,year,bodyType}),make+' '+model+' '+year)
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,year:1990,bodyType}),null,'Wrong generation '+make+' '+model)
+ }
+})
