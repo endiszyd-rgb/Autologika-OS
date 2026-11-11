@@ -374,3 +374,28 @@ test('twelve new models have sourced photos for the right years and body variant
  assert.equal(resolveVerifiedVehiclePhoto({make:'Mercedes-Benz',model:'GLC',year:2018,bodyType:'coupe'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'SEAT',model:'Ateca',year:2019,bodyType:'sedan'}),null)
 })
+
+test('new 22 curated images match their model, year and body type',()=>{
+ const models=[
+  ['Mercedes-Benz','GLA',2018,'suv'],['Mercedes-Benz','GLE',2017,'suv'],
+  ['Mercedes-Benz','Vito',2018,'van'],['Renault','Trafic',2017,'van'],
+  ['Peugeot','Partner',2017,'mpv'],['Kia','Sorento',2018,'suv'],
+  ['Mazda','CX-3',2019,'suv'],['Ford','S-Max',2021,'mpv'],
+  ['Nissan','X-Trail',2005,'suv'],['Skoda','Rapid',2014,'liftback'],
+  ['Volkswagen','up!',2013,'hatchback'],['Skoda','Kamiq',2020,'suv'],
+  ['Volvo','V60',2020,'wagon'],['Land Rover','Discovery',2019,'suv'],
+  ['Volvo','V40',2018,'hatchback'],['Alfa Romeo','Giulia',2018,'sedan'],
+  ['Mitsubishi','Outlander',2019,'suv'],['Alfa Romeo','Giulietta',2018,'hatchback'],
+  ['Alfa Romeo','Stelvio',2018,'suv'],['Jeep','Renegade',2017,'suv'],
+  ['Jeep','Compass',2013,'suv'],['Kia','Rio',2019,'hatchback']
+ ]
+ for(const [make,model,year,bodyType] of models){
+  const found=resolveVerifiedVehiclePhoto({make,model,year,bodyType})
+  assert.ok(found,`${make} ${model} ${year} ${bodyType}`)
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,year:1991,bodyType}),null)
+ }
+ const spaceback=resolveVerifiedVehiclePhoto({make:'Skoda',model:'Rapid',year:2018,bodyType:'hatchback'})
+ assert.ok(spaceback)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Rapid',year:2018,bodyType:'liftback'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Peugeot',model:'Partner',year:2017,bodyType:'van'}),null)
+})
