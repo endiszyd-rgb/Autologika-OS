@@ -93,5 +93,41 @@ export const verifiedVehiclePhotos=[
     source:"https://commons.wikimedia.org/wiki/File:Renault-Megane3.jpg",
     author:"Mausmaus",license:"CC BY-SA 3.0",
     licenseUrl:"https://creativecommons.org/licenses/by-sa/3.0/",note:"Megane III hatchback przed liftingiem; fotografia z 2008 r."
-  }
+  },
+ {
+  make:"Volkswagen",model:"Golf",generation:"IV (1J)",from:1998,to:2003,
+  file:"VW Golf IV front 20071205.jpg",source:"https://commons.wikimedia.org/wiki/File:VW_Golf_IV_front_20071205.jpg",
+  author:"Rudolf Stricker",license:"CC BY-SA 3.0",
+  licenseUrl:'https://creativecommons.org/licenses/by-sa/3.0/',note:"Golf IV hatchback; zdjęcie wykonano w 2007 roku"
+ },
+ {
+  make:"Volkswagen",model:"Golf",generation:"V (1K)",from:2004,to:2008,
+  file:"VW golf V.jpg",source:"https://commons.wikimedia.org/wiki/File:VW_golf_V.jpg",
+  author:"Stahlkocher (pierwotny autor; późniejsze wersje: Head)",license:"CC BY-SA 3.0",
+  licenseUrl:'https://creativecommons.org/licenses/by-sa/3.0/',note:"Golf V hatchback; fotografia z 2004 roku"
+ },
+ {
+  make:"Opel",model:"Corsa",generation:undefined,from:2006,to:2010,
+  file:"Opel Corsa D front 20070611.jpg",source:"https://commons.wikimedia.org/wiki/File:Opel_Corsa_D_front_20070611.jpg",
+  author:"Rudolf Stricker",license:"CC BY-SA 3.0",
+  licenseUrl:'https://creativecommons.org/licenses/by-sa/3.0/',note:"Corsa D przed liftingiem, fotografia z 2007 roku"
+ },
+ {
+  make:"Audi",model:"A3",generation:"8P",from:2004,to:2008,
+  file:"AUDI A3.jpg",source:"https://commons.wikimedia.org/wiki/File:AUDI_A3.jpg",
+  author:"Bárdos Dezső (Sóhivatal)",license:"CC BY-SA 3.0",
+  licenseUrl:'https://creativecommons.org/licenses/by-sa/3.0/',note:"Audi A3 8PA Sportback, zdjęcie z 2008 roku"
+ },
+ {
+  make:"BMW",model:"Seria 5",generation:"E60/E61",from:2007,to:2010,
+  file:"BMW E60 front 20080515.jpg",source:"https://commons.wikimedia.org/wiki/File:BMW_E60_front_20080515.jpg",
+  author:"Rudolf Stricker",license:"CC BY-SA 3.0",
+  licenseUrl:'https://creativecommons.org/licenses/by-sa/3.0/',note:"BMW E60 sedan, zdjęcie z 2008 roku; nie przedstawia E61 Touring"
+ },
+ {
+  make:"Skoda",model:"Octavia",generation:"II (1Z)",from:2004,to:2008,
+  file:"Skoda Octavia front 20071001.jpg",source:"https://commons.wikimedia.org/wiki/File:Skoda_Octavia_front_20071001.jpg",
+  author:"Rudolf Stricker",license:"CC BY-SA 3.0",
+  licenseUrl:'https://creativecommons.org/licenses/by-sa/3.0/',note:"Škoda Octavia II Combi przed liftingiem, zdjęcie z 2007 roku"
+ }
 ]
