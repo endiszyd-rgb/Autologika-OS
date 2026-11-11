@@ -399,3 +399,18 @@ test('new 22 curated images match their model, year and body type',()=>{
  assert.equal(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Rapid',year:2018,bodyType:'liftback'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Peugeot',model:'Partner',year:2017,bodyType:'van'}),null)
 })
+
+test('BMW 2/6/7/X7 and Mercedes B/S/CLS/Sprinter photos use conservative identity',()=>{
+ const examples=[
+  ['BMW','Seria 2',2018,'mpv'],['BMW','Seria 6',2018,'liftback'],
+  ['BMW','Seria 7',2006,'sedan'],['BMW','X7',2020,'suv'],
+  ['Mercedes-Benz','Klasa B',2017,'mpv'],['Mercedes-Benz','Klasa S',2019,'sedan'],
+  ['Mercedes-Benz','CLS',2013,'sedan'],['Mercedes-Benz','Sprinter',2016,'van']
+ ]
+ for(const [make,model,year,bodyType] of examples){
+  assert.ok(resolveVerifiedVehiclePhoto({make,model,year,bodyType}),make+' '+model)
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,year:1990,bodyType}),null)
+ }
+ assert.equal(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 2',year:2018,bodyType:'coupe'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Mercedes-Benz',model:'Sprinter',year:2016,bodyType:'sedan'}),null)
+})
