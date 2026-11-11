@@ -129,5 +129,45 @@ export const verifiedVehiclePhotos=[
   file:"Skoda Octavia front 20071001.jpg",source:"https://commons.wikimedia.org/wiki/File:Skoda_Octavia_front_20071001.jpg",
   author:"Rudolf Stricker",license:"CC BY-SA 3.0",
   licenseUrl:'https://creativecommons.org/licenses/by-sa/3.0/',note:"Škoda Octavia II Combi przed liftingiem, zdjęcie z 2007 roku"
+ },
+ {
+  make:"Volkswagen",model:"Golf",generation:"VI (5K)",from:2009,to:2012,
+  file:"VW Golf VI TSI am 2008-10-11.jpg",source:"https://commons.wikimedia.org/wiki/File:VW_Golf_VI_TSI_am_2008-10-11.jpg",
+  author:"Spurzem – Lothar Spurzem",license:"CC BY-SA 2.0 DE",licenseUrl:"https://creativecommons.org/licenses/by-sa/2.0/de/",note:"Golf VI TSI hatchback; zdjęcie wykonane 2008-10-11; zakres dopasowania 2009–2012"
+ },
+ {
+  make:"Opel",model:"Astra",from:2013,to:2015,
+  file:"Opel Astra J Modellpflege Front.jpg",source:"https://commons.wikimedia.org/wiki/File:Opel_Astra_J_Modellpflege_Front.jpg",
+  author:"Nordenfan",license:"CC BY-SA 4.0",licenseUrl:"https://creativecommons.org/licenses/by-sa/4.0/",note:"Opel Astra J po faceliftingu; zdjęcie egzemplarza z roku modelowego 2015"
+ },
+ {
+  make:"Ford",model:"Focus",from:2008,to:2010,
+  file:"Ford Focus II (Modellpflege, seit 2008) front MJ.JPG",source:"https://commons.wikimedia.org/wiki/File:Ford_Focus_II_(Modellpflege,_seit_2008)_front_MJ.JPG",
+  author:"M 93",license:"CC BY-SA 3.0",licenseUrl:"https://creativecommons.org/licenses/by-sa/3.0/",note:"Focus II po faceliftingu, ujęcie z przodu"
+ },
+ {
+  make:"Ford",model:"Focus",from:2011,to:2014,
+  file:"Ford Focus, Highway 1.jpg",source:"https://commons.wikimedia.org/wiki/File:Ford_Focus,_Highway_1.jpg",
+  author:"Photograph by Mike Peel (www.mikepeel.net)",license:"CC BY-SA 4.0",licenseUrl:"https://creativecommons.org/licenses/by-sa/4.0/",note:"Focus Mk3 przed faceliftingiem; zdjęcie z lipca 2012"
+ },
+ {
+  make:"BMW",model:"Seria 3",generation:"E90/E91/E92/E93",from:2005,to:2008,
+  file:"BMW E90 front 20070831.jpg",source:"https://commons.wikimedia.org/wiki/File:BMW_E90_front_20070831.jpg",
+  author:"Rudolf Stricker",license:"CC BY-SA 3.0",licenseUrl:"https://creativecommons.org/licenses/by-sa/3.0/",note:"BMW E90 sedan przed faceliftingiem; nie przedstawia E91/E92/E93"
+ },
+ {
+  make:"Kia",model:"Ceed",from:2007,to:2009,
+  file:"Kia cee'd Front.JPG",source:"https://commons.wikimedia.org/wiki/File:Kia_cee'd_Front.JPG",
+  author:"Thomas doerfer",license:"CC BY-SA 3.0",licenseUrl:"https://creativecommons.org/licenses/by-sa/3.0/",note:"Kia cee'd ED pierwszej generacji, hatchback przed liftingiem"
+ },
+ {
+  make:"Hyundai",model:"i30",from:2012,to:2014,
+  file:"Hyundai i30 (front).jpg",source:"https://commons.wikimedia.org/wiki/File:Hyundai_i30_(front).jpg",
+  author:"Overlaet",license:"CC BY-SA 3.0",licenseUrl:"https://creativecommons.org/licenses/by-sa/3.0/",note:"Hyundai i30 GD hatchback pokazany na IAA 2011, wersja przed liftingiem"
+ },
+ {
+  make:"Toyota",model:"Yaris",from:2011,to:2014,
+  file:"Toyota Yaris (XP130) – Frontansicht, 21. Juli 2012, Heiligenhaus.jpg",source:"https://commons.wikimedia.org/wiki/File:Toyota_Yaris_(XP130)_–_Frontansicht,_21._Juli_2012,_Heiligenhaus.jpg",
+  author:"M 93",license:"CC BY-SA 3.0 DE",licenseUrl:"https://creativecommons.org/licenses/by-sa/3.0/de/",note:"Yaris XP130 przed faceliftingiem, zdjęcie z 21 lipca 2012"
  }
 ]
