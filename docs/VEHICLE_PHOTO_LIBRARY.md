@@ -165,3 +165,17 @@ Wdrożono:
 Audyt plików Wikimedia Commons uruchomiony jako `43033254809` sprawdził wszystkie 84 odwołania w manifeście bezpośrednio w API Commons. Wynik początkowy: **83 poprawne, 1 do przeglądu, 0 brakujących, 0 bez odpowiedzi**. Jedyną niezgodnością była licencja fotografii Passata B6: w manifeście `CC BY-SA 2.5`, na Commons `CC BY-SA 3.0`. Poprawiono ten wpis w commicie `532095d6`. Kolejny audyt będzie uruchamiany po zmianach manifestu; należy sprawdzić jego wynik przed ostatecznym scaleniem.
 
 Audyt potwierdza istnienie pliku, odczyt licencji i autora — nie zastępuje wizualnej inspekcji dopasowania do generacji. Nie należy opisywać wszystkich 171 modeli jako posiadających fotografie, dopóki status `missing` nie spadnie do zera.
+
+## Etap 13 — kolejne 17 fotografii (11 listopada 2026)
+W tej partii przybyło **17 fotografii** nowych modeli i wariantów:
+- Fiat Tipo II hatchback, Fiat 500 po lifcie, Fiat Ducato X250
+- Honda Jazz III, Toyota Land Cruiser Prado J150
+- Citroën C3 III, Peugeot 208 I po liftingu, Suzuki Vitara LY i Mercedes-Benz Klasa A W176
+- Hyundai i20 GB po liftingu, Dacia Logan II MCV, Mitsubishi ASX
+- SEAT Leon III hatchback i Leon ST kombi; Peugeot 508 I sedan i 508 SW kombi; Citroën Berlingo II furgon.
+
+Źródła są w manifeście, ze wskazaniem autorów, odpowiednich licencji Creative Commons i zakresów roczników. Fotografie nadwozi kombi/sedan/hatchback są rozróżniane na podstawie jawnej deklaracji nadwozia. Kiedy dla tego samego modelu i rocznika występuje więcej niż jeden typ nadwozia, a karta samochodu nie podaje typu, resolver **nie wybiera losowej fotografii** — pokazuje neutralny symbol.
+
+**Stan:** 101 fotografii dla 87 z 171 modeli. Pozostało **84 modele bez zweryfikowanego zdjęcia**, a również wiele generacji i wersji nadwozia już częściowo pokrytych modeli nie ma odrębnego zdjęcia.
+
+Wykonano automatyczny audyt źródeł w GitHub Actions `43040183320`: **101/101 zdjęć ma dostępny plik, autora i licencję zgodną z manifestem; 0 brakujących / 0 wymagających przeglądu**. Audyt metadanych nie zastępuje kontroli wizualnej zgodności modelu i nadwozia.
