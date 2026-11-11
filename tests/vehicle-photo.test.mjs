@@ -444,3 +444,31 @@ test('last 24 missing models have conservative exact model and year matches',()=
   assert.equal(resolveVerifiedVehiclePhoto({make,model,year:1990,bodyType}),null,'Wrong generation '+make+' '+model)
  }
 })
+
+test('generation inventory reports true year-by-year coverage instead of counting any overlapping image',()=>{
+ const get=(make,model,generation)=>vehiclePhotoInventory.find(x=>x.make===make&&x.model===model).generations.find(g=>g.generation===generation)
+ const passat=get('Volkswagen','Passat','B8 (3G)')
+ assert.ok(passat.matchedYearCount>0)
+ assert.ok(passat.matchedYearCount<passat.yearCount)
+ assert.equal(passat.status,'partial')
+ assert.ok(passat.missingYears.includes(2023))
+ const octavia=get('Skoda','Octavia','I (1U)')
+ assert.ok(octavia.matchedYearCount>0)
+ assert.ok(octavia.missingYears.includes(1996))
+ assert.equal(vehiclePhotoInventorySummary.generationCount,48)
+ assert.equal(vehiclePhotoInventorySummary.generationFullyCovered+vehiclePhotoInventorySummary.generationPartial+vehiclePhotoInventorySummary.generationMissing,48)
+})
+test('confirmed generation photos distinguish wagon sedan from unknown body types',()=>{
+ const cases=[
+ ['Skoda','Octavia','I (1U)',2007,'wagon'],
+ ['Volkswagen','Passat','B8 (3G)',2016,'wagon'],
+ ['Volkswagen','Passat','B8 (3G)',2016,'sedan'],
+ ['Audi','A4','B9 (8W)',2018,'wagon'],
+ ['BMW','Seria 5','F10/F11',2013,'sedan'],
+ ['Mercedes-Benz','Klasa C','W204',2012,'sedan']
+ ]
+ for(const [make,model,generation,year,bodyType] of cases)
+  assert.ok(resolveVerifiedVehiclePhoto({make,model,generation,year,bodyType}),make+' '+model+' '+generation)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 5',generation:'F10/F11',year:2013,bodyType:'wagon'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B8 (3G)',year:2016}),null)
+})
