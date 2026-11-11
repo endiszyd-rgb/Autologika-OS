@@ -1,6 +1,7 @@
 import React,{useState} from 'react'
 import {Icon} from './ui.jsx'
 import {VehiclePhoto} from './vehicle-photo.jsx'
+import {VehiclePhoto} from './vehicle-photo.jsx'
 import './order-workspace.css'
 
 const money=n=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN',maximumFractionDigits:0}).format(Number(n||0))
