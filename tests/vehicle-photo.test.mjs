@@ -266,3 +266,20 @@ test('four more verified models match exact years, generation and body style',()
  assert.equal(resolveVerifiedVehiclePhoto({make:'Mercedes-Benz',model:'Klasa C',generation:'W204',year:2016}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Scala',year:2017}),null)
 })
+
+test('all reviewed discovery models appear with correct make and bounded year',()=>{
+ const examples=[
+  ['Audi','A1',2012],['Audi','A5',2021],['Audi','A7',2019],['Audi','A8',2007],
+  ['Audi','Q2',2018],['Audi','Q3',2014],['Audi','Q5',2022],['Audi','Q7',2012],
+  ['Audi','Q8',2019],['Audi','TT',2012],['BMW','X5',2020],['BMW','X6',2021],
+  ['Renault','Kadjar',2016],['Fiat','Doblo',2017],['Toyota','Avensis',1999],
+  ['Honda','CR-V',2019],['Nissan','Micra',2012],['Nissan','Navara',2018]
+ ]
+ for(const [make,model,year] of examples){
+  assert.ok(resolveVerifiedVehiclePhoto({make,model,year}),make+' '+model+' '+year)
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,year:1990}),null,make+' '+model+' wrongly matched 1990')
+ }
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Audi',model:'A7',year:2019,bodyType:'liftback'}))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Audi',model:'A7',year:2019,bodyType:'wagon'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Audi',model:'A5',generation:'8T/8F',year:2021}),null)
+})
