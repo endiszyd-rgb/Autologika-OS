@@ -144,3 +144,19 @@ Zapisano 7 kolejnych przypisań w `src/vehicle-photo-manifest.mjs`:
 - Peugeot 3008 II, 2017–2020, Bindydad123, CC BY-SA 4.0: https://commons.wikimedia.org/wiki/File:2018_Peugeot_3008_1.6_Allure_(1).jpg
 
 **Stan po etapie 11:** 54 wpisy fotografii dla 46 modeli spośród 171; 125 modeli bez zdjęcia referencyjnego. Zakresy lat opisują okno bezpiecznego dopasowania do zdjęć, nie wszystkie warianty produkcyjne; nie wolno uznawać tego za pełne pokrycie roczników, nadwozi ani liftingów. Testy uwzględniają różnice nadwozi i generacji. Każda fotografia jest nadal odnośnikiem do Wikimedia Commons, a nie plikiem binarnym w repozytorium.
+
+## Etap 12 — pełny indeks, 25 kolejnych zdjęć i masowe badanie źródeł (2026-11-11)
+Wdrożono:
+- 3 ręcznie zweryfikowane fotografie nowych generacji: VW Golf VIII, Škoda Octavia IV, BMW Seria 3 F30 (patrz wpisy manifestu).
+- 4 zdjęcia nowych modeli: BMW X3 G01, Mercedes-Benz C W205, Škoda Scala, Ford Kuga I.
+- 5 zdjęć dla Audi A6 (sedan i Avant), BMW X1 F48, Dacia Sandero II i VW Caddy Maxi.
+- 18 fotografii modeli z metadanych Wikimedia Commons: Audi A1, A5, A7, A8, Q2, Q3, Q5, Q7, Q8, TT; BMW X5, X6; Renault Kadjar; Fiat Doblo; Toyota Avensis; Honda CR-V; Nissan Micra, Navara.
+- `src/vehicle-photo-inventory.mjs`: deterministyczny indeks **wszystkich 171 marek/modeli** z polem `status: partial|missing`, liczbą fotografii i szczegółowymi generacjami.
+- W Ustawieniach: licznik pokrycia zdjęciami i wyszukiwalna lista wszystkich modeli, braków i źródeł.
+- `scripts/research-all-vehicle-photos.mjs`: wyszukiwanie brakujących modeli w API Commons; wszystkie kandydatury mają `reviewStatus: unverified` i nigdy nie są automatycznie dodawane do produkcyjnego manifestu.
+- `.github/workflows/vehicle-photo-research.yml`: raport kandydatów do ręcznej kontroli jako artefakt GitHub Actions (wywoływany z workflow_dispatch lub przy zmianach skryptu, bez zmian w produkcyjnym manifeście).
+- `scripts/validate-vehicle-photo-sources.mjs` i `.github/workflows/vehicle-photo-source-audit.yml`: kontrola istnienia plików i zmian licencji u źródła, bez błędnego kwalifikowania limitu API jako błędnej fotografii.
+
+**Stan po nowej partii:** 84 wpisy zdjęć / 72 modele spośród 171; pozostało 99 modeli bez zatwierdzonej referencji. Indeks jest kompletny, ale BIBLIOTEKA ZDJĘĆ NIE JEST jeszcze kompletna: pokrycie pojedynczego modelu nie oznacza wszystkich generacji/roczników/nadwozi.
+
+**Ograniczenia pierwszej próby automatycznych badań:** raport z Actions `43031445608` przetworzył 125 brakujących wówczas modeli, ale tylko 25 miało kandydata po filtracji, a 95 zapytań zakończyło się HTTP 429 (przekroczony limit API). Poprawiono kod o pojedynczą kolejkę z odstępem i retry. Do ukończenia weryfikacji nie wystarcza samo pomyślne wykonanie Actions; potrzebna jest analiza wynikowych zdjęć i praw licencyjnych.
