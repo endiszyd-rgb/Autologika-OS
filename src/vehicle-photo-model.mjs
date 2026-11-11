@@ -3,7 +3,7 @@ import {detailedVehicleCatalog} from './vehicle-catalog.js'
 
 export const normalizeVehicleText=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()
 const norm=normalizeVehicleText
-export const isPhotoLicenseAllowed=value=>/^(?:CC BY(?:-SA)?(?: [0-9.]+)?|CC0(?: [0-9.]+)?|Public domain|PD(?:-|$))/i.test(String(value||'').replace(/<[^>]+>/g,'').trim())
+export const isPhotoLicenseAllowed=value=>/^(?:CC BY(?:-SA)?(?: [0-9]+(?:\.[0-9]+)?)?|CC0(?: [0-9]+(?:\.[0-9]+)?)?|Public domain|PD(?:-[A-Za-z0-9-]+)?)$/i.test(String(value||'').replace(/<[^>]+>/g,'').trim())
 export const vehiclePhotoKey=v=>[v?.make,v?.model,v?.generation,v?.year].map(norm).join('|')
 const validYear=value=>String(value??'').trim()!==''&&Number.isInteger(Number(value))&&Number(value)>=1900&&Number(value)<=2100
 function matchingGenerationForYear(make,model,year){
