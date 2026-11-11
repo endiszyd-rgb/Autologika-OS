@@ -349,3 +349,28 @@ test('ambiguous wagon/sedan cars require body style before picking a photograph'
  assert.equal(resolveVerifiedVehiclePhoto({make:'Audi',model:'A6',year:2019}),null)
  assert.ok(resolveVerifiedVehiclePhoto({make:'Audi',model:'A6',year:2019,bodyType:'wagon'}))
 })
+
+test('twelve new models have sourced photos for the right years and body variants',()=>{
+ const examples=[
+  ['BMW','Seria 1',2020,'hatchback'],
+  ['Mercedes-Benz','Klasa E',2018,'sedan'],
+  ['Mercedes-Benz','GLC',2018,'suv'],
+  ['Volkswagen','Arteon',2018,'liftback'],
+  ['Volkswagen','Touareg',2004,'suv'],
+  ['Skoda','Karoq',2018,'suv'],
+  ['SEAT','Ateca',2018,'suv'],
+  ['SEAT','Arona',2018,'suv'],
+  ['Peugeot','5008',2018,'suv'],
+  ['Nissan','Juke',2018,'suv'],
+  ['Mercedes-Benz','CLA',2019,'sedan'],
+  ['Cupra','Ateca',2019,'suv']
+ ]
+ for(const [make,model,year,bodyType] of examples){
+  assert.ok(resolveVerifiedVehiclePhoto({make,model,year,bodyType}),make+' '+model+' '+year)
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,year:1990,bodyType}),null,'Wrong year '+make+' '+model)
+ }
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Mercedes-Benz',model:'CLA',year:2022,bodyType:'wagon'}))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Mercedes-Benz',model:'CLA',year:2022,bodyType:'sedan'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Mercedes-Benz',model:'GLC',year:2018,bodyType:'coupe'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'SEAT',model:'Ateca',year:2019,bodyType:'sedan'}),null)
+})
