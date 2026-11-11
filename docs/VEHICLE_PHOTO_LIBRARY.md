@@ -95,3 +95,16 @@ Dodano kolejne osiem referencyjnych plików Wikimedia Commons z przypisanymi aut
 **Stan:** 27 przypisań zdjęć, 19 modeli z co najmniej jedną referencyjną fotografią, 152/171 modeli bez ręcznego przypisania. Roczniki są orientacyjnymi oknami doboru zdjęć, wymagają dalszego audytu w odniesieniu do wersji nadwoziowych i liftingów; nie utożsamiaj daty wykonania fotografii z rocznikiem auta. Przykładowo E90 w manifeście to sedan, choć nazwa generacji w katalogu obejmuje także E91/E92/E93. Po dodaniu pól wersji nadwozia resolver powinien wymagać zgodności nadwozia.
 
 **Licencje regionalne:** poprawiono walidację tak, by dopuszczała jawnie wariant `DE` (niemiecką jurysdykcję dla wybranych starszych CC BY-SA), bez błędnego dopuszczania `NC`/`ND`.
+
+## Etap 8 — kolejne 8 modeli (11 listopada 2026)
+Dodano 8 zweryfikowanych stron fotografii:
+- Toyota Auris I (E150), 2007–2010, M 93, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Toyota_Auris_front.jpg
+- Honda Civic IX (EU hatchback), 2012–2014, Overlaet, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Honda_Civic_(front).jpg
+- Peugeot 207 hatchback, 2006–2009, M 93, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Peugeot_207_(2007)_front.jpg
+- Volkswagen Polo VI facelift, 2021–2023, Saro96, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Vw-polo-front.png
+- Nissan Qashqai J10, 2007–2010, M 93, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Nissan_Qashqai_front.jpg
+- Fiat Panda III, 2012–2016, Overlaet, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Fiat_Panda_(2011)_front.jpg
+- Renault Scenic II facelift, 2006–2009, Thomas doerfer, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Renault_Scénic_Facelift_Front.JPG
+- Dacia Duster II facelift, 2021–2023, ROCostiTheBunnyCZ, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2021_Dacia_Duster_(facelift)-_front_angle_view.jpg
+
+**Postęp:** 35 wpisów fotografii dla 27 z 171 modeli, pozostały 144 modele bez referencji; liczby dotyczą przynajmniej jednego zdjęcia w modelu, nie pokrycia generacji/wersji nadwozia. Nowe rekordy mają `bodyType` oraz źródło/licencję. Resolver bierze pod uwagę `bodyType`, `body_type` lub `body_style`, jeżeli dane te występują. Brak danych o nadwoziu w starszych wpisach nie pozwala jeszcze odróżniać wszystkich sedanów/kombi; wymaga dalszej integracji w formularzach pojazdu i bazie.
