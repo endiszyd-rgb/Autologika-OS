@@ -312,3 +312,16 @@ test('C3, 208, Vitara and A-Class W176 have conservative photo matching',()=>{
   assert.equal(resolveVerifiedVehiclePhoto({make,model,year:2001,bodyType}),null,make+' '+model+' ancient model')
  }
 })
+
+test('Hyundai i20, Dacia Logan MCV and Mitsubishi ASX reflect correct body and year',()=>{
+ const entries=[
+  ['Hyundai','i20',2019,'hatchback'],
+  ['Dacia','Logan',2018,'wagon'],
+  ['Mitsubishi','ASX',2017,'suv']
+ ]
+ for(const [make,model,year,bodyType] of entries){
+  assert.ok(resolveVerifiedVehiclePhoto({make,model,year,bodyType}),make+' '+model)
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,year,bodyType:'sedan'}),null)
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,year:2003,bodyType}),null)
+ }
+})
