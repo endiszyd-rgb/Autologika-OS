@@ -38,6 +38,7 @@ app.whenReady().then(async()=>{
     }
   })()`)
   if(process.env.PWA_SCREENSHOT){const image=await win.webContents.capturePage();fs.writeFileSync(process.env.PWA_SCREENSHOT,image.toPNG())}
+  console.log('PWA BROWSER STATE',JSON.stringify(result))
   assert.equal(result.heading,process.env.PWA_EXPECT_HEADING||'PWA nie jest jeszcze połączona z chmurą')
   assert.equal(result.fatal,false)
   assert.equal(result.overflow,false)
