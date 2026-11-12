@@ -12,7 +12,8 @@ test('PWA Supabase key cannot shadow the record key method',()=>{
 })
 
 test('PWA phone layout replaces the desktop rail with a bottom dock',()=>{
-  assert.match(mobileCss,/\.pwaPlatform \.shell>aside\{position:fixed/)
+  assert.match(mobileCss,/\.pwaPlatform \.shell>aside\{[^}]*display:block/)
+  assert.match(mobileCss,/\.pwaPlatform \.shell>aside\{[^}]*position:fixed/)
   assert.match(mobileCss,/inset:auto 0 0/)
   assert.match(mobileCss,/\.pwaPlatform \.shell>main\{width:100%/)
 })
