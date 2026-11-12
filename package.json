@@ -1,6 +1,6 @@
 {
   "name": "autologika-os",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "private": true,
   "description": "Autologika OS - system operacyjny warsztatu samochodowego",
   "author": "Autologika",
@@ -23,7 +23,9 @@
     "dist:win": "npm run dist",
     "dist:portable": "npm run build && electron-builder --win portable --config.win.signAndEditExecutable=false",
     "release": "npm test && npm run build && electron-builder --win nsis --publish always",
-    "rebuild": "electron-rebuild -f -w better-sqlite3"
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "audit:vehicle-photos": "node --experimental-default-type=module scripts/audit-vehicle-photos.mjs",
+    "test:vehicle-photos": "node --experimental-default-type=module --test tests/vehicle-photo.test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/outfit": "5.2.5",

@@ -1,0 +1,32 @@
+name: Research all missing vehicle model photos
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/vehicle-model-photographs]
+    paths:
+      - 'scripts/research-all-vehicle-photos.mjs'
+      - 'src/vehicle-photo-inventory.mjs'
+concurrency:
+  group: vehicle-photo-research
+  cancel-in-progress: true
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run research for all missing catalog models
+        run: node --experimental-default-type=module scripts/research-all-vehicle-photos.mjs vehicle-photo-candidates.json 171
+      - name: Upload unverified candidates for manual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vehicle-photo-candidates
+          path: vehicle-photo-candidates.json
+          if-no-files-found: warn
+          retention-days: 30

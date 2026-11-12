@@ -1,0 +1,29 @@
+name: Verify Wikimedia vehicle photo source files
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/vehicle-model-photographs]
+    paths:
+      - 'scripts/validate-vehicle-photo-sources.mjs'
+      - '.github/workflows/vehicle-photo-source-audit.yml'
+      - 'src/vehicle-photo-manifest.mjs'
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Audit Commons image existence and license metadata
+        run: node --experimental-default-type=module scripts/validate-vehicle-photo-sources.mjs vehicle-photo-source-audit.json
+      - name: Save inspection report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vehicle-photo-source-audit
+          path: vehicle-photo-source-audit.json
+          if-no-files-found: warn

@@ -46,6 +46,26 @@ export default defineConfig({
         navigateFallback: 'index.html',
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         globIgnores:['ocr/**'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/commons\.wikimedia\.org\/wiki\/Special:FilePath\//,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'autologika-vehicle-photos-v1',
+              expiration: {maxEntries: 250, maxAgeSeconds: 60 * 60 * 24 * 30, purgeOnQuotaError: true},
+              cacheableResponse: {statuses: [0, 200]}
+            }
+          },
+          {
+            urlPattern: /^https:\/\/upload\.wikimedia\.org\/wikipedia\/commons\//,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'autologika-vehicle-photos-v1',
+              expiration: {maxEntries: 250, maxAgeSeconds: 60 * 60 * 24 * 30, purgeOnQuotaError: true},
+              cacheableResponse: {statuses: [0, 200]}
+            }
+          }
+        ],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024
       }
     })

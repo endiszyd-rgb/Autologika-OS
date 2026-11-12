@@ -1,0 +1,46 @@
+name: Vehicle photos quality checks
+
+on:
+  pull_request:
+    paths:
+      - 'src/vehicle-photo*'
+      - 'src/vehicle-catalog.js'
+      - 'src/quick-intake-screen.jsx'
+      - 'src/schedule.jsx'
+      - 'src/dashboard.jsx'
+      - 'src/order-workspace.jsx'
+      - 'src/operations-screens.jsx'
+      - 'src/main.jsx'
+      - 'tests/vehicle-photo.test.mjs'
+      - 'scripts/*vehicle-photo*'
+      - 'package.json'
+      - '.github/workflows/vehicle-photos.yml'
+  workflow_dispatch:
+
+jobs:
+  vehicle-photo-checks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci --ignore-scripts
+      - name: Validate model and generation identity
+        run: npm run test:vehicle-photos
+      - name: Audit model photo coverage
+        run: npm run audit:vehicle-photos
+      - name: Check all vehicle-photo imports are unique
+        run: |
+          node --input-type=module -e '
+          import {readFileSync} from "node:fs";
+          const files=["src/schedule.jsx","src/dashboard.jsx","src/order-workspace.jsx","src/operations-screens.jsx","src/quick-intake-screen.jsx","src/main.jsx"];
+          for(const path of files){
+            const matches=readFileSync(path,"utf8").match(/import\s+\{VehiclePhoto\}\s+from\s+["\x27]\.\/vehicle-photo\.jsx["\x27]/g)||[];
+            if(matches.length!==1)throw Error(path+": expected 1 VehiclePhoto import, found "+matches.length);
+          }'
+      - name: Build desktop/PWA frontend
+        run: npm run build

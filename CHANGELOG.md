@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.6 — 2026-11-12
+
+### Zdjęcia pojazdów z weryfikowanymi źródłami
+
+- Dodano bibliotekę 207 zdjęć z Wikimedia Commons obejmującą wszystkie 171 par marka–model z katalogu AutoLogiki.
+- Zdjęcia pojazdu są widoczne na pulpicie, w Centrum zlecenia, szybkim przyjęciu, terminarzu i kartotece pojazdów.
+- Dopasowanie jest zachowawcze: uwzględnia markę, model, rocznik, generację i typ nadwozia, a przy niejednoznacznych danych pokazuje neutralny symbol zamiast błędnego samochodu.
+- W Ustawieniach dodano wykaz autorów, licencji i bezpośrednich źródeł wszystkich wykorzystanych fotografii.
+- PWA zapisuje pobrane zdjęcia pojazdów w kontrolowanej pamięci podręcznej, dzięki czemu wcześniej oglądane fotografie pozostają dostępne przy słabym połączeniu.
+- Dodano testy dopasowania generacji i nadwozia, audyt kompletności katalogu oraz automatyczną kontrolę istnienia i licencji źródeł Commons.
+- Audyt szczegółowy wykazuje zdjęcie w co najmniej jednym roczniku dla 37 z 48 opisanych generacji; pełne pokrycie każdego rocznika ma obecnie 4 z 48 generacji, dlatego pozostałe luki nadal korzystają z bezpiecznego symbolu zastępczego.
+
 ## 1.1.5 — 2026-11-11
 
 ### Bezpieczniejsze operacje i wiarygodny licznik „Do uwagi”
