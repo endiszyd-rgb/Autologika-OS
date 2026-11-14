@@ -83,7 +83,8 @@ test('new workshop models resolve only within their photo generation year ranges
   assert.ok(resolveVerifiedVehiclePhoto({make,model,year:correctYear}),make+' '+model)
   assert.equal(resolveVerifiedVehiclePhoto({make,model,year:wrongYear}),null,make+' '+model)
  }
- assert.ok(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B6 (3C)',year:2008}))
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B6 (3C)',year:2008,bodyType:'sedan'}))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B6 (3C)',year:2008}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B7 (36)',year:2012}),null)
 })
 
