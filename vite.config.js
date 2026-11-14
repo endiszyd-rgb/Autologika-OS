@@ -29,8 +29,8 @@ export default defineConfig({
         display: 'standalone',
         display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
         orientation: 'portrait',
-        background_color: '#080a09',
-        theme_color: '#0b0f0c',
+        background_color: '#0b0608',
+        theme_color: '#0b0608',
         lang: 'pl',
         categories: ['business', 'productivity', 'automotive'],
         icons: [

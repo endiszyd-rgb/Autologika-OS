@@ -1,6 +1,9 @@
 import React,{useEffect,useMemo,useState} from 'react'
 import {Icon} from './ui.jsx'
 import './delivery-document-import.css'
+import './parts-ui.css'
+
+const IMPORT_STEPS=['Wybór pliku','Odczyt OCR','Weryfikacja','Przyjęcie']
 
 const money=value=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN',minimumFractionDigits:2}).format(Number(value||0))
 const blankItem=()=>({enabled:true,part_no:'',name:'',qty:1,unit_cost:0,net_total:0,vat_rate:23,vat_amount:0,gross_total:0,confidence:'CHECK'})
@@ -24,11 +27,13 @@ export function DeliveryDocumentImport({api,close,onImported}){
  const addItem=()=>setDocument(current=>({...current,items:[...current.items,{...blankItem(),key:`manual-${Date.now()}`}]}))
  const submit=async()=>{if(!selected.length||scan?.duplicate)return;setPhase('IMPORTING');setError('');try{const imported=await api.inventory.importDeliveryDocument({...scan,document:{...document,items:selected}});setResult(imported);setPhase('DONE');onImported?.(imported)}catch(err){setError(err.message||String(err));setPhase('REVIEW')}}
  const busy=['SCANNING','IMPORTING'].includes(phase)
+ const stepIndex={SCANNING:Number(progress.progress||0)>0?1:0,ERROR:1,REVIEW:2,IMPORTING:3,DONE:4}[phase]??0
  return <div className="deliveryShade" onMouseDown={event=>event.target===event.currentTarget&&!busy&&close()}>
   <section className="deliveryModal" role="dialog" aria-modal="true" aria-labelledby="delivery-title">
    <header><div className="deliveryTitleMark"><span><Icon name="documents"/></span><div><small>INTELIGENTNE PRZYJĘCIE DOSTAWY</small><h2 id="delivery-title">Skanuj dokument części</h2></div></div><button aria-label="Zamknij" onClick={close} disabled={busy}>×</button></header>
-   {phase==='SCANNING'&&<div className="deliveryScanning"><div className="paperScanner"><div className="paperLines"><i/><i/><i/><i/><i/></div><span/></div><div><small>LOKALNE OCR · DANE NIE OPUSZCZAJĄ KOMPUTERA</small><h3>{phaseLabel[progress.status]||progress.status||'Odczytywanie dokumentu'}</h3><p>{progress.file_name||'Wybierz zdjęcie lub skan kartki z hurtowni.'}</p><div className="deliveryProgress"><i style={{width:`${Math.max(4,Math.round(Number(progress.progress||0)*100))}%`}}/></div><b>{Math.round(Number(progress.progress||0)*100)}%</b></div></div>}
-   {phase==='ERROR'&&<div className="deliveryFailure"><Icon name="notifications" size={30}/><h3>Nie udało się odczytać dokumentu</h3><p>{error}</p><button className="primary" onClick={scanDocument}>Wybierz inne zdjęcie</button></div>}
+   <ol className="deliverySteps" aria-label="Etapy przyjęcia dostawy">{IMPORT_STEPS.map((label,index)=><li key={label} className={index<stepIndex?'done':index===stepIndex?(phase==='ERROR'?'error':'current'):''} aria-current={index===stepIndex?'step':undefined}><span aria-hidden="true">{index<stepIndex?'✓':index+1}</span>{label}</li>)}</ol>
+   {phase==='SCANNING'&&<div className="deliveryScanning"><div className="paperScanner"><div className="paperLines"><i/><i/><i/><i/><i/></div><span/></div><div><small>LOKALNE OCR · DANE NIE OPUSZCZAJĄ KOMPUTERA</small><h3>{phaseLabel[progress.status]||progress.status||'Odczytywanie dokumentu'}</h3><p>{progress.file_name||'Wybierz zdjęcie lub skan kartki z hurtowni.'}</p><div className="deliveryProgress" role="progressbar" aria-label="Postęp odczytu dokumentu" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Number(progress.progress||0)*100)}><i style={{width:`${Math.max(4,Math.round(Number(progress.progress||0)*100))}%`}}/></div><b>{Math.round(Number(progress.progress||0)*100)}%</b></div></div>}
+   {phase==='ERROR'&&<div className="deliveryFailure" role="alert"><Icon name="notifications" size={30}/><h3>Nie udało się odczytać dokumentu</h3><p>Jeśli problem dotyczy samego zdjęcia, zrób je na płasko, w dobrym świetle i z całą tabelą w kadrze.</p><p className="deliveryFailureDetail">{error}</p><button className="primary" onClick={scanDocument}>Wybierz inne zdjęcie</button></div>}
    {phase==='DONE'&&<div className="deliverySuccess"><span>✓</span><small>DOSTAWA PRZYJĘTA</small><h3>{result.item_count} pozycji trafiło do magazynu</h3><p>Utworzono {result.created} nowych kart części, a stan {result.updated} istniejących kart został zwiększony.</p><div><b>{Number(result.quantity||0).toLocaleString('pl-PL')} szt.</b><span>{result.supplier_name}</span></div><button className="primary" onClick={close}>Przejdź do magazynu</button></div>}
    {phase==='REVIEW'&&document&&<>
     <div className="deliverySummary"><div><small>PLIK</small><b>{scan.file_name}</b><span>Pewność OCR {Number(document.ocr_confidence||0).toFixed(0)}%</span></div><div><small>POZYCJE</small><b>{selected.length}</b><span>{document.items.filter(item=>item.confidence==='CHECK').length} do sprawdzenia</span></div><div><small>WARTOŚĆ DOKUMENTU</small><b>{money(document.gross_total||totals.gross)}</b><span>brutto</span></div><button onClick={scanDocument}>↻ Inny dokument</button></div>

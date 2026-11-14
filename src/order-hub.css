@@ -1,0 +1,310 @@
+/* ==========================================================================
+   AutoLogika UI 2.0 — Centrum zlecenia i przyjęcie pojazdu
+   Karta pojazdu, pasek realizacji, kafelki sekcji, finanse, dokumentacja,
+   podgląd zlecenia i ergonomia dotykowa. Wygląd tylko pod html.ui2;
+   poza nim zostaje minimalny, czytelny układ (awaryjny tryb „legacy”).
+   ========================================================================== */
+
+/* ---------- Układ bazowy (działa także bez UI 2.0) ---------- */
+.intakeVehicleSection{display:flex;flex-direction:column;gap:12px;min-width:0}
+.intakeVehicleSection .intakeRecordPicker{grid-template-columns:1fr}
+.orderSectionTiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 12px}
+.orderProgress ol{display:flex;gap:6px;margin:0;padding:0;list-style:none;overflow-x:auto}
+.vehicleSpecChips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.vehicleSpecChips>div{display:flex;gap:4px}
+.vehicleSpecChips dt,.vehicleSpecChips dd{margin:0}
+.plateBadge{display:inline-flex;align-items:center;gap:4px;vertical-align:middle}
+.visuallyHidden{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ==========================================================================
+   KARTA POJAZDU W NAGŁÓWKU ZLECENIA
+   ========================================================================== */
+html.ui2 .orderCenterPage{display:flex;flex-direction:column;gap:var(--ui-space-4)}
+html.ui2 .orderCenterPage>*{margin-top:0!important;margin-bottom:0!important}
+html.ui2 .centerPicker{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--ui-space-3);padding:var(--ui-space-3) var(--ui-space-4);border:1px solid var(--ui-border);border-radius:var(--ui-radius-lg);background:var(--ui-surface-1);box-shadow:var(--ui-shadow-inset)}
+html.ui2 .centerPicker label{flex:1 1 320px;display:grid;gap:6px;color:var(--ui-text-3);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase}
+html.ui2 .centerPicker select{height:42px;font-size:var(--ui-text-sm);font-weight:var(--ui-weight-medium);letter-spacing:0;text-transform:none}
+
+html.ui2 .centerHero.orderHero{
+ position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--ui-space-5);
+ padding:var(--ui-space-5);overflow:hidden;
+ border:1px solid var(--ui-border);border-radius:var(--ui-radius-xl);
+ background:radial-gradient(70% 140% at 100% 0%,rgba(212,61,101,.18),transparent 60%),linear-gradient(180deg,var(--ui-surface-2),var(--ui-surface-1));
+ box-shadow:var(--ui-shadow-inset),var(--ui-shadow-md);
+}
+html.ui2 .centerHero.orderHero::before{display:none!important}
+html.ui2 .orderHeroMedia{position:relative;align-self:stretch;display:flex}
+html.ui2 .orderHeroMedia .vehiclePhoto{width:228px;height:100%;min-height:148px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-lg);background:radial-gradient(120% 100% at 50% 100%,rgba(212,61,101,.18),transparent 60%),var(--ui-surface-inset);box-shadow:var(--ui-shadow-inset)}
+html.ui2 .orderHeroMedia .vehiclePhoto img{width:100%;height:100%;object-fit:cover}
+html.ui2 .orderHeroMedia .vehiclePhotoFallback,html.ui2 .orderPreviewVehicle .vehiclePhotoFallback,html.ui2 .intakeVehicleCard .vehiclePhotoFallback{font-size:52px!important;opacity:.75;filter:grayscale(.2)}
+html.ui2 .orderHero .centerHeroIdentity{display:flex;flex-direction:column;gap:4px;min-width:0}
+html.ui2 .orderHero .centerHeroIdentity>small{color:var(--ui-accent-text);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps)}
+html.ui2 .orderHero h2{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:2px 0 0;color:var(--ui-text);font-size:var(--ui-text-3xl);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-tight);line-height:var(--ui-leading-tight)}
+html.ui2 .orderHero .orderTitleRow{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ui-space-2) var(--ui-space-3);margin:6px 0 2px}
+html.ui2 .orderHero .orderTitleRow span{display:block;color:var(--ui-text-3);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps)}
+html.ui2 .orderHero .orderTitleRow h3{margin:2px 0 0;color:var(--ui-text);font-size:var(--ui-text-lg);font-weight:var(--ui-weight-semibold)}
+html.ui2 .orderHero .orderTitleRow button{height:34px;min-height:34px;padding:0 12px;border:1px solid var(--ui-border-strong);border-radius:var(--ui-radius-sm);background:var(--ui-surface-2);color:var(--ui-text-2);font-size:var(--ui-text-xs)}
+html.ui2 .orderHero .centerHeroIdentity>p{margin:4px 0 0;color:var(--ui-text-2);font-size:var(--ui-text-sm)}
+html.ui2 .orderHero .phoneLink{min-height:0;padding:0;border:0;background:none;color:var(--ui-accent-text);font-weight:var(--ui-weight-semibold);text-decoration:underline;text-underline-offset:3px}
+html.ui2 .orderHero .centerHeroRight{display:flex;flex-direction:column;align-items:flex-end;gap:6px;text-align:right}
+html.ui2 .orderHero .centerHeroRight>b{color:var(--ui-text);font-size:var(--ui-text-3xl);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-tight);font-variant-numeric:tabular-nums}
+html.ui2 .orderHero .centerHeroRight>span{color:var(--ui-text-3);font-size:var(--ui-text-xs)}
+html.ui2 .orderHero .orderPreviewButton{margin-top:6px}
+
+/* Tablica rejestracyjna w stylu UE */
+html.ui2 .plateBadge{height:28px;padding:0 10px 0 0;overflow:hidden;border:1.5px solid #101010;border-radius:5px;background:#f7f7f2;color:#111;font:var(--ui-weight-bold) 15px/1 var(--ui-font-mono);letter-spacing:.06em;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+html.ui2 .plateBadge>i{display:grid;place-items:center;align-self:stretch;width:20px;margin-right:6px;background:#1f4fbf;color:#ffd84a;font:var(--ui-weight-bold) 8.5px/1 var(--ui-font-sans);font-style:normal;letter-spacing:0}
+html.ui2 .plateBadge.empty{padding:0 10px;border-style:dashed;border-color:var(--ui-border-strong);background:transparent;color:var(--ui-text-3);font:var(--ui-weight-medium) var(--ui-text-xs) var(--ui-font-sans);letter-spacing:0;box-shadow:none}
+
+/* Parametry pojazdu */
+html.ui2 .vehicleSpecChips{gap:6px;margin:6px 0 2px}
+html.ui2 .vehicleSpecChips>div{align-items:baseline;gap:6px;height:26px;padding:0 10px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-full);background:var(--ui-surface-inset);font-size:var(--ui-text-xs);line-height:24px;white-space:nowrap}
+html.ui2 .vehicleSpecChips dt{color:var(--ui-text-3)}
+html.ui2 .vehicleSpecChips dd{color:var(--ui-text);font-weight:var(--ui-weight-medium)}
+html.ui2 .vehicleSpecChips .vin dd{font-family:var(--ui-font-mono);letter-spacing:.03em}
+
+/* ==========================================================================
+   PASEK REALIZACJI
+   ========================================================================== */
+html.ui2 .orderProgress{position:relative;padding:var(--ui-space-4) var(--ui-space-5) var(--ui-space-5);border:1px solid var(--ui-border);border-radius:var(--ui-radius-lg);background:var(--ui-surface-1);box-shadow:var(--ui-shadow-inset)}
+html.ui2 .orderProgressHead{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ui-space-2) var(--ui-space-3);margin-bottom:var(--ui-space-3)}
+html.ui2 .orderProgressHead b{color:var(--ui-text);font-size:var(--ui-text-md);font-weight:var(--ui-weight-semibold)}
+html.ui2 .orderProgressHead em{margin-left:auto;color:var(--ui-text-2);font-style:normal;font-weight:var(--ui-weight-semibold);font-variant-numeric:tabular-nums}
+html.ui2 .orderWaitChip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:var(--ui-radius-full);background:var(--ui-warning-soft);color:var(--ui-warning-text);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold)}
+html.ui2 .orderWaitChip::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ui-warning)}
+html.ui2 .orderProgress ol{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;scrollbar-width:none}
+html.ui2 .orderProgress ol::-webkit-scrollbar{display:none}
+html.ui2 .orderProgress li{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:64px;color:var(--ui-text-3);font-size:var(--ui-text-xs);font-weight:var(--ui-weight-medium);text-align:center}
+html.ui2 .orderProgress li::before{content:"";position:absolute;top:13px;right:50%;left:-50%;height:2px;background:var(--ui-border-strong);z-index:0}
+html.ui2 .orderProgress li:first-child::before{display:none}
+html.ui2 .orderProgress li.done::before,html.ui2 .orderProgress li.current::before{background:linear-gradient(90deg,var(--ui-wine-600),var(--ui-wine-400))}
+html.ui2 .orderProgress li>i{position:relative;z-index:1;display:grid;place-items:center;width:28px;height:28px;border:1.5px solid var(--ui-border-strong);border-radius:50%;background:var(--ui-surface-1);color:var(--ui-text-3);font-size:var(--ui-text-2xs);font-style:normal;font-weight:var(--ui-weight-bold);transition:background-color var(--ui-duration-base) var(--ui-ease-standard),border-color var(--ui-duration-base) var(--ui-ease-standard),transform var(--ui-duration-base) var(--ui-ease-emphasized)}
+html.ui2 .orderProgress li.done>i{border-color:transparent;background:var(--ui-wine-700);color:#fff}
+html.ui2 .orderProgress li.current>i{border-color:var(--ui-wine-300);background:var(--ui-accent-gradient);color:#fff;box-shadow:0 0 0 4px var(--ui-accent-soft),var(--ui-shadow-accent);transform:scale(1.08)}
+html.ui2 .orderProgress li.current{color:var(--ui-text);font-weight:var(--ui-weight-semibold)}
+html.ui2 .orderProgress li.done{color:var(--ui-text-2)}
+html.ui2 .orderProgressTrack{position:absolute;left:0;right:0;bottom:0;height:3px;overflow:hidden;border-radius:0 0 var(--ui-radius-lg) var(--ui-radius-lg);background:transparent}
+html.ui2 .orderProgressTrack i{display:block;height:100%;transform-origin:left;background:linear-gradient(90deg,var(--ui-wine-700),var(--ui-wine-300));transition:transform var(--ui-duration-slower) var(--ui-ease-out)}
+
+/* ==========================================================================
+   KAFELKI SEKCJI: NAPRAWY · CZĘŚCI · KOSZTY · DOKUMENTACJA
+   ========================================================================== */
+html.ui2 .orderSectionTiles{gap:var(--ui-space-3);margin:0}
+html.ui2 .orderSectionTile{
+ position:relative;display:flex;align-items:center;gap:var(--ui-space-3);min-width:0;min-height:76px;
+ padding:var(--ui-space-3) var(--ui-space-4);
+ border:1px solid var(--ui-border)!important;border-radius:var(--ui-radius-lg)!important;
+ background:var(--ui-surface-1)!important;color:var(--ui-text);text-align:left;
+ box-shadow:var(--ui-shadow-inset),var(--ui-shadow-sm);cursor:pointer;
+ transition:border-color var(--ui-duration-base) var(--ui-ease-standard),transform var(--ui-duration-base) var(--ui-ease-out),box-shadow var(--ui-duration-base) var(--ui-ease-standard),background-color var(--ui-duration-base) var(--ui-ease-standard)!important;
+}
+html.ui2 .shell .orderSectionTile:hover:not(:disabled){border-color:var(--ui-border-strong)!important;background:var(--ui-surface-2)!important;transform:translateY(-2px);box-shadow:var(--ui-shadow-inset),var(--ui-shadow-md)}
+html.ui2 .shell .orderSectionTile:active:not(:disabled){transform:scale(.98)}
+html.ui2 .orderSectionTile.active{border-color:rgba(255,138,166,.45)!important;background:radial-gradient(120% 140% at 100% 0%,rgba(212,61,101,.2),transparent 60%),var(--ui-surface-1)!important}
+html.ui2 .orderSectionTile :is(span,small,b,em){background:none!important;border:0!important;box-shadow:none!important;text-align:left!important;text-transform:none}
+html.ui2 .orderSectionTile .orderSectionText>*{display:block;margin:0!important;padding:0!important;min-height:0!important;width:auto!important}
+html.ui2 .orderSectionTile .orderSectionText small{text-transform:uppercase}
+html.ui2 .orderSectionTile .orderSectionIcon{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:var(--ui-radius-md);background:var(--ui-surface-3)!important;color:var(--ui-text-2)}
+html.ui2 .orderSectionTile.tone-accent .orderSectionIcon{background:var(--ui-accent-soft)!important;color:var(--ui-accent-text)}
+html.ui2 .orderSectionTile.tone-warning .orderSectionIcon{background:var(--ui-warning-soft)!important;color:var(--ui-warning-text)}
+html.ui2 .orderSectionTile.tone-success .orderSectionIcon{background:var(--ui-success-soft)!important;color:var(--ui-success-text)}
+html.ui2 .orderSectionTile.tone-info .orderSectionIcon{background:var(--ui-info-soft)!important;color:var(--ui-info-text)}
+html.ui2 .orderSectionText{display:grid;justify-items:start;gap:1px;flex:1;min-width:0;text-align:left}
+html.ui2 .orderSectionTile .orderSectionText>*{justify-self:start!important}
+html.ui2 .orderSectionText small{color:var(--ui-text-3);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase}
+html.ui2 .orderSectionText b{color:var(--ui-text);font-size:var(--ui-text-xl);font-weight:var(--ui-weight-semibold);font-variant-numeric:tabular-nums;line-height:1.2}
+html.ui2 .orderSectionText em{overflow:hidden;color:var(--ui-text-3);font-size:var(--ui-text-xs);font-style:normal;text-overflow:ellipsis;white-space:nowrap}
+html.ui2 .orderSectionChevron{flex:none;color:var(--ui-text-3);transition:transform var(--ui-duration-base) var(--ui-ease-out)}
+html.ui2 .orderSectionTile:hover .orderSectionChevron{transform:translateX(3px);color:var(--ui-text)}
+
+/* Zakładki zlecenia — spójne z segmentami UI 2.0 */
+html.ui2 .orderTabDock{padding:6px!important;border:1px solid var(--ui-border);border-radius:var(--ui-radius-lg);background:var(--ui-surface-1);box-shadow:var(--ui-shadow-inset)!important}
+html.ui2 .orderTabPrimary button{min-height:44px;border:0!important;border-radius:var(--ui-radius-md)!important;background:transparent!important;color:var(--ui-text-3)!important;font-size:var(--ui-text-xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps)}
+html.ui2 .orderTabPrimary button:hover{background:var(--ui-surface-3)!important;color:var(--ui-text)!important}
+html.ui2 .orderTabPrimary button.active{background:var(--ui-accent-soft-strong)!important;color:#fff!important;box-shadow:inset 0 0 0 1px rgba(255,138,166,.25)}
+html.ui2 .orderTabSecondary{border-top-color:var(--ui-border)!important}
+html.ui2 .orderTabSecondary button{min-height:40px;border:1px solid transparent!important;border-radius:var(--ui-radius-sm)!important;background:transparent!important;color:var(--ui-text-2)!important;font-size:var(--ui-text-sm);font-weight:var(--ui-weight-medium)}
+html.ui2 .orderTabSecondary button:hover{background:var(--ui-surface-3)!important;color:var(--ui-text)!important}
+html.ui2 .orderTabSecondary button.active{border-color:var(--ui-border-strong)!important;background:var(--ui-surface-hover)!important;color:var(--ui-text)!important;box-shadow:var(--ui-shadow-inset),var(--ui-shadow-xs)}
+html.ui2 .orderTabSecondary button i{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:6px;padding:0 5px;border-radius:var(--ui-radius-full);background:var(--ui-accent-soft);color:var(--ui-accent-text);font-size:10px;font-style:normal;font-weight:var(--ui-weight-bold)}
+
+/* Doradca następnego kroku */
+html.ui2 .workflowAdvisor{border:1px solid rgba(255,138,166,.22)!important;border-radius:var(--ui-radius-lg)!important;background:linear-gradient(90deg,rgba(212,61,101,.12),transparent 60%),var(--ui-surface-1)!important;box-shadow:var(--ui-shadow-inset)!important}
+html.ui2 .workflowAdvisor small{color:var(--ui-accent-text)!important;letter-spacing:var(--ui-tracking-caps)}
+
+/* ==========================================================================
+   PODSUMOWANIE FINANSOWE
+   ========================================================================== */
+html.ui2 .orderFinance{gap:var(--ui-space-4)}
+html.ui2 .orderFinanceTotals{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:var(--ui-space-3)}
+html.ui2 .orderFinanceTotals>div{display:grid;gap:4px;padding:var(--ui-space-3);border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface-inset)}
+html.ui2 .orderFinanceTotals span{color:var(--ui-text-3);font-size:var(--ui-text-xs)}
+html.ui2 .orderFinanceTotals strong{color:var(--ui-text);font-size:var(--ui-text-lg);font-weight:var(--ui-weight-semibold);font-variant-numeric:tabular-nums}
+html.ui2 .orderFinanceTotals .primaryTotal{border-color:rgba(255,138,166,.22);background:radial-gradient(120% 140% at 100% 0%,rgba(212,61,101,.18),transparent 60%),var(--ui-surface-inset)}
+html.ui2 .orderFinanceTotals .primaryTotal strong{font-size:var(--ui-text-2xl)}
+html.ui2 .orderFinanceTotals small{color:var(--ui-warning-text);font-size:var(--ui-text-2xs)}
+html.ui2 .orderFinanceTotals .due strong{color:var(--ui-warning-text)}
+html.ui2 .orderFinancePaid{height:6px;overflow:hidden;border-radius:var(--ui-radius-full);background:rgba(255,214,224,.06)}
+html.ui2 .orderFinancePaid i{display:block;height:100%;transform-origin:left;border-radius:inherit;background:linear-gradient(90deg,#1f9e68,var(--ui-success));transition:transform var(--ui-duration-slower) var(--ui-ease-out)}
+html.ui2 .orderFinanceSplit{display:flex;gap:3px;height:10px;overflow:hidden;border-radius:var(--ui-radius-full)}
+html.ui2 .orderFinanceSplit i{flex-basis:0;min-width:4px;border-radius:2px}
+html.ui2 :is(.orderFinanceSplit,.orderFinanceLegend) i.labor{background:var(--ui-wine-400)}
+html.ui2 :is(.orderFinanceSplit,.orderFinanceLegend) i.parts{background:var(--ui-info)}
+html.ui2 :is(.orderFinanceSplit,.orderFinanceLegend) i.other{background:var(--ui-violet)}
+html.ui2 .orderFinanceLegend{display:grid;gap:6px;margin:0}
+html.ui2 .orderFinanceLegend>div{display:flex;align-items:center;justify-content:space-between;gap:var(--ui-space-3);font-size:var(--ui-text-sm)}
+html.ui2 .orderFinanceLegend dt{display:flex;align-items:center;gap:8px;color:var(--ui-text-2)}
+html.ui2 .orderFinanceLegend dt i{width:10px;height:10px;border-radius:3px}
+html.ui2 .orderFinanceLegend dd{margin:0;color:var(--ui-text);font-weight:var(--ui-weight-semibold);font-variant-numeric:tabular-nums}
+html.ui2 .orderFinanceLegend .muted dt,html.ui2 .orderFinanceLegend .muted dd{color:var(--ui-text-3);font-weight:var(--ui-weight-regular)}
+html.ui2 .orderFinanceNote{margin:0;color:var(--ui-text-3);font-size:var(--ui-text-2xs)}
+html.ui2 .orderFinanceEmpty{margin:0;color:var(--ui-text-3);font-size:var(--ui-text-sm)}
+html.ui2 .orderFinanceActions{display:flex;flex-wrap:wrap;gap:var(--ui-space-2)}
+
+/* ==========================================================================
+   DOKUMENTACJA FOTOGRAFICZNA
+   ========================================================================== */
+html.ui2 .photoStageGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--ui-space-2)}
+html.ui2 .photoStage{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0;min-height:96px;padding:var(--ui-space-3);border:1px solid var(--ui-border)!important;border-radius:var(--ui-radius-md)!important;background:var(--ui-surface-inset)!important;color:var(--ui-text);text-align:left}
+html.ui2 .photoStage:hover{border-color:var(--ui-border-strong)!important;background:var(--ui-surface-2)!important}
+html.ui2 .photoStage.empty{border-style:dashed!important}
+html.ui2 .photoStageIcon{display:grid;place-items:center;width:32px;height:32px;border-radius:var(--ui-radius-sm);background:var(--ui-accent-soft);color:var(--ui-accent-text)}
+html.ui2 .photoStage.empty .photoStageIcon{background:var(--ui-surface-3);color:var(--ui-text-2)}
+html.ui2 .photoStage b{font-size:var(--ui-text-sm);font-weight:var(--ui-weight-semibold)}
+html.ui2 .photoStage small{color:var(--ui-text-3);font-size:var(--ui-text-2xs)}
+html.ui2 .photoRecent{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0;padding:0;list-style:none}
+html.ui2 .photoRecent button{display:flex;align-items:center;gap:var(--ui-space-2);width:100%;min-height:48px;padding:6px 10px 6px 6px;border:1px solid var(--ui-border)!important;border-radius:var(--ui-radius-md)!important;background:transparent!important;color:var(--ui-text);text-align:left}
+html.ui2 .photoRecent button:hover{background:var(--ui-surface-2)!important}
+html.ui2 .photoRecentKind{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:var(--ui-radius-sm);background:var(--ui-surface-3);color:var(--ui-text-3);font:var(--ui-weight-bold) 9.5px/1 var(--ui-font-sans);letter-spacing:.04em}
+html.ui2 .photoRecentKind.image{background:var(--ui-info-soft);color:var(--ui-info-text)}
+html.ui2 .photoRecent span:last-child{display:grid;min-width:0}
+html.ui2 .photoRecent b{overflow:hidden;font-size:var(--ui-text-xs);font-weight:var(--ui-weight-medium);text-overflow:ellipsis;white-space:nowrap}
+html.ui2 .photoRecent small{color:var(--ui-text-3);font-size:var(--ui-text-2xs)}
+
+/* Karta zgłoszenia i panele przeglądu w siatce */
+html.ui2 .orderCenterPage .centerGrid{gap:var(--ui-space-4)}
+html.ui2 .orderCenterPage .centerGrid>.ui-card{margin:0}
+html.ui2 .orderCenterPage .centerFacts>div{border-radius:var(--ui-radius-md);background:var(--ui-surface-inset);border-color:var(--ui-border)}
+
+/* ==========================================================================
+   PODGLĄD ZLECENIA (okno)
+   ========================================================================== */
+html.ui2 .orderPreview{display:flex;flex-direction:column;gap:var(--ui-space-4);padding:var(--ui-space-1) 0 var(--ui-space-2)}
+html.ui2 .orderPreviewHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--ui-space-4)}
+html.ui2 .orderPreviewHeader h3{margin:4px 0 2px;color:var(--ui-text);font-size:var(--ui-text-xl);font-weight:var(--ui-weight-semibold)}
+html.ui2 .orderPreviewHeader small{color:var(--ui-text-3)}
+html.ui2 .orderPreviewVehicle{display:flex;align-items:center;gap:var(--ui-space-4);padding:var(--ui-space-3);border:1px solid var(--ui-border);border-radius:var(--ui-radius-lg);background:var(--ui-surface-inset)}
+html.ui2 .orderPreviewVehicle .vehiclePhoto{width:168px;height:104px;border-radius:var(--ui-radius-md)}
+html.ui2 .orderPreviewVehicle>div{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+html.ui2 .orderPreviewVehicle b{color:var(--ui-text);font-size:var(--ui-text-lg);font-weight:var(--ui-weight-semibold)}
+html.ui2 .orderPreviewFacts{display:grid;grid-template-columns:1fr 1fr;gap:var(--ui-space-2);margin:0}
+html.ui2 .orderPreviewFacts>div{padding:var(--ui-space-3);border:1px solid var(--ui-border);border-radius:var(--ui-radius-md)}
+html.ui2 .orderPreviewFacts .wide{grid-column:1/-1}
+html.ui2 .orderPreviewFacts dt{color:var(--ui-text-3);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase}
+html.ui2 .orderPreviewFacts dd{margin:4px 0 0;color:var(--ui-text);font-size:var(--ui-text-sm);line-height:var(--ui-leading-normal)}
+html.ui2 .orderPreviewList h4{display:flex;align-items:center;gap:8px;margin:0 0 6px;color:var(--ui-text);font-size:var(--ui-text-md);font-weight:var(--ui-weight-semibold)}
+html.ui2 .orderPreviewList ul{margin:0;padding:0;list-style:none;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);overflow:hidden}
+html.ui2 .orderPreviewList li{display:flex;align-items:center;justify-content:space-between;gap:var(--ui-space-3);padding:10px var(--ui-space-3);font-size:var(--ui-text-sm)}
+html.ui2 .orderPreviewList li+li{border-top:1px solid var(--ui-border)}
+html.ui2 .orderPreviewList li span{min-width:0;color:var(--ui-text-2)}
+html.ui2 .orderPreviewList li b{flex:none;color:var(--ui-text);font-variant-numeric:tabular-nums}
+html.ui2 .orderPreviewList li em{flex:none;color:var(--ui-text-3);font-size:var(--ui-text-xs);font-style:normal}
+html.ui2 .orderPreviewList h5{margin:10px 0 6px;color:var(--ui-text-3);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase}
+html.ui2 .orderPreviewHint{margin:-2px 0 6px;color:var(--ui-text-3);font-size:var(--ui-text-2xs)}
+html.ui2 .orderPreviewList .muted{margin:0;color:var(--ui-text-3);font-size:var(--ui-text-sm)}
+html.ui2 .orderPreviewTotals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--ui-space-2)}
+html.ui2 .orderPreviewTotals>div{display:grid;gap:3px;padding:var(--ui-space-3);border-radius:var(--ui-radius-md);background:var(--ui-surface-2)}
+html.ui2 .orderPreviewTotals span{color:var(--ui-text-3);font-size:var(--ui-text-2xs)}
+html.ui2 .orderPreviewTotals b{color:var(--ui-text);font-size:var(--ui-text-md);font-variant-numeric:tabular-nums}
+html.ui2 .orderPreviewTotals .due b{color:var(--ui-warning-text)}
+html.ui2 .orderPreviewActions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--ui-space-2);padding-top:var(--ui-space-3);border-top:1px solid var(--ui-border)}
+
+/* ==========================================================================
+   PRZYJĘCIE — karta pojazdu
+   ========================================================================== */
+html.ui2 .intakeVehicleCard{display:flex;align-items:center;gap:var(--ui-space-4);margin:0;padding:var(--ui-space-4);border:1px solid var(--ui-border);border-radius:var(--ui-radius-lg);background:radial-gradient(90% 140% at 100% 0%,rgba(212,61,101,.14),transparent 60%),var(--ui-surface-1);box-shadow:var(--ui-shadow-inset),var(--ui-shadow-sm)}
+html.ui2 .intakeVehicleCard .vehiclePhoto{width:168px;height:106px;border-radius:var(--ui-radius-md);background:var(--ui-surface-inset)}
+html.ui2 .intakeVehicleCardBody{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
+html.ui2 .intakeVehicleCardBody>b{color:var(--ui-text);font-size:var(--ui-text-xl);font-weight:var(--ui-weight-semibold);letter-spacing:-.01em}
+html.ui2 .intakeVehicleCardMeta{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+html.ui2 .intakeVehicleCardMeta small{color:var(--ui-text-3);opacity:1}
+html.ui2 .stickyIntake{border:1px solid var(--ui-border-strong);border-radius:var(--ui-radius-xl);background:var(--ui-surface-overlay);box-shadow:var(--ui-shadow-lg)}
+
+/* ==========================================================================
+   RESPONSYWNOŚĆ I DOTYK
+   ========================================================================== */
+@media (max-width:1400px){
+ html.ui2 .orderFinanceTotals{grid-template-columns:1fr 1fr}
+ html.ui2 .orderFinanceTotals .primaryTotal{grid-column:1/-1}
+ html.ui2 .photoStageGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:1250px){
+ html.ui2 .orderSectionTiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+ html.ui2 .orderHeroMedia .vehiclePhoto{width:180px}
+}
+@media (max-width:900px){
+ html.ui2 .centerHero.orderHero{grid-template-columns:auto minmax(0,1fr);gap:var(--ui-space-4)}
+ html.ui2 .orderHero .centerHeroRight{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:var(--ui-space-2) var(--ui-space-3);text-align:left}
+ html.ui2 .orderHero .orderPreviewButton{margin:0 0 0 auto}
+ html.ui2 .orderFinanceTotals{grid-template-columns:1fr 1fr}
+ html.ui2 .orderFinanceTotals .primaryTotal{grid-column:1/-1}
+ html.ui2 .photoStageGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ html.ui2 .orderPreviewTotals{grid-template-columns:1fr 1fr}
+}
+@media (max-width:600px){
+ html.ui2 .orderCenterPage{gap:var(--ui-space-3)}
+ html.ui2 .centerPicker{flex-direction:column;align-items:stretch;padding:var(--ui-space-3)}
+ html.ui2 .centerPicker label{flex:0 0 auto}
+ html.ui2 .centerPicker .grow{display:none}
+ html.ui2 .centerPicker>:is(button,details){width:100%}
+ html.ui2 .centerPicker select{height:48px}
+ html.ui2 .centerHero.orderHero{grid-template-columns:1fr;padding:var(--ui-space-3);border-radius:var(--ui-radius-lg)}
+ html.ui2 .orderHeroMedia .vehiclePhoto{width:100%;height:auto;min-height:0;max-height:168px;aspect-ratio:21/9}
+ html.ui2 .orderHeroMedia .vehiclePhoto[data-vehicle-photo="fallback"]{max-height:96px}
+ html.ui2 .orderHero .orderTitleRow{justify-content:flex-start;text-align:left}
+ html.ui2 .orderHero .orderTitleRow>div{text-align:left}
+ html.ui2 .orderHero .orderTitleRow button{width:auto;min-height:44px}
+ html.ui2 .orderHero h2{font-size:var(--ui-text-2xl)}
+ html.ui2 .orderHero .centerHeroRight>b{font-size:var(--ui-text-2xl)}
+ html.ui2 .orderHero .orderPreviewButton{width:100%;margin:0;height:44px;min-height:44px}
+ html.ui2 .vehicleSpecChips{flex-wrap:nowrap;overflow-x:auto;margin-inline:calc(-1 * var(--ui-space-3));padding-inline:var(--ui-space-3);scrollbar-width:none}
+ html.ui2 .vehicleSpecChips::-webkit-scrollbar{display:none}
+ html.ui2 .orderProgress{padding:var(--ui-space-3) var(--ui-space-3) var(--ui-space-4)}
+ html.ui2 .orderProgress ol{display:flex;overflow-x:auto;scroll-snap-type:x proximity;margin-inline:calc(-1 * var(--ui-space-3));padding-inline:var(--ui-space-3)}
+ html.ui2 .orderProgress li{flex:0 0 72px;scroll-snap-align:center}
+ html.ui2 .orderSectionTiles{gap:var(--ui-space-2)}
+ html.ui2 .orderSectionTile{flex-direction:column;align-items:flex-start;min-height:112px;padding:var(--ui-space-3)}
+ html.ui2 .orderSectionChevron{position:absolute;top:var(--ui-space-3);right:var(--ui-space-3)}
+ html.ui2 .orderSectionText em{white-space:normal}
+ html.ui2 .orderFinanceTotals{grid-template-columns:1fr 1fr}
+ html.ui2 .photoRecent{grid-template-columns:1fr}
+ html.ui2 .orderPreviewVehicle{flex-direction:column;align-items:stretch}
+ html.ui2 .orderPreviewVehicle .vehiclePhoto{width:100%;height:auto;aspect-ratio:16/9}
+ html.ui2 .orderPreviewFacts{grid-template-columns:1fr}
+ html.ui2 .orderPreviewActions{flex-direction:column}
+ html.ui2 .orderPreviewActions .ui-btn{width:100%;height:48px}
+ html.ui2 .intakeVehicleCard{flex-direction:column;align-items:stretch}
+ html.ui2 .intakeVehicleCard .vehiclePhoto{width:100%;height:auto;aspect-ratio:16/9}
+ /* Zakładki przyklejone pod nagłówkiem — sekcje zawsze pod kciukiem */
+ /* Dok zakładek nie jest przyklejany: przy wyższym nagłówku (tryb warsztatowy) chowałby się pod nim
+    i zabierał ~40% ekranu iPhone SE. Kafelki sekcji prowadzą do zakładek. */
+}
+
+/* Dotyk (tablet, telefon, ekran dotykowy na hali): min. 44–48 px i brak opóźnienia dotknięcia */
+@media (pointer:coarse){
+ html.ui2 .orderCenterPage :is(button:not(.phoneLink),select,summary,input:not([type=checkbox]):not([type=radio])),
+ html.ui2 .intakePage :is(button,select,input:not([type=checkbox]):not([type=radio])){min-height:var(--ui-touch-min);touch-action:manipulation}
+ html.ui2 .orderCenterPage :is(input[type=checkbox],input[type=radio]),html.ui2 .intakePage :is(input[type=checkbox],input[type=radio]){width:22px;height:22px}
+ html.ui2 .orderTabPrimary button{min-height:48px}
+ html.ui2 .orderTabSecondary button{min-height:var(--ui-touch-min)}
+ html.ui2 .orderSectionTile,html.ui2 .photoStage{-webkit-tap-highlight-color:transparent}
+ html.ui2 .shell .orderSectionTile:hover:not(:disabled){transform:none}
+}
+html.ui2.workshopOutdoor :is(.orderTabSecondary button,.orderHero .orderTitleRow button,.photoRecent button){min-height:var(--ui-touch-min)}
+html.ui2.workshopOutdoor .orderSectionTile{min-height:88px}
+
+@media (prefers-reduced-motion:reduce){
+ html.ui2 :is(.orderProgressTrack i,.orderFinancePaid i,.orderProgress li>i,.orderSectionTile,.orderSectionChevron){transition:none!important}
+ html.ui2 .shell .orderSectionTile:is(:hover,:active):not(:disabled){transform:none}
+ html.ui2 .orderProgress li.current>i{transform:none}
+}

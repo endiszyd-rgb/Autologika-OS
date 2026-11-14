@@ -1,0 +1,435 @@
+/* AutoLogika UI 2.0 — moduł „Części i magazyn”.
+   Nowe elementy mają bazowy układ bez prefiksu (działają też w starym wyglądzie),
+   a przebudowa istniejących klas jest ograniczona do html.ui2.
+   !important tylko tam, gdzie nadpisujemy reguły !important z android-parity.css. */
+
+/* ---------- bazowy układ nowych elementów ---------- */
+.stockFilters,.stockToolbarEnd,.stockViewToggle,.stockStepper,.stockEmptyActions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.stockSearch{position:relative}
+.stockSearch input{flex:1;min-width:0}
+.stockSearchClear{padding:2px 8px}
+.stockSort{display:flex;align-items:center;gap:6px}
+.stockLevel{display:flex;align-items:center;gap:12px}
+.stockLevelInfo{display:grid;gap:5px;flex:1;min-width:0}
+.stockMeter{position:relative;height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:visible}
+.stockMeter>i{display:block;height:100%;border-radius:inherit;background:currentColor}
+.stockMeter>em{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;border-radius:2px;background:rgba(255,255,255,.55)}
+.stockSkeleton{display:grid;gap:10px;min-height:190px;padding:16px;border:1px solid rgba(255,255,255,.06);border-radius:14px}
+.stockSkeleton>i{display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.1),rgba(255,255,255,.04));background-size:200% 100%;animation:ui-shimmer 1.4s linear infinite}
+.stockSkeleton>i:nth-child(1){width:40%}.stockSkeleton>i:nth-child(2){width:85%;height:18px}.stockSkeleton>i:nth-child(3){width:60%}.stockSkeleton>i:nth-child(4){height:34px;margin-top:auto}
+.stockThumbBar{display:none}
+.stockListHead{display:none}
+.partsTabShort{display:none}
+.stockCloudNote{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:12px}
+.deliveryStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.deliveryStats>div{display:grid;gap:4px;padding:14px 16px;border-radius:12px}
+.deliveryCardWarn{margin:0 20px 12px;padding:9px 12px;border-radius:9px;font-size:12px}
+.deliveryPreviewModal{width:min(860px,96vw)}
+.deliveryPreviewMeta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:16px 0 12px}
+.deliveryPreviewMeta>div{display:grid;gap:3px;margin:0}
+.deliveryPreviewMeta dd,.stockCardFoot dd,.pwaReviewSummary dd{margin:0}
+.deliveryPreviewTableWrap{overflow:auto;max-height:46vh;border-radius:12px}
+.deliveryPreviewItems{display:table;width:100%;border-collapse:collapse}
+.deliveryPreviewItems th,.deliveryPreviewItems td{padding:9px 10px;text-align:left}
+.deliveryPreviewItems td:nth-child(n+4),.deliveryPreviewItems th:nth-child(n+4){text-align:right;white-space:nowrap}
+.deliveryPreviewTotals{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:12px}
+.deliveryPreviewTotals>div{display:grid;gap:2px;padding:10px 14px;border-radius:10px;text-align:right}
+.deliveryPreviewModal>footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.deliverySteps{display:flex;gap:6px;margin:14px 0 0;padding:0;list-style:none;flex-wrap:wrap}
+.deliverySteps li{display:flex;align-items:center;gap:7px;padding:6px 12px 6px 6px;border-radius:99px;font-size:12px}
+.deliverySteps li>span{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700}
+.partStatusChip{display:inline-flex!important;align-items:center;justify-content:center}
+.visuallyHidden{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.stockSearch input::-webkit-search-cancel-button{display:none}
+.stockCardSelect{display:inline;min-height:0;margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;box-shadow:none}
+.stockMetricActions{display:flex;flex-direction:column;gap:8px}
+.stockMetricActions .scanDeliveryAction{display:flex;align-items:center;justify-content:center;gap:7px;border-color:#806a31;background:#292315;color:#ead27f;white-space:nowrap}
+
+/* ---------- UI 2.0: zakładki ---------- */
+html.ui2 .partsWorkspace{grid-template-columns:minmax(0,1fr);gap:var(--ui-space-4)}
+html.ui2 .partsWorkspace>*,html.ui2 .deliveryHistory>*,html.ui2 .partsCenter2>*,html.ui2 .stockToolbar>*{min-width:0}
+html.ui2 .deliveryHistory{grid-template-columns:minmax(0,1fr)}
+html.ui2 .partsWorkspace .partsTabs{display:flex;gap:4px;width:max-content;max-width:100%;padding:4px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-lg);background:var(--ui-surface-inset);overflow-x:auto;scrollbar-width:none}
+html.ui2 .partsWorkspace .partsTabs::-webkit-scrollbar{display:none}
+html.ui2 .partsWorkspace .partsTabs button{position:relative;display:flex;align-items:center;gap:8px;min-height:40px;padding:0 16px;border:0!important;border-radius:var(--ui-radius-md);background:transparent!important;color:var(--ui-text-3)!important;font-size:var(--ui-text-sm);font-weight:var(--ui-weight-semibold);white-space:nowrap;box-shadow:none;transition:background var(--ui-duration-fast) var(--ui-ease-standard),color var(--ui-duration-fast) var(--ui-ease-standard)}
+html.ui2 .partsWorkspace .partsTabs button:hover{background:var(--ui-surface-2)!important;color:var(--ui-text)!important}
+html.ui2 .partsWorkspace .partsTabs button.active{background:var(--ui-surface-3)!important;color:var(--ui-text)!important;box-shadow:var(--ui-shadow-sm),inset 0 0 0 1px var(--ui-border-strong)}
+html.ui2 .partsWorkspace .partsTabs button.active svg{color:var(--ui-accent-text)}
+html.ui2 .partsTabBadge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:var(--ui-warning-soft);color:var(--ui-warning-text);font-size:11px;font-style:normal;font-weight:700}
+
+/* ---------- UI 2.0: wyszukiwarka (hero) ---------- */
+html.ui2 .partsWorkspace .stockHero{grid-template-columns:minmax(0,1fr) minmax(380px,.8fr);gap:var(--ui-space-6);padding:var(--ui-space-6);border:1px solid var(--ui-border);border-radius:var(--ui-radius-xl);background:radial-gradient(120% 140% at 100% 0%,rgba(212,61,101,.16) 0,transparent 55%),linear-gradient(160deg,var(--ui-surface-2),var(--ui-surface-1));box-shadow:var(--ui-shadow-md)}
+html.ui2 .partsWorkspace .stockHero.cloudOnly{grid-template-columns:1fr}
+html.ui2 .partsWorkspace .stockHero h2{margin:8px 0 6px;font-size:var(--ui-text-3xl);line-height:var(--ui-leading-tight);letter-spacing:var(--ui-tracking-tight)}
+html.ui2 .partsWorkspace .stockHero h2 em{color:var(--ui-accent-text)!important;font-style:normal}
+html.ui2 .partsWorkspace .stockHero p{max-width:56ch;color:var(--ui-text-2);font-size:var(--ui-text-md);line-height:var(--ui-leading-normal)}
+html.ui2 .partsWorkspace .stockLookupModes{gap:10px}
+html.ui2 .partsWorkspace .stockScan,html.ui2 .partsWorkspace .stockScan.partNumberScan{gap:10px;padding:12px;border:1px solid var(--ui-border-strong)!important;border-radius:var(--ui-radius-lg);background:var(--ui-surface-inset)!important;transition:border-color var(--ui-duration-fast) var(--ui-ease-standard),box-shadow var(--ui-duration-fast) var(--ui-ease-standard)}
+html.ui2 .partsWorkspace .stockScan:focus-within{border-color:var(--ui-border-focus)!important;box-shadow:var(--ui-ring)!important}
+html.ui2 .partsWorkspace .stockScan label{gap:6px;color:var(--ui-text-3);font-size:var(--ui-text-xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase}
+html.ui2 .partsWorkspace .stockScan input{min-height:44px;font-family:var(--ui-font-mono);font-size:16px;letter-spacing:.04em;text-transform:none}
+html.ui2 .partsWorkspace .stockScan button{display:inline-flex;align-items:center;gap:8px;min-height:44px;white-space:nowrap}
+html.ui2 .partsWorkspace .stockScan.partNumberScan button{border-color:var(--ui-border-strong)!important;background:var(--ui-surface-3)!important;color:var(--ui-text)!important}
+
+/* ---------- UI 2.0: komunikaty ---------- */
+html.ui2 .partsWorkspace .stockLookupMessage,html.ui2 .deliveryHistory .stockLookupMessage{gap:12px;padding:12px 14px;border:1px solid var(--ui-success-soft)!important;border-radius:var(--ui-radius-lg);background:linear-gradient(90deg,var(--ui-success-soft),var(--ui-surface-1) 60%)!important;animation:ui-rise var(--ui-duration-base) var(--ui-ease-out)}
+html.ui2 .stockLookupMessage>svg{flex:none;color:var(--ui-success-text)}
+html.ui2 .stockLookupMessage b{color:var(--ui-text);font-size:var(--ui-text-md)}
+html.ui2 .stockLookupMessage span{color:var(--ui-text-2);font-size:var(--ui-text-sm)}
+html.ui2 .partsWorkspace .stockLookupMessage.online{border-color:rgba(106,168,255,.25)!important;background:linear-gradient(90deg,var(--ui-info-soft),var(--ui-surface-1) 60%)!important}
+html.ui2 .stockLookupMessage.online>svg{color:var(--ui-info-text)}
+html.ui2 .partsWorkspace .stockLookupMessage.missing{border-color:rgba(245,177,66,.25)!important;background:linear-gradient(90deg,var(--ui-warning-soft),var(--ui-surface-1) 60%)!important}
+html.ui2 .stockLookupMessage.missing>svg{color:var(--ui-warning-text)}
+html.ui2 .partsWorkspace .stockLookupMessage.error,html.ui2 .deliveryHistory .stockLookupMessage.error{border-color:rgba(240,82,92,.3)!important;background:linear-gradient(90deg,var(--ui-danger-soft),var(--ui-surface-1) 60%)!important}
+html.ui2 .stockLookupMessage.error>svg{color:var(--ui-danger-text)}
+html.ui2 .stockLookupMessage>button{min-width:40px;min-height:40px}
+html.ui2 .partsWorkspace .stockLookupMessage .lookupRetry,html.ui2 .deliveryHistory .stockLookupMessage .lookupRetry{border-color:var(--ui-border-strong)!important;background:var(--ui-surface-3)!important;color:var(--ui-text)!important}
+
+/* ---------- UI 2.0: wskaźniki ---------- */
+html.ui2 .partsWorkspace .stockMetrics{grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:10px}
+html.ui2 .partsWorkspace .stockMetrics>.stockMetric{display:grid;align-content:start;gap:4px;min-height:96px;padding:14px 16px;border:1px solid var(--ui-border)!important;border-radius:var(--ui-radius-lg);background:var(--ui-surface-1)!important;color:var(--ui-text)!important;text-align:left;box-shadow:var(--ui-shadow-xs)}
+html.ui2 .partsWorkspace .stockMetrics>.stockMetric span{color:var(--ui-text-3);font-size:var(--ui-text-xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase}
+html.ui2 .partsWorkspace .stockMetrics>.stockMetric b{margin:2px 0 0;font-size:var(--ui-text-2xl);font-variant-numeric:tabular-nums;letter-spacing:var(--ui-tracking-tight)}
+html.ui2 .partsWorkspace .stockMetrics>.stockMetric small{color:var(--ui-text-3);font-size:var(--ui-text-xs)}
+html.ui2 .partsWorkspace .stockMetrics>button.stockMetric{cursor:pointer;transition:border-color var(--ui-duration-fast) var(--ui-ease-standard),transform var(--ui-duration-fast) var(--ui-ease-standard)}
+html.ui2 .partsWorkspace .stockMetrics>button.stockMetric:hover{border-color:var(--ui-border-strong)!important;background:var(--ui-surface-2)!important;transform:translateY(-1px)}
+html.ui2 .partsWorkspace .stockMetrics>button.stockMetric.warn:hover{background:linear-gradient(160deg,var(--ui-warning-soft),var(--ui-surface-2) 70%)!important}
+html.ui2 .partsWorkspace .stockMetrics>button.stockMetric.danger:hover{background:linear-gradient(160deg,var(--ui-danger-soft),var(--ui-surface-2) 70%)!important}
+html.ui2 .partsWorkspace .stockMetrics>button.stockMetric.warn{border-color:rgba(245,177,66,.28)!important;background:linear-gradient(160deg,var(--ui-warning-soft),var(--ui-surface-1) 70%)!important}
+html.ui2 .partsWorkspace .stockMetrics>button.stockMetric.warn b{color:var(--ui-warning-text)}
+html.ui2 .partsWorkspace .stockMetrics>button.stockMetric.danger{border-color:rgba(240,82,92,.3)!important;background:linear-gradient(160deg,var(--ui-danger-soft),var(--ui-surface-1) 70%)!important}
+html.ui2 .partsWorkspace .stockMetrics>button.stockMetric.danger b{color:var(--ui-danger-text)}
+html.ui2 .partsWorkspace .stockMetrics>button.stockMetric[aria-pressed="true"]{box-shadow:var(--ui-ring)}
+html.ui2 .partsWorkspace .stockMetrics>.stockMetricActions{display:grid;gap:8px;align-content:stretch;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+html.ui2 .partsWorkspace .stockMetricActions>button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;white-space:nowrap}
+html.ui2 .partsWorkspace .stockMetricActions>button.scanDeliveryAction{border-color:transparent!important;background:var(--ui-accent-gradient)!important;color:#fff!important;box-shadow:var(--ui-shadow-accent)}
+html.ui2 .partsWorkspace .stockMetricActions>button.scanDeliveryAction:hover{filter:brightness(1.08)}
+html.ui2 .stockCloudNote{border:1px solid rgba(106,168,255,.22);background:var(--ui-info-soft);color:var(--ui-info-text);font-size:var(--ui-text-sm);line-height:var(--ui-leading-snug)}
+html.ui2 .stockCloudNote>svg{flex:none;margin-top:1px}
+
+/* ---------- UI 2.0: pasek wyszukiwania i filtrów ---------- */
+html.ui2 .partsWorkspace .stockToolbar,html.ui2 .deliveryHistory .stockToolbar{position:static;display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:flex-start;margin:0;padding:0;border:0!important;background:transparent!important;box-shadow:none!important}
+html.ui2 .stockToolbar .stockSearch{display:flex;align-items:center;gap:8px;flex:1 1 280px;max-width:440px;min-height:44px;padding:0 6px 0 12px;border:1px solid var(--ui-border-strong);border-radius:var(--ui-radius-md);background:var(--ui-surface-inset);color:var(--ui-text-3);transition:border-color var(--ui-duration-fast) var(--ui-ease-standard),box-shadow var(--ui-duration-fast) var(--ui-ease-standard)}
+html.ui2 .stockToolbar .stockSearch:focus-within{border-color:var(--ui-border-focus);box-shadow:var(--ui-ring);color:var(--ui-text-2)}
+html.ui2 .stockToolbar .stockSearch input{height:42px;min-height:0;padding:0;border:0!important;background:transparent!important;box-shadow:none!important;font-size:var(--ui-text-md)}
+html.ui2 .stockToolbar .stockSearch input::-webkit-search-cancel-button{display:none}
+html.ui2 .stockSearchClear{display:grid;place-items:center;width:32px;height:32px;min-height:0;padding:0;border:0;border-radius:var(--ui-radius-sm);background:var(--ui-surface-3);color:var(--ui-text-2);font-size:18px;line-height:1}
+html.ui2 .stockFilters{gap:6px}
+html.ui2 .stockFilters button{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 12px;border:1px solid var(--ui-border);border-radius:99px;background:var(--ui-surface-1);color:var(--ui-text-2);font-size:var(--ui-text-sm);font-weight:var(--ui-weight-medium)}
+html.ui2 .stockFilters button i{min-width:18px;padding:1px 6px;border-radius:99px;background:var(--ui-surface-3);color:var(--ui-text-3);font-size:11px;font-style:normal;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
+html.ui2 .stockFilters button:hover{border-color:var(--ui-border-strong);color:var(--ui-text)}
+html.ui2 .stockFilters button.active{border-color:rgba(212,61,101,.45);background:var(--ui-accent-soft);color:var(--ui-text)}
+html.ui2 .stockFilters button.active i{background:var(--ui-accent);color:#fff}
+html.ui2 .stockToolbarEnd{margin-left:auto;gap:10px}
+html.ui2 .stockSort span{color:var(--ui-text-3);font-size:var(--ui-text-xs)}
+html.ui2 .stockSort select{min-height:36px;padding:0 30px 0 10px;font-size:var(--ui-text-sm)}
+html.ui2 .stockViewToggle{gap:2px;padding:3px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface-inset)}
+html.ui2 .stockViewToggle button{display:grid;place-items:center;width:34px;height:30px;min-height:0;padding:0;border:0;border-radius:var(--ui-radius-sm);background:transparent;color:var(--ui-text-3)}
+html.ui2 .stockViewToggle button[aria-pressed="true"]{background:var(--ui-surface-3);color:var(--ui-text);box-shadow:var(--ui-shadow-xs)}
+html.ui2 .stockCount{color:var(--ui-text-3);font-size:var(--ui-text-xs);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- UI 2.0: karta części ---------- */
+html.ui2 .partsWorkspace .stockGrid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;transition:opacity var(--ui-duration-base) var(--ui-ease-standard)}
+html.ui2 .partsWorkspace .stockGrid.refreshing{opacity:.6}
+html.ui2 .partsWorkspace .stockCard{position:relative;display:grid;grid-template-rows:auto auto auto 1fr auto;gap:12px;padding:16px;border:1px solid var(--ui-border)!important;border-radius:var(--ui-radius-lg);background:linear-gradient(170deg,var(--ui-surface-2),var(--ui-surface-1))!important;box-shadow:var(--ui-shadow-sm)!important;cursor:pointer;transition:border-color var(--ui-duration-fast) var(--ui-ease-standard),transform var(--ui-duration-fast) var(--ui-ease-standard),box-shadow var(--ui-duration-fast) var(--ui-ease-standard)}
+html.ui2 .partsWorkspace .stockCard:hover{border-color:var(--ui-border-strong)!important;transform:translateY(-1px);box-shadow:var(--ui-shadow-md)!important}
+html.ui2 .partsWorkspace .stockCard:focus-visible{outline:none;box-shadow:var(--ui-ring)!important}
+html.ui2 .partsWorkspace .stockCard.selected{border-color:rgba(212,61,101,.6)!important;box-shadow:0 0 0 3px var(--ui-accent-soft),var(--ui-shadow-md)!important}
+html.ui2 .partsWorkspace .stockCard.level-low::before,html.ui2 .partsWorkspace .stockCard.level-out::before{content:"";position:absolute;left:-1px;top:16px;bottom:16px;width:3px;border-radius:0 3px 3px 0;background:var(--ui-warning)}
+html.ui2 .partsWorkspace .stockCard.level-out::before{background:var(--ui-danger)}
+html.ui2 .partsWorkspace .stockCardHead>span{color:var(--ui-accent-text)!important;font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-bold);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.ui2 .partsWorkspace .stockCardHead code{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);background:var(--ui-surface-inset);color:var(--ui-text-3);font-family:var(--ui-font-mono);font-size:11px}
+html.ui2 .partsWorkspace .stockCardTitle{display:grid;gap:6px;min-width:0}
+html.ui2 .partsWorkspace .stockCardSelect{min-height:0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important;color:var(--ui-text)!important;font:inherit;border-radius:var(--ui-radius-xs)}
+html.ui2 .partsWorkspace .stockCardSelect:focus-visible{outline:none;box-shadow:var(--ui-ring)!important}
+html.ui2 .partsWorkspace .stockCardTitle h3{margin:0;font-size:var(--ui-text-lg);line-height:var(--ui-leading-snug);overflow-wrap:anywhere}
+html.ui2 .partsWorkspace .stockCardTitle p{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0;color:var(--ui-text-3);font-size:var(--ui-text-sm)}
+html.ui2 .stockPartNo{font-family:var(--ui-font-mono);color:var(--ui-text-2)}
+html.ui2 .stockLocation{display:inline-flex;align-items:center;gap:4px;padding:2px 8px 2px 6px;border-radius:99px;background:var(--ui-surface-3);color:var(--ui-text-2);font-weight:var(--ui-weight-semibold)}
+html.ui2 .stockLocation.missing{background:transparent;color:var(--ui-text-3);font-weight:var(--ui-weight-regular)}
+html.ui2 .partsWorkspace .stockLevel{padding:12px;border-radius:var(--ui-radius-md);background:var(--ui-surface-inset)}
+html.ui2 .stockLevel.tone-success{color:var(--ui-success)}
+html.ui2 .stockLevel.tone-warning{color:var(--ui-warning)}
+html.ui2 .stockLevel.tone-danger{color:var(--ui-danger)}
+html.ui2 .stockLevelCount{display:flex;align-items:baseline;gap:4px;min-width:64px}
+html.ui2 .stockLevelCount b{color:var(--ui-text);font-size:30px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:var(--ui-tracking-tight)}
+html.ui2 .stockLevel.tone-danger .stockLevelCount b{color:var(--ui-danger-text)}
+html.ui2 .stockLevelCount span{color:var(--ui-text-3);font-size:var(--ui-text-sm)}
+html.ui2 .stockLevelBadge{justify-self:start;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:var(--ui-weight-bold);letter-spacing:.02em}
+html.ui2 .stockLevel.tone-success .stockLevelBadge{background:var(--ui-success-soft);color:var(--ui-success-text)}
+html.ui2 .stockLevel.tone-warning .stockLevelBadge{background:var(--ui-warning-soft);color:var(--ui-warning-text)}
+html.ui2 .stockLevel.tone-danger .stockLevelBadge{background:var(--ui-danger-soft);color:var(--ui-danger-text)}
+html.ui2 .stockLevelInfo small{color:var(--ui-text-3);font-size:var(--ui-text-xs)}
+html.ui2 .partsWorkspace .stockCardFoot{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px;margin:0;padding:0;border:0!important}
+html.ui2 .partsWorkspace .stockCardFoot>div{display:grid;gap:2px;min-width:0;text-align:left}
+html.ui2 .partsWorkspace .stockCardFoot>div:last-child{text-align:left}
+html.ui2 .partsWorkspace .stockCardFoot dt{color:var(--ui-text-3);font-size:var(--ui-text-2xs);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase}
+html.ui2 .partsWorkspace .stockCardFoot dd{color:var(--ui-text);font-size:var(--ui-text-sm);font-weight:var(--ui-weight-semibold);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.ui2 .partsWorkspace .stockCardFoot .stockSupplier{grid-column:1/-1;display:flex;align-items:baseline;gap:8px}
+html.ui2 .partsWorkspace .stockCardFoot .stockSupplier dd{color:var(--ui-text-2);font-weight:var(--ui-weight-regular)}
+html.ui2 .partsWorkspace .stockActions{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-top:12px;border-top:1px solid var(--ui-border)}
+html.ui2 .partsWorkspace .stockActions button{min-height:38px;padding:0 12px;font-size:var(--ui-text-sm)}
+html.ui2 .partsWorkspace .stockActions .issueAction{display:inline-flex;align-items:center;gap:6px;flex:1 1 100%;justify-content:center;margin:0;border-color:transparent!important;background:var(--ui-accent-gradient)!important;color:#fff!important;box-shadow:var(--ui-shadow-accent);font-weight:var(--ui-weight-semibold)}
+html.ui2 .partsWorkspace .stockActions .issueAction:disabled{background:var(--ui-surface-3)!important;color:var(--ui-text-3)!important;box-shadow:none}
+html.ui2 .stockStepper{flex-wrap:nowrap;gap:0;border:1px solid var(--ui-border-strong);border-radius:var(--ui-radius-md);overflow:hidden}
+html.ui2 .partsWorkspace .stockStepper button{border:0!important;border-radius:0;background:var(--ui-surface-2)!important;color:var(--ui-text)!important;box-shadow:none!important}
+html.ui2 .partsWorkspace .stockStepper button+button{border-left:1px solid var(--ui-border-strong)!important}
+html.ui2 .partsWorkspace .stockStepper button.primary{background:var(--ui-success-soft)!important;color:var(--ui-success-text)!important;font-weight:var(--ui-weight-semibold)}
+html.ui2 .partsWorkspace .stockStepper button:disabled{color:var(--ui-text-3)!important;opacity:.6}
+html.ui2 .partsWorkspace .stockActions .editPartAction{margin-left:auto}
+html.ui2 .partsWorkspace .stockActions .deletePartAction{border-color:transparent!important;background:transparent!important;color:var(--ui-danger-text)!important}
+html.ui2 .partsWorkspace .stockActions .deletePartAction:hover:not(:disabled){background:var(--ui-danger-soft)!important}
+html.ui2 .partsWorkspace .stockActions .deletePartAction:disabled{color:var(--ui-text-3)!important}
+html.ui2 .partsWorkspace .stockSkeleton{border-color:var(--ui-border);background:var(--ui-surface-1)}
+
+/* ---------- UI 2.0: zestawienie (lista) ---------- */
+@media (min-width:1500px){
+ html.ui2 .partsWorkspace .stockListHead{display:grid;grid-template-columns:minmax(200px,1.5fr) minmax(190px,1fr) minmax(230px,1.1fr) 470px;gap:16px;padding:0 16px;color:var(--ui-text-3);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase}
+ html.ui2 .partsWorkspace .stockGrid.stockList{grid-template-columns:1fr;gap:6px}
+ html.ui2 .partsWorkspace .stockList .stockCard{grid-template-columns:minmax(200px,1.5fr) minmax(190px,1fr) minmax(230px,1.1fr) 470px;grid-template-rows:auto auto;grid-template-areas:"head level foot actions" "title level foot actions";align-items:center;gap:2px 16px;padding:10px 16px;border-radius:var(--ui-radius-md)}
+ html.ui2 .partsWorkspace .stockList .stockCard:hover{transform:none}
+ html.ui2 .partsWorkspace .stockList .stockCardHead{grid-area:head;justify-content:flex-start}
+ html.ui2 .partsWorkspace .stockList .stockCardTitle{grid-area:title}
+ html.ui2 .partsWorkspace .stockList .stockCardTitle h3{font-size:var(--ui-text-md)}
+ html.ui2 .partsWorkspace .stockList .stockLevel{grid-area:level;padding:8px 10px}
+ html.ui2 .partsWorkspace .stockList .stockLevelCount b{font-size:22px}
+ html.ui2 .partsWorkspace .stockList .stockCardFoot{grid-area:foot;grid-template-columns:repeat(3,minmax(0,1fr))}
+ html.ui2 .partsWorkspace .stockList .stockCardFoot .stockSupplier{display:none}
+ html.ui2 .partsWorkspace .stockList .stockActions{grid-area:actions;flex-wrap:nowrap;padding:0;border:0;justify-content:flex-end}
+ html.ui2 .partsWorkspace .stockList .stockActions .issueAction{flex:0 0 auto}
+ html.ui2 .partsWorkspace .stockList .stockActions .editPartAction{margin-left:0}
+}
+
+/* ---------- UI 2.0: puste stany ---------- */
+html.ui2 .partsWorkspace .stockEmpty,html.ui2 .deliveryHistory .deliveryHistoryEmpty{gap:10px;min-height:260px;padding:32px 20px;border:1px dashed var(--ui-border-strong);border-radius:var(--ui-radius-xl);background:var(--ui-surface-1);color:var(--ui-text-3);text-align:center}
+html.ui2 .partsWorkspace .stockEmpty>svg,html.ui2 .deliveryHistory .deliveryHistoryEmpty>svg{width:56px;height:56px;padding:13px;border-radius:50%;background:var(--ui-accent-soft);color:var(--ui-accent-text)}
+html.ui2 .partsWorkspace .stockEmpty b,html.ui2 .deliveryHistory .deliveryHistoryEmpty b{color:var(--ui-text);font-size:var(--ui-text-lg)}
+html.ui2 .partsWorkspace .stockEmpty span,html.ui2 .deliveryHistory .deliveryHistoryEmpty span{max-width:44ch}
+html.ui2 .partsWorkspace .stockEmpty button,html.ui2 .deliveryHistory .deliveryHistoryEmpty button{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin-top:6px}
+html.ui2 .stockEmptyActions{justify-content:center}
+
+/* ---------- UI 2.0: modale magazynu ---------- */
+html.ui2 .stockModalShade{background:rgba(6,3,4,.78)!important;backdrop-filter:none}
+html.ui2.pwaPlatform .stockModalShade{z-index:11000}
+html.ui2 .stockModal{padding:var(--ui-space-6);border:1px solid var(--ui-border-strong)!important;border-radius:var(--ui-radius-xl);background:var(--ui-surface-1)!important;box-shadow:var(--ui-shadow-xl);animation:ui-pop var(--ui-duration-base) var(--ui-ease-out)}
+html.ui2 .stockModal>header{position:static;margin:0;padding:0 0 var(--ui-space-4);border:0;border-bottom:1px solid var(--ui-border)!important;border-radius:0;background:transparent;box-shadow:none}
+html.ui2 .stockModal>header span{color:var(--ui-accent-text)!important;font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-bold);letter-spacing:var(--ui-tracking-caps)}
+html.ui2 .stockModal>header>button{display:grid;place-items:center;width:40px;height:40px;padding:0;font-size:20px}
+html.ui2 .stockModal form>footer,html.ui2 .deliveryPreviewModal>footer{padding-top:var(--ui-space-4);border-top:1px solid var(--ui-border)}
+html.ui2 .stockModal form>footer button,html.ui2 .deliveryPreviewModal>footer button{min-height:44px;padding:0 18px}
+html.ui2 .issuePartSummary{border:1px solid var(--ui-border)!important;border-radius:var(--ui-radius-lg);background:var(--ui-surface-inset)!important}
+html.ui2 .issuePartSummary strong{color:var(--ui-accent-text)!important;font-variant-numeric:tabular-nums}
+html.ui2 .issueBalance{border:1px solid var(--ui-border)!important;border-radius:var(--ui-radius-md);background:var(--ui-surface-2)!important}
+html.ui2 .stockError{border-color:rgba(240,82,92,.3);border-radius:var(--ui-radius-md);background:var(--ui-danger-soft);color:var(--ui-danger-text)}
+
+/* ---------- UI 2.0: dokumenty dostaw ---------- */
+html.ui2 .deliveryHistory{gap:var(--ui-space-4)}
+html.ui2 .deliveryHistory .deliveryHistoryHero{padding:var(--ui-space-6);border:1px solid var(--ui-border)!important;border-radius:var(--ui-radius-xl);background:radial-gradient(120% 140% at 100% 0%,rgba(212,61,101,.14) 0,transparent 55%),linear-gradient(160deg,var(--ui-surface-2),var(--ui-surface-1))!important;box-shadow:var(--ui-shadow-md)}
+html.ui2 .deliveryHistory .deliveryHistoryHero h2{font-size:var(--ui-text-3xl);letter-spacing:var(--ui-tracking-tight)}
+html.ui2 .deliveryHistory .deliveryHistoryHero p{color:var(--ui-text-2)}
+html.ui2 .deliveryHistory .deliveryHistoryHero button{min-height:44px;padding:0 18px}
+html.ui2 .deliveryStats>div{border:1px solid var(--ui-border);background:var(--ui-surface-1)}
+html.ui2 .deliveryStats span{color:var(--ui-text-3);font-size:var(--ui-text-xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase}
+html.ui2 .deliveryStats b{font-size:var(--ui-text-xl);font-variant-numeric:tabular-nums}
+html.ui2 .deliveryHistory .deliveryHistoryGrid{grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+html.ui2 .deliveryHistory .deliverySkeleton{min-height:240px}
+html.ui2 .deliveryHistory .deliveryHistoryCard{display:flex;flex-direction:column;border:1px solid var(--ui-border)!important;border-radius:var(--ui-radius-lg);background:var(--ui-surface-1)!important;box-shadow:var(--ui-shadow-sm)!important;transition:border-color var(--ui-duration-fast) var(--ui-ease-standard),box-shadow var(--ui-duration-fast) var(--ui-ease-standard)}
+html.ui2 .deliveryHistory .deliveryHistoryCard:hover{border-color:var(--ui-border-strong)!important;box-shadow:var(--ui-shadow-md)!important}
+html.ui2 .deliveryHistory .deliveryHistoryCard>header{align-items:flex-start;gap:12px;padding:16px 18px;border-bottom:1px solid var(--ui-border)!important;background:linear-gradient(160deg,var(--ui-surface-2),var(--ui-surface-1))!important}
+html.ui2 .deliveryHistory .deliveryHistoryCard>header>div{flex:1;min-width:0}
+html.ui2 .deliveryDocIcon{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:var(--ui-radius-md);background:var(--ui-accent-soft);color:var(--ui-accent-text)}
+html.ui2 .deliveryHistory .deliveryHistoryCard header small{color:var(--ui-text-3)!important;font-size:var(--ui-text-2xs);letter-spacing:var(--ui-tracking-caps)}
+html.ui2 .deliveryHistory .deliveryHistoryCard header h3{margin:4px 0 2px;font-size:var(--ui-text-lg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.ui2 .deliveryHistory .deliveryHistoryCard header span{color:var(--ui-text-2);font-family:var(--ui-font-mono);font-size:var(--ui-text-sm)}
+html.ui2 .deliveryHistory .deliveryHistoryCard header>b{color:var(--ui-text)!important;font-size:var(--ui-text-xl);font-variant-numeric:tabular-nums}
+html.ui2 .deliveryHistory .deliveryHistoryStats{gap:0;background:transparent!important;border-bottom:1px solid var(--ui-border)}
+html.ui2 .deliveryHistory .deliveryHistoryStats span{display:flex;align-items:baseline;gap:5px;padding:10px 18px;background:transparent!important;color:var(--ui-text-3);font-size:var(--ui-text-xs)}
+html.ui2 .deliveryHistory .deliveryHistoryStats span+span{border-left:1px solid var(--ui-border)}
+html.ui2 .deliveryHistory .deliveryHistoryStats strong{color:var(--ui-text);font-variant-numeric:tabular-nums}
+html.ui2 .deliveryHistory .deliveryHistoryItems{flex:1;padding:6px 18px 10px}
+html.ui2 .deliveryHistory .deliveryHistoryItems>div{border-bottom:1px solid var(--ui-border-subtle)!important;font-size:var(--ui-text-sm)}
+html.ui2 .deliveryHistory .deliveryHistoryItems code{color:var(--ui-text-2);font-family:var(--ui-font-mono)}
+html.ui2 .deliveryHistory .deliveryHistoryItems span{color:var(--ui-text-2)}
+html.ui2 .deliveryHistory .deliveryHistoryItems b{color:var(--ui-text);font-variant-numeric:tabular-nums}
+html.ui2 .deliveryCardWarn{border:1px solid rgba(245,177,66,.25);background:var(--ui-warning-soft);color:var(--ui-warning-text)}
+html.ui2 .deliveryHistory .deliveryHistoryCard>footer{gap:8px;padding:12px 18px;border-top:1px solid var(--ui-border)!important}
+html.ui2 .deliveryHistory .deliveryHistoryCard>footer button{flex:1;min-height:44px}
+html.ui2 .deliveryPreviewMeta>div{padding:10px 12px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface-inset)}
+html.ui2 .deliveryPreviewMeta dt{color:var(--ui-text-3);font-size:var(--ui-text-2xs);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase}
+html.ui2 .deliveryPreviewMeta dd{color:var(--ui-text);font-weight:var(--ui-weight-semibold);overflow-wrap:anywhere}
+html.ui2 .deliveryPreviewTableWrap{border:1px solid var(--ui-border)}
+html.ui2 .deliveryPreviewItems th{position:sticky;top:0;background:var(--ui-surface-2);color:var(--ui-text-3);font-size:var(--ui-text-2xs);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase}
+html.ui2 .deliveryPreviewItems td{border-top:1px solid var(--ui-border-subtle);color:var(--ui-text-2);font-size:var(--ui-text-sm);font-variant-numeric:tabular-nums}
+html.ui2 .deliveryPreviewItems td:nth-child(3){color:var(--ui-text)}
+html.ui2 .deliveryPreviewItems td:first-child{color:var(--ui-text-3)}
+html.ui2 .deliveryPreviewItems code,html.ui2 .deliveryHistory .deliveryHistoryItems code,html.ui2 .partsWorkspace .stockPartNo{padding:0;border:0;background:transparent;font-family:var(--ui-font-mono);color:var(--ui-text-2)}
+html.ui2 .deliveryPreviewTotals>div{border:1px solid var(--ui-border);background:var(--ui-surface-2)}
+html.ui2 .deliveryPreviewTotals span{color:var(--ui-text-3);font-size:var(--ui-text-xs)}
+html.ui2 .deliveryPreviewTotals b{font-size:var(--ui-text-lg);font-variant-numeric:tabular-nums}
+html.ui2 .deliveryPreviewTotals>div.warn{border-color:rgba(245,177,66,.3);background:var(--ui-warning-soft)}
+html.ui2 .deliveryPreviewTotals>div.warn b{color:var(--ui-warning-text)}
+html.ui2 .deliveryPreviewNote,html.ui2 .deliveryPreviewEmpty{color:var(--ui-text-3);font-size:var(--ui-text-sm)}
+
+/* ---------- UI 2.0: import dostawy na PC ---------- */
+html.ui2 .deliveryShade{background:rgba(6,3,4,.82);backdrop-filter:none}
+html.ui2 .deliveryModal{border:1px solid var(--ui-border-strong);border-radius:var(--ui-radius-2xl);background:var(--ui-surface-1);box-shadow:var(--ui-shadow-xl)}
+html.ui2 .deliveryModal>header{border-bottom-color:var(--ui-border)}
+html.ui2 .deliveryTitleMark>span{border:0;background:var(--ui-accent-soft);color:var(--ui-accent-text)}
+html.ui2 .deliveryTitleMark small{color:var(--ui-accent-text);font-weight:var(--ui-weight-bold)}
+html.ui2 .deliverySteps li{background:var(--ui-surface-2);color:var(--ui-text-3)}
+html.ui2 .deliverySteps li>span{background:var(--ui-surface-3);color:var(--ui-text-2)}
+html.ui2 .deliverySteps li.current{background:var(--ui-accent-soft);color:var(--ui-text)}
+html.ui2 .deliverySteps li.current>span{background:var(--ui-accent);color:#fff}
+html.ui2 .deliverySteps li.done{color:var(--ui-text-2)}
+html.ui2 .deliverySteps li.done>span{background:var(--ui-success-soft);color:var(--ui-success-text)}
+html.ui2 .deliverySteps li.error{background:var(--ui-danger-soft);color:var(--ui-danger-text)}
+html.ui2 .deliverySteps li.error>span{background:var(--ui-danger);color:#fff}
+html.ui2 .deliveryProgress{background:var(--ui-surface-3)}
+html.ui2 .deliveryProgress i{background:var(--ui-accent-gradient)}
+html.ui2 .paperScanner>span{background:var(--ui-accent);box-shadow:0 0 22px 7px rgba(212,61,101,.55)}
+html.ui2 .deliveryScanning small{color:var(--ui-accent-text)}
+html.ui2 .deliveryScanning>div:last-child>b{color:var(--ui-text-2)}
+html.ui2 .deliverySummary>div,html.ui2 .deliverySummary>button,html.ui2 .deliveryTableWrap{border-color:var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface-inset)}
+html.ui2 .deliveryTable{background:transparent}
+html.ui2 .deliveryTable th{background:var(--ui-surface-2)}
+html.ui2 .deliveryTable td{border-top-color:var(--ui-border-subtle)}
+html.ui2 .deliveryTable input[type=checkbox]{width:20px;height:20px;accent-color:var(--ui-accent)}
+html.ui2 .deliveryTable tr.check td:nth-child(2){box-shadow:inset 3px 0 var(--ui-warning)}
+html.ui2 .deliveryTable td>small{color:var(--ui-warning-text)}
+html.ui2 .deliveryAddRow{color:var(--ui-text-2)}
+html.ui2 .deliveryFailureDetail{font-size:var(--ui-text-sm);color:var(--ui-text-3)!important}
+html.ui2 .deliverySuccess>span{border-color:rgba(62,207,142,.4);background:var(--ui-success-soft);color:var(--ui-success-text);box-shadow:0 0 55px rgba(62,207,142,.18)}
+html.ui2 .deliverySuccess>small{color:var(--ui-success-text)}
+html.ui2 .deliveryImporting>span{border-color:var(--ui-surface-3);border-top-color:var(--ui-accent)}
+
+/* ---------- UI 2.0: części do zleceń ---------- */
+html.ui2 .partsCenter2{display:grid;gap:var(--ui-space-4)}
+html.ui2 .partsCenter2 .partsHero{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--ui-space-6);margin:0;padding:var(--ui-space-6);border:1px solid var(--ui-border)!important;border-radius:var(--ui-radius-xl);background:radial-gradient(120% 140% at 100% 0%,rgba(212,61,101,.14) 0,transparent 55%),linear-gradient(160deg,var(--ui-surface-2),var(--ui-surface-1))!important;box-shadow:var(--ui-shadow-md)}
+html.ui2 .partsCenter2 .partsHero small{color:var(--ui-accent-text);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-bold);letter-spacing:var(--ui-tracking-caps)}
+html.ui2 .partsCenter2 .partsHero h2{margin:8px 0 6px;font-size:var(--ui-text-3xl);letter-spacing:var(--ui-tracking-tight)}
+html.ui2 .partsCenter2 .partsHero p{margin:0;color:var(--ui-text-2)}
+html.ui2 .partsCenter2 .partsHeroStats{display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:10px}
+html.ui2 .partsCenter2 .partsHeroStats>div{display:grid;gap:4px;padding:14px 16px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-lg);background:var(--ui-surface-inset)}
+html.ui2 .partsCenter2 .partsHeroStats b{font-size:var(--ui-text-2xl);font-variant-numeric:tabular-nums;white-space:nowrap}
+html.ui2 .partsCenter2 .partsHeroStats span{color:var(--ui-text-3);font-size:var(--ui-text-xs)}
+html.ui2 .partsCenter2 .partsHeroStats>.dangerStat{border-color:rgba(240,82,92,.3);background:var(--ui-danger-soft)}
+html.ui2 .partsCenter2 .partsHeroStats>.dangerStat b{color:var(--ui-danger-text)}
+html.ui2 .partsCenter2>.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0}
+html.ui2 .partsCenter2>.toolbar>select{width:auto;min-width:200px;min-height:44px}
+html.ui2 .partsCenter2 .viewSwitch{display:flex;gap:2px;padding:3px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface-inset)}
+html.ui2 .partsCenter2 .viewSwitch button{min-height:36px;padding:0 14px;border:0;background:transparent;color:var(--ui-text-3);box-shadow:none}
+html.ui2 .partsCenter2 .viewSwitch button.active{background:var(--ui-surface-3);color:var(--ui-text);box-shadow:var(--ui-shadow-xs)}
+html.ui2 .partsCenter2>.toolbar>.grow{flex:1}
+html.ui2 .partsCenter2>.toolbar>button{min-height:44px;padding:0 16px;white-space:nowrap}
+html.ui2 .partsCenter2 .partGroups{display:grid;gap:12px}
+html.ui2 .partsCenter2 .groupSummary{display:flex;flex-wrap:wrap;gap:6px 16px;padding-bottom:10px;border-bottom:1px solid var(--ui-border);color:var(--ui-text-3);font-size:var(--ui-text-sm)}
+html.ui2 .partsCenter2 .groupSummary strong{color:var(--ui-success-text)}
+html.ui2 .partsCenter2 :is(.barcodeTag,.oeTag){padding:1px 6px;border-radius:var(--ui-radius-xs);background:var(--ui-surface-3);font-style:normal;font-family:var(--ui-font-mono)}
+html.ui2 .partsCenter2 .inventoryRow{gap:16px;padding:14px 0}
+html.ui2 .partsCenter2 .inventoryRow>div:last-child{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
+html.ui2 .partsCenter2 .inventoryRow>div:last-child>strong.partStatusChip{display:inline-flex;min-height:28px;padding:0 10px;border-radius:99px;font-size:11px;font-weight:var(--ui-weight-bold);letter-spacing:.04em;white-space:nowrap}
+html.ui2 .partStatusChip.tone-warning{background:var(--ui-warning-soft);color:var(--ui-warning-text)}
+html.ui2 .partStatusChip.tone-info{background:var(--ui-info-soft);color:var(--ui-info-text)}
+html.ui2 .partStatusChip.tone-violet{background:var(--ui-violet-soft);color:var(--ui-violet-text)}
+html.ui2 .partStatusChip.tone-success{background:var(--ui-success-soft);color:var(--ui-success-text)}
+html.ui2 .partStatusChip.tone-danger{background:var(--ui-danger-soft);color:var(--ui-danger-text)}
+html.ui2 .partStatusChip.tone-neutral{background:var(--ui-surface-3);color:var(--ui-text-2)}
+
+/* ---------- responsywność ---------- */
+@media (max-width:1280px){
+ html.ui2 .partsWorkspace .stockMetrics{grid-template-columns:repeat(4,minmax(0,1fr))}
+ html.ui2 .partsWorkspace .stockMetrics>.stockMetricActions{grid-column:1/-1;grid-template-columns:1fr 1fr}
+}
+@media (max-width:1100px){
+ html.ui2 .partsWorkspace .stockHero{grid-template-columns:1fr}
+ html.ui2 .partsWorkspace .stockMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+ html.ui2 .partsWorkspace .stockMetrics>button{grid-column:auto}
+ html.ui2 .deliveryStats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ html.ui2 .partsCenter2 .partsHero{grid-template-columns:1fr}
+}
+@media (max-width:1499px){
+ html.ui2 .stockViewToggle{display:none}
+}
+@media (max-width:900px){
+ html.ui2 .stockToolbarEnd{margin-left:0;width:100%;justify-content:space-between}
+}
+@media (max-width:600px){
+ html.ui2 .partsWorkspace{gap:12px;padding-bottom:88px}
+ html.ui2 .partsWorkspace .partsTabs{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+ html.ui2 .partsWorkspace .partsTabs button{justify-content:center;flex-direction:column;gap:3px;min-height:52px;padding:6px 4px;font-size:12px}
+ html.ui2 .partsTabLabel{display:none}
+ html.ui2 .partsTabShort{display:inline}
+ html.ui2 .partsTabBadge{position:absolute;top:4px;right:calc(50% - 26px);min-width:18px;height:18px;font-size:10px}
+ html.ui2 .partsWorkspace .stockHero{gap:14px;padding:18px;border-radius:var(--ui-radius-lg)}
+ html.ui2 .partsWorkspace .stockHero h2{font-size:var(--ui-text-2xl)}
+ html.ui2 .partsWorkspace .stockHero p{font-size:var(--ui-text-sm)}
+ html.ui2 .partsWorkspace .stockScan{flex-direction:column;align-items:stretch}
+ html.ui2 .partsWorkspace .stockScan button{justify-content:center;min-height:48px}
+ html.ui2 .partsWorkspace .stockMetrics{gap:8px}
+ html.ui2 .partsWorkspace .stockMetrics>.stockMetric{min-height:84px;padding:12px}
+ html.ui2 .partsWorkspace .stockMetrics>.stockMetric b{font-size:var(--ui-text-xl)}
+ html.ui2 .partsWorkspace .stockMetrics>.stockMetricActions{display:none}
+ html.ui2 .stockToolbar .stockSearch{flex:1 1 100%;max-width:none;min-height:52px;border-radius:var(--ui-radius-lg)}
+ html.ui2 .stockToolbar .stockSearch input{height:50px;font-size:16px}
+ html.ui2 .stockSearchClear{width:40px;height:40px}
+ html.ui2 .partsWorkspace .stockFilters{flex-wrap:nowrap;width:100%;padding:2px 1px;overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity}
+ html.ui2 .partsWorkspace .stockFilters::-webkit-scrollbar{display:none}
+ html.ui2 .stockFilters button{flex:none;min-height:44px;padding:0 14px;scroll-snap-align:start}
+ html.ui2 .stockSort select{min-height:44px}
+ html.ui2 .partsWorkspace .stockGrid{grid-template-columns:1fr;gap:10px}
+ html.ui2 .partsWorkspace .stockCard{padding:14px;gap:10px}
+ html.ui2 .partsWorkspace .stockCard:hover{transform:none}
+ html.ui2 .partsWorkspace .stockActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ html.ui2 .partsWorkspace .stockActions .issueAction{grid-column:1/-1}
+ html.ui2 .partsWorkspace .stockActions button{min-height:48px;font-size:var(--ui-text-md)}
+ html.ui2 .stockStepper{grid-column:1/-1;display:grid;grid-template-columns:1fr 2fr}
+ html.ui2 .partsWorkspace .stockActions .editPartAction{margin:0}
+ html.ui2 .partsWorkspace .stockActions .deletePartAction{border:1px solid rgba(240,82,92,.25)!important}
+ html.ui2 .partsWorkspace .stockCardFoot{grid-template-columns:repeat(3,minmax(0,1fr))}
+ html.ui2 .stockThumbBar{position:fixed;left:max(12px,var(--ui-safe-left));right:max(12px,var(--ui-safe-right));bottom:calc(12px + var(--ui-safe-bottom));z-index:var(--ui-z-sticky);display:grid;grid-template-columns:1.4fr 1fr 52px;gap:8px;padding:8px;border:1px solid var(--ui-border-strong);border-radius:20px;background:rgba(22,12,16,.94);box-shadow:var(--ui-shadow-xl)}
+ html.ui2 .stockThumbBar button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 10px;border-radius:14px;font-size:var(--ui-text-md);font-weight:var(--ui-weight-semibold)}
+ html.ui2 .stockThumbBar .stockThumbSearch{padding:0}
+ html.ui2.pwaPlatform .stockThumbBar{bottom:calc(var(--ui-dock-height) + var(--ui-safe-bottom) + 24px)}
+ html.ui2 .partsWorkspace:has(.stockThumbBar){padding-bottom:96px}
+ html.ui2 .deliveryHistory .deliveryHistoryHero{padding:18px;border-radius:var(--ui-radius-lg)}
+ html.ui2 .deliveryHistory .deliveryHistoryHero h2{font-size:var(--ui-text-2xl)}
+ html.ui2 .deliveryHistory .deliveryHistoryHero button{justify-content:center;min-height:52px}
+ html.ui2 .deliveryStats{gap:8px}
+ html.ui2 .deliveryStats>div{padding:12px}
+ html.ui2 .deliveryStats b{font-size:var(--ui-text-lg)}
+ html.ui2 .deliveryHistory .deliveryHistoryGrid{grid-template-columns:1fr}
+ html.ui2 .deliveryHistory .deliveryHistoryStats{grid-template-columns:repeat(3,minmax(0,1fr))}
+ html.ui2 .deliveryHistory .deliveryHistoryStats span{padding:10px 12px}
+ html.ui2 .deliveryHistory .deliveryHistoryCard>footer button{min-height:48px}
+ /* modale jako arkusz od dołu — w zasięgu kciuka */
+ html.ui2 .stockModalShade{place-items:end stretch;padding:0;padding-top:max(24px,var(--ui-safe-top))}
+ html.ui2 .stockModal{width:100%;max-height:calc(100dvh - max(24px,var(--ui-safe-top)));padding:18px 16px calc(16px + var(--ui-safe-bottom));border-radius:22px 22px 0 0;border-bottom:0}
+ html.ui2 .stockModal form>footer,html.ui2 .deliveryPreviewModal>footer{position:sticky;bottom:calc(-16px - var(--ui-safe-bottom));margin:0 -16px calc(-16px - var(--ui-safe-bottom));padding:12px 16px calc(12px + var(--ui-safe-bottom));background:var(--ui-surface-1)}
+ html.ui2 .stockModal form>footer button,html.ui2 .deliveryPreviewModal>footer button{flex:1;min-height:52px}
+ html.ui2 .deliveryPreviewMeta{grid-template-columns:repeat(2,minmax(0,1fr))}
+ html.ui2 .deliveryPreviewItems th:nth-child(1),html.ui2 .deliveryPreviewItems td:nth-child(1){display:none}
+ html.ui2 .deliveryPreviewItems td,html.ui2 .deliveryPreviewItems th{padding:8px}
+ html.ui2 .deliveryPreviewTotals>div{flex:1 1 140px}
+ html.ui2 .partsCenter2 .inventoryRow{flex-direction:column;align-items:stretch}
+ html.ui2 .partsCenter2 .partsHero{grid-template-columns:1fr;padding:18px}
+ html.ui2 .partsCenter2 .partsHero h2{font-size:var(--ui-text-2xl)}
+ html.ui2 .partsCenter2 .partsHeroStats{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+ html.ui2 .partsCenter2 .partsHeroStats>div{padding:10px}
+ html.ui2 .partsCenter2 .partsHeroStats b{font-size:var(--ui-text-lg)}
+ html.ui2 .partsCenter2>.toolbar>select{flex:1 1 100%}
+ html.ui2 .partsCenter2>.toolbar>.grow{display:none}
+ html.ui2 .partsCenter2>.toolbar>button{flex:1}
+ html.ui2 .partsCenter2 .inventoryRow>div:last-child{justify-content:flex-start;text-align:left}
+ html.ui2 .partsCenter2 .inventoryRow>div:last-child button,html.ui2 .partsCenter2 .inventoryRow>div:last-child select{min-height:44px}
+}
+@media (pointer:coarse){
+ html.ui2 .partsWorkspace .stockActions button,html.ui2 .stockFilters button,html.ui2 .stockSort select,html.ui2 .deliveryHistory .deliveryHistoryCard>footer button{min-height:var(--ui-touch-min)}
+ html.ui2 .stockSearchClear{width:44px;height:44px}
+}
+html.ui2.workshopOutdoor .partsWorkspace .stockActions button,html.ui2.workshopOutdoor .stockFilters button,html.ui2.workshopOutdoor .stockThumbBar button{min-height:var(--ui-touch-min)}
+html.ui2.workshopOutdoor .partsWorkspace .stockCard{border-color:var(--ui-border-strong)!important}
+@media (prefers-reduced-motion:reduce){
+ .stockSkeleton>i{animation:none}
+ html.ui2 .partsWorkspace .stockCard,html.ui2 .partsWorkspace .stockMetrics>button.stockMetric{transition:none}
+ html.ui2 .partsWorkspace .stockCard:hover,html.ui2 .partsWorkspace .stockMetrics>button.stockMetric:hover{transform:none}
+}

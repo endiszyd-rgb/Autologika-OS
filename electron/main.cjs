@@ -44,7 +44,7 @@ app.disableHardwareAcceleration()
 
 function createWindow(){
   const win = new BrowserWindow({
-    width:1500,height:940,minWidth:1100,minHeight:720,backgroundColor:'#090b0d',
+    width:1500,height:940,minWidth:1100,minHeight:720,backgroundColor:'#0b0608',
     icon:path.join(__dirname,'..','build','icon.png'),
     show:false,
     webPreferences:{

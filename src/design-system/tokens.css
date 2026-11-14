@@ -1,0 +1,197 @@
+/* ==========================================================================
+   AutoLogika UI 2.0 — design tokens
+   Jedno źródło prawdy dla kolorów, typografii, odstępów, zaokrągleń, cieni,
+   ruchu i warstw. Wszystkie komponenty UI 2.0 korzystają wyłącznie z tych
+   zmiennych. Stare zmienne (--b-*, --bg, --panel, --text…) są mapowane na
+   nowe tokeny, więc dotychczasowe ekrany dziedziczą spójną paletę.
+   ========================================================================== */
+:root{
+ /* --- Paleta bazowa (bordo / grafit) --------------------------------- */
+ --ui-wine-50:#fff1f4;
+ --ui-wine-100:#ffdbe3;
+ --ui-wine-200:#ffb3c4;
+ --ui-wine-300:#ff8aa6;
+ --ui-wine-400:#f0607f;
+ --ui-wine-500:#d43d65;
+ --ui-wine-600:#b52f53;
+ --ui-wine-700:#8f2241;
+ --ui-wine-800:#5e1529;
+ --ui-wine-900:#2e0a14;
+
+ --ui-ink-0:#0b0608;
+ --ui-ink-50:#100a0c;
+ --ui-ink-100:#150d10;
+ --ui-ink-200:#1b1115;
+ --ui-ink-300:#22161b;
+ --ui-ink-400:#2b1c22;
+ --ui-ink-500:#3a2830;
+
+ /* --- Kolory semantyczne -------------------------------------------- */
+ --ui-bg:var(--ui-ink-0);
+ --ui-bg-subtle:var(--ui-ink-50);
+ --ui-surface-1:var(--ui-ink-100);
+ --ui-surface-2:var(--ui-ink-200);
+ --ui-surface-3:var(--ui-ink-300);
+ --ui-surface-hover:var(--ui-ink-400);
+ --ui-surface-inset:#0d0709;
+ --ui-surface-overlay:rgba(16,9,12,.94);
+
+ --ui-border:rgba(255,214,224,.075);
+ --ui-border-subtle:rgba(255,214,224,.05);
+ --ui-border-strong:rgba(255,214,224,.15);
+ --ui-border-focus:var(--ui-wine-300);
+
+ --ui-text:#f8eff2;
+ --ui-text-2:#c7b2b9;
+ --ui-text-3:#957b83;
+ --ui-text-inverse:#1a0a10;
+
+ --ui-accent:var(--ui-wine-500);
+ --ui-accent-hover:var(--ui-wine-400);
+ --ui-accent-press:var(--ui-wine-600);
+ --ui-accent-text:var(--ui-wine-200);
+ --ui-accent-soft:rgba(212,61,101,.14);
+ --ui-accent-soft-strong:rgba(212,61,101,.24);
+ --ui-accent-gradient:linear-gradient(180deg,#d9446c 0%,#a82a4c 100%);
+
+ --ui-success:#3ecf8e;  --ui-success-soft:rgba(62,207,142,.12);  --ui-success-text:#7ee6b4;
+ --ui-warning:#f5b142;  --ui-warning-soft:rgba(245,177,66,.13);  --ui-warning-text:#ffcf7d;
+ --ui-danger:#f0525c;   --ui-danger-soft:rgba(240,82,92,.13);    --ui-danger-text:#ff9097;
+ --ui-info:#6aa8ff;     --ui-info-soft:rgba(106,168,255,.13);    --ui-info-text:#a9cbff;
+ --ui-violet:#a78bfa;   --ui-violet-soft:rgba(167,139,250,.14);  --ui-violet-text:#cbbbff;
+
+ /* --- Typografia ----------------------------------------------------- */
+ --ui-font-sans:'Outfit Variable','Segoe UI Variable Text','Segoe UI',system-ui,-apple-system,'Roboto',sans-serif;
+ --ui-font-mono:ui-monospace,'Cascadia Code','SF Mono','Roboto Mono',Consolas,monospace;
+ --ui-text-2xs:10.5px;
+ --ui-text-xs:11.5px;
+ --ui-text-sm:13px;
+ --ui-text-md:14px;
+ --ui-text-lg:16px;
+ --ui-text-xl:19px;
+ --ui-text-2xl:24px;
+ --ui-text-3xl:30px;
+ --ui-text-4xl:38px;
+ --ui-weight-regular:420;
+ --ui-weight-medium:520;
+ --ui-weight-semibold:600;
+ --ui-weight-bold:680;
+ --ui-leading-tight:1.15;
+ --ui-leading-snug:1.3;
+ --ui-leading-normal:1.5;
+ --ui-tracking-tight:-.02em;
+ --ui-tracking-caps:.08em;
+
+ /* --- Odstępy (siatka 4 px) ---------------------------------------- */
+ --ui-space-0:0;
+ --ui-space-1:4px;
+ --ui-space-2:8px;
+ --ui-space-3:12px;
+ --ui-space-4:16px;
+ --ui-space-5:20px;
+ --ui-space-6:24px;
+ --ui-space-7:32px;
+ --ui-space-8:40px;
+ --ui-space-9:56px;
+
+ /* --- Zaokrąglenia -------------------------------------------------- */
+ --ui-radius-xs:6px;
+ --ui-radius-sm:8px;
+ --ui-radius-md:12px;
+ --ui-radius-lg:16px;
+ --ui-radius-xl:20px;
+ --ui-radius-2xl:28px;
+ --ui-radius-full:999px;
+
+ /* --- Cienie (elewacja) -------------------------------------------- */
+ --ui-shadow-inset:inset 0 1px 0 rgba(255,255,255,.045);
+ --ui-shadow-xs:0 1px 2px rgba(0,0,0,.35);
+ --ui-shadow-sm:0 1px 2px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.22);
+ --ui-shadow-md:0 2px 4px rgba(0,0,0,.28),0 8px 24px rgba(0,0,0,.3);
+ --ui-shadow-lg:0 4px 8px rgba(0,0,0,.3),0 18px 48px rgba(0,0,0,.42);
+ --ui-shadow-xl:0 8px 16px rgba(0,0,0,.32),0 32px 80px rgba(0,0,0,.5);
+ --ui-shadow-accent:0 6px 20px rgba(212,61,101,.32);
+ --ui-ring:0 0 0 3px rgba(255,138,166,.32);
+
+ /* --- Ruch ---------------------------------------------------------- */
+ --ui-duration-instant:90ms;
+ --ui-duration-fast:150ms;
+ --ui-duration-base:220ms;
+ --ui-duration-slow:340ms;
+ --ui-duration-slower:520ms;
+ --ui-ease-standard:cubic-bezier(.2,0,0,1);
+ --ui-ease-out:cubic-bezier(.215,.61,.355,1);
+ --ui-ease-in-out:cubic-bezier(.645,.045,.355,1);
+ --ui-ease-emphasized:cubic-bezier(.3,0,0,1.15);
+
+ /* --- Warstwy ------------------------------------------------------- */
+ --ui-z-base:1;
+ --ui-z-sticky:30;
+ --ui-z-sidebar:40;
+ --ui-z-dropdown:200;
+ --ui-z-dock:9000;
+ --ui-z-toast:10020;
+
+ /* --- Wymiary powłoki ---------------------------------------------- */
+ --ui-sidebar-expanded:256px;
+ --ui-sidebar-rail:76px;
+ --ui-topbar-height:60px;
+ --ui-dock-height:64px;
+ --ui-content-max:1680px;
+ --ui-touch-min:44px;
+ --ui-safe-top:env(safe-area-inset-top,0px);
+ --ui-safe-right:env(safe-area-inset-right,0px);
+ --ui-safe-bottom:env(safe-area-inset-bottom,0px);
+ --ui-safe-left:env(safe-area-inset-left,0px);
+
+ color-scheme:dark;
+}
+
+/* Mapowanie starych zmiennych na tokeny UI 2.0 — tylko gdy UI 2.0 jest aktywne. */
+html.ui2{
+ --b-bg:var(--ui-bg);
+ --b-bg2:var(--ui-bg-subtle);
+ --b-surface:var(--ui-surface-1);
+ --b-surface-solid:var(--ui-surface-1);
+ --b-line:var(--ui-border);
+ --b-line-strong:var(--ui-border-strong);
+ --b-text:var(--ui-text);
+ --b-muted:var(--ui-text-2);
+ --b-dim:var(--ui-text-3);
+ --b-accent:var(--ui-accent);
+ --b-accent2:var(--ui-accent-hover);
+ --b-button:var(--ui-accent-press);
+ --b-pink:var(--ui-wine-300);
+ --b-green:var(--ui-success);
+ --b-amber:var(--ui-warning);
+ --b-ease:var(--ui-ease-out);
+ --b-font:var(--ui-font-sans);
+ --bg:var(--ui-bg);
+ --bg2:var(--ui-bg-subtle);
+ --side:var(--ui-bg-subtle);
+ --panel:var(--ui-surface-1);
+ --panel2:var(--ui-surface-2);
+ --panel3:var(--ui-surface-3);
+ --line:var(--ui-border-strong);
+ --text:var(--ui-text);
+ --text2:var(--ui-text-2);
+ --analytics-text:var(--ui-text);
+ --analytics-line:var(--ui-border);
+ --analytics-line-strong:var(--ui-border-strong);
+}
+
+/* Tryb warsztatowy (wysoki kontrast) — mocniejsze krawędzie i tekst. */
+html.ui2.workshopOutdoor{
+ --ui-border:rgba(255,224,232,.16);
+ --ui-border-strong:rgba(255,224,232,.3);
+ --ui-text-2:#e4d3d8;
+ --ui-text-3:#bfa6ad;
+ --ui-touch-min:52px;
+}
+
+@media (prefers-contrast:more){
+ :root{--ui-border:rgba(255,224,232,.18);--ui-border-strong:rgba(255,224,232,.34);--ui-text-2:#e6d6db;--ui-text-3:#c2a9b0}
+}
+@media (prefers-reduced-motion:reduce){
+ :root{--ui-duration-instant:0ms;--ui-duration-fast:0ms;--ui-duration-base:0ms;--ui-duration-slow:0ms;--ui-duration-slower:0ms}
+}

@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.7 — 2026-11-14
+
+### AutoLogika UI 2.0
+
+- Nowy design system: spójne kolory, typografia, zaokrąglenia, cienie, animacje i komponenty wielokrotnego użytku, z obsługą trybu warsztatowego, wysokiego kontrastu i ograniczonego ruchu.
+- Przebudowane menu boczne (przypinane lub zwinięte do paska ikon), górny pasek i pulpit; na telefonie dolny dock z obsługą bezpiecznych obszarów iOS.
+- Centrum zlecenia: karta pojazdu ze zdjęciem i tablicą rejestracyjną, pasek etapów realizacji, kafelki Naprawy / Części / Koszty / Dokumentacja, podsumowanie finansowe, dokumentacja fotograficzna według etapów i podgląd zlecenia z eksportem PDF.
+- Szybkie przyjęcie: jedna czytelna karta pojazdu (naprawiono podwójny podgląd zdjęcia).
+- Części i magazyn: wyszukiwarka z filtrami stanów i sortowaniem, karty z poziomem stanu i minimum, widok listy, kafle „Do uzupełnienia” i „Brak na stanie”, stany ładowania i błędów oraz podgląd dokumentów dostaw z kontrolą sum.
+- Mobilne skanowanie faktur: kroki Zdjęcie → Odczyt → Sprawdzenie → Przyjęcie, duży przycisk aparatu, przyciski −/+ ilości i podsumowanie przed przyjęciem; dolny pasek akcji w zasięgu kciuka na iPhone.
+- Na telefonie operacje dostępne tylko w aplikacji Windows są wyraźnie oznaczone zamiast kończyć się błędem.
+- Przełącznik awaryjny: `localStorage['autologika.ui']='legacy'` przywraca poprzedni wygląd.
+
 ## 1.1.6 — 2026-11-12
 
 ### Zdjęcia pojazdów z weryfikowanymi źródłami

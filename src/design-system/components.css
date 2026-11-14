@@ -1,0 +1,245 @@
+/* ==========================================================================
+   AutoLogika UI 2.0 — komponenty wielokrotnego użytku
+   1) Prymitywy ui-* (Button, IconButton, Card, Badge, Chip, Kbd, Segmented,
+      StatTile, EmptyState, Skeleton, Avatar, Divider) — używane przez
+      src/design-system/components.jsx.
+   2) Podniesienie istniejących elementów (button, .primary, pola formularzy,
+      panele, statusy) do tokenów UI 2.0, bez zmiany struktury ekranów.
+   Wszystko działa tylko pod html.ui2 — klasa włącza/wyłącza nowy wygląd.
+   Animujemy wyłącznie transform/opacity/kolory; bez backdrop-filter (Electron).
+   ========================================================================== */
+
+/* Awaryjny powrót do starego wyglądu (autologika.ui = legacy): elementy dodane przez UI 2.0 znikają. */
+html:not(.ui2) :is(.brandMark2,.sidebarToggle,.sideStatusIcon svg,.titleBlock>.eyebrow,.dashHeroCopy>.ui-eyebrow,.dashGreeting){display:none!important}
+html:not(.ui2) :is(.sideModeButtons button svg,.kpiIcon){display:none}
+
+/* ---------- Podstawa typograficzna ---------- */
+html.ui2,html.ui2 body{background:var(--ui-bg);color:var(--ui-text)}
+html.ui2 body{font-family:var(--ui-font-sans);font-size:var(--ui-text-sm);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-feature-settings:"ss01","cv11"}
+html.ui2 ::selection{background:var(--ui-accent-soft-strong);color:#fff}
+html.ui2 :where(button,input,select,textarea){font-family:var(--ui-font-sans)}
+html.ui2 :where(.tabular,.goalAmount,.studioKpi strong,.financeKpi strong,td.num,.money){font-variant-numeric:tabular-nums}
+
+/* Fokus z klawiatury — jeden, wyraźny styl w całej aplikacji. */
+html.ui2 :where(button,a,[tabindex],input,select,textarea,summary):focus-visible{outline:2px solid var(--ui-border-focus);outline-offset:2px;box-shadow:none}
+
+/* Paski przewijania */
+html.ui2 *{scrollbar-color:var(--ui-surface-hover) transparent;scrollbar-width:thin}
+html.ui2 ::-webkit-scrollbar{width:10px;height:10px}
+html.ui2 ::-webkit-scrollbar-track{background:transparent}
+html.ui2 ::-webkit-scrollbar-thumb{background:var(--ui-surface-hover);border:3px solid var(--ui-bg);border-radius:var(--ui-radius-full)}
+html.ui2 ::-webkit-scrollbar-thumb:hover{background:var(--ui-ink-500)}
+
+/* ==========================================================================
+   1) PRYMITYWY ui-*
+   ========================================================================== */
+
+/* ---------- Button ---------- */
+html.ui2 .ui-btn{
+ --btn-h:38px;--btn-px:14px;--btn-fs:var(--ui-text-sm);
+ position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+ height:var(--btn-h);min-height:var(--btn-h);padding:0 var(--btn-px);
+ border:1px solid var(--ui-border-strong);border-radius:var(--ui-radius-md);
+ background:var(--ui-surface-2);color:var(--ui-text);
+ font:var(--ui-weight-medium) var(--btn-fs)/1 var(--ui-font-sans);letter-spacing:0;white-space:nowrap;
+ box-shadow:var(--ui-shadow-inset),var(--ui-shadow-xs);cursor:pointer;user-select:none;
+ transition:background-color var(--ui-duration-fast) var(--ui-ease-standard),border-color var(--ui-duration-fast) var(--ui-ease-standard),color var(--ui-duration-fast) var(--ui-ease-standard),box-shadow var(--ui-duration-base) var(--ui-ease-standard),transform var(--ui-duration-instant) var(--ui-ease-standard);
+}
+html.ui2 .ui-btn:hover:not(:disabled){background:var(--ui-surface-hover);border-color:var(--ui-border-strong);transform:none}
+html.ui2 .ui-btn:active:not(:disabled){transform:scale(.97)}
+html.ui2 .ui-btn:disabled{opacity:.45;cursor:not-allowed}
+html.ui2 .ui-btn svg{flex:none}
+html.ui2 .ui-btn--sm{--btn-h:32px;--btn-px:11px;--btn-fs:var(--ui-text-xs);border-radius:var(--ui-radius-sm)}
+html.ui2 .ui-btn--lg{--btn-h:46px;--btn-px:18px;--btn-fs:var(--ui-text-md);border-radius:var(--ui-radius-md)}
+html.ui2 .ui-btn--block{width:100%}
+html.ui2 .ui-btn--primary{border-color:transparent;background:var(--ui-accent-gradient);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),var(--ui-shadow-accent)}
+html.ui2 .ui-btn--primary:hover:not(:disabled){background:linear-gradient(180deg,#e5527a,#b52f53);border-color:transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 10px 28px rgba(212,61,101,.42)}
+html.ui2 .ui-btn--secondary{background:var(--ui-surface-2)}
+html.ui2 .ui-btn--ghost{border-color:transparent;background:transparent;box-shadow:none;color:var(--ui-text-2)}
+html.ui2 .ui-btn--ghost:hover:not(:disabled){background:var(--ui-surface-3);color:var(--ui-text)}
+html.ui2 .ui-btn--soft{border-color:transparent;background:var(--ui-accent-soft);color:var(--ui-accent-text);box-shadow:none}
+html.ui2 .ui-btn--soft:hover:not(:disabled){background:var(--ui-accent-soft-strong);color:#fff}
+html.ui2 .ui-btn--danger{border-color:rgba(240,82,92,.4);background:var(--ui-danger-soft);color:var(--ui-danger-text)}
+html.ui2 .ui-btn--danger:hover:not(:disabled){background:rgba(240,82,92,.22);color:#fff}
+html.ui2 .ui-btn[aria-busy="true"]{color:transparent}
+html.ui2 .ui-btn[aria-busy="true"]::after{content:"";position:absolute;width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:ui-spin .7s linear infinite}
+
+/* ---------- IconButton ---------- */
+html.ui2 .ui-icon-btn{
+ display:inline-grid;place-items:center;flex:none;
+ width:var(--ui-touch-min);height:var(--ui-touch-min);min-height:0;padding:0;
+ border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);
+ background:var(--ui-surface-2);color:var(--ui-text-2);box-shadow:var(--ui-shadow-inset);
+ transition:background-color var(--ui-duration-fast) var(--ui-ease-standard),color var(--ui-duration-fast) var(--ui-ease-standard),border-color var(--ui-duration-fast) var(--ui-ease-standard),transform var(--ui-duration-instant) var(--ui-ease-standard);
+}
+html.ui2 .ui-icon-btn:hover:not(:disabled){background:var(--ui-surface-hover);color:var(--ui-text);border-color:var(--ui-border-strong);transform:none}
+html.ui2 .ui-icon-btn:active:not(:disabled){transform:scale(.94)}
+html.ui2 .ui-icon-btn--sm{width:32px;height:32px;border-radius:var(--ui-radius-sm)}
+html.ui2 .ui-icon-btn--ghost{border-color:transparent;background:transparent;box-shadow:none}
+
+/* ---------- Card ---------- */
+html.ui2 .ui-card{
+ position:relative;display:flex;flex-direction:column;gap:var(--ui-space-4);min-width:0;
+ padding:var(--ui-space-5);
+ border:1px solid var(--ui-border);border-radius:var(--ui-radius-lg);
+ background:var(--ui-surface-1);box-shadow:var(--ui-shadow-inset),var(--ui-shadow-sm);
+}
+html.ui2 .ui-card--flush{padding:0}
+html.ui2 .ui-card--interactive{cursor:pointer;transition:border-color var(--ui-duration-base) var(--ui-ease-standard),transform var(--ui-duration-base) var(--ui-ease-out),box-shadow var(--ui-duration-base) var(--ui-ease-standard),background-color var(--ui-duration-base) var(--ui-ease-standard)}
+html.ui2 .ui-card--interactive:hover{border-color:var(--ui-border-strong);transform:translateY(-2px);box-shadow:var(--ui-shadow-inset),var(--ui-shadow-md)}
+html.ui2 .ui-card--accent{background:radial-gradient(120% 140% at 100% 0%,rgba(212,61,101,.22),transparent 55%),var(--ui-surface-1);border-color:rgba(255,138,166,.18)}
+html.ui2 .ui-card__header{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--ui-space-3);min-width:0}
+html.ui2 .ui-card__title{margin:0;color:var(--ui-text);font-size:var(--ui-text-lg);font-weight:var(--ui-weight-semibold);letter-spacing:-.01em;line-height:var(--ui-leading-snug)}
+html.ui2 .ui-card__subtitle{display:block;margin-top:2px;color:var(--ui-text-3);font-size:var(--ui-text-xs);line-height:var(--ui-leading-normal)}
+html.ui2 .ui-card__actions{display:flex;align-items:center;gap:var(--ui-space-2);flex:none}
+
+/* ---------- Eyebrow / section header ---------- */
+html.ui2 .ui-eyebrow{display:inline-flex;align-items:center;gap:6px;color:var(--ui-text-3);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase}
+
+/* ---------- Badge / Chip ---------- */
+html.ui2 .ui-badge{
+ --badge-bg:var(--ui-surface-3);--badge-fg:var(--ui-text-2);--badge-dot:var(--ui-text-3);
+ display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;
+ border-radius:var(--ui-radius-full);background:var(--badge-bg);color:var(--badge-fg);
+ font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:.01em;white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+html.ui2 .ui-badge--dot::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--badge-dot)}
+html.ui2 .ui-badge--accent{--badge-bg:var(--ui-accent-soft);--badge-fg:var(--ui-accent-text);--badge-dot:var(--ui-accent)}
+html.ui2 .ui-badge--success{--badge-bg:var(--ui-success-soft);--badge-fg:var(--ui-success-text);--badge-dot:var(--ui-success)}
+html.ui2 .ui-badge--warning{--badge-bg:var(--ui-warning-soft);--badge-fg:var(--ui-warning-text);--badge-dot:var(--ui-warning)}
+html.ui2 .ui-badge--danger{--badge-bg:var(--ui-danger-soft);--badge-fg:var(--ui-danger-text);--badge-dot:var(--ui-danger)}
+html.ui2 .ui-badge--info{--badge-bg:var(--ui-info-soft);--badge-fg:var(--ui-info-text);--badge-dot:var(--ui-info)}
+html.ui2 .ui-badge--violet{--badge-bg:var(--ui-violet-soft);--badge-fg:var(--ui-violet-text);--badge-dot:var(--ui-violet)}
+
+/* ---------- Kbd ---------- */
+html.ui2 .ui-kbd{display:inline-flex;align-items:center;height:20px;padding:0 6px;border:1px solid var(--ui-border-strong);border-bottom-width:2px;border-radius:var(--ui-radius-xs);background:var(--ui-surface-inset);color:var(--ui-text-3);font:var(--ui-weight-medium) 10.5px/1 var(--ui-font-sans);letter-spacing:.02em}
+
+/* ---------- Segmented control ---------- */
+html.ui2 .ui-segmented{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface-inset);max-width:100%;overflow-x:auto;scrollbar-width:none}
+html.ui2 .ui-segmented::-webkit-scrollbar{display:none}
+html.ui2 .ui-segmented>button{flex:none;height:30px;min-height:30px;padding:0 12px;border:0;border-radius:var(--ui-radius-sm);background:transparent;color:var(--ui-text-3);font-size:var(--ui-text-xs);font-weight:var(--ui-weight-medium);box-shadow:none;transition:background-color var(--ui-duration-fast) var(--ui-ease-standard),color var(--ui-duration-fast) var(--ui-ease-standard)}
+html.ui2 .ui-segmented>button:hover{background:var(--ui-surface-3);color:var(--ui-text);transform:none}
+html.ui2 .ui-segmented>button[aria-pressed="true"],html.ui2 .ui-segmented>button.active{background:var(--ui-surface-hover);color:var(--ui-text);box-shadow:var(--ui-shadow-inset),var(--ui-shadow-xs)}
+
+/* ---------- StatTile ---------- */
+html.ui2 .ui-stat{
+ position:relative;display:flex;flex-direction:column;gap:var(--ui-space-3);min-width:0;
+ padding:var(--ui-space-4) var(--ui-space-5) var(--ui-space-4);
+ border:1px solid var(--ui-border);border-radius:var(--ui-radius-lg);
+ background:var(--ui-surface-1);color:var(--ui-text);text-align:left;
+ box-shadow:var(--ui-shadow-inset),var(--ui-shadow-sm);overflow:hidden;
+}
+html.ui2 .ui-stat__top{display:flex;align-items:center;justify-content:space-between;gap:var(--ui-space-3);color:var(--ui-text-2);font-size:var(--ui-text-xs);font-weight:var(--ui-weight-medium)}
+html.ui2 .ui-stat__icon{display:grid;place-items:center;width:34px;height:34px;flex:none;border-radius:var(--ui-radius-md);background:var(--ui-accent-soft);color:var(--ui-accent-text)}
+html.ui2 .ui-stat__value{color:var(--ui-text);font-size:var(--ui-text-3xl);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-tight);line-height:1;font-variant-numeric:tabular-nums}
+html.ui2 .ui-stat__meta{display:flex;align-items:center;justify-content:space-between;gap:var(--ui-space-2);color:var(--ui-text-3);font-size:var(--ui-text-xs)}
+html.ui2 .ui-stat--warning .ui-stat__icon{background:var(--ui-warning-soft);color:var(--ui-warning-text)}
+html.ui2 .ui-stat--success .ui-stat__icon{background:var(--ui-success-soft);color:var(--ui-success-text)}
+html.ui2 .ui-stat--info .ui-stat__icon{background:var(--ui-info-soft);color:var(--ui-info-text)}
+
+/* ---------- EmptyState ---------- */
+html.ui2 .ui-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--ui-space-2);padding:var(--ui-space-7) var(--ui-space-5);border:1px dashed var(--ui-border-strong);border-radius:var(--ui-radius-lg);color:var(--ui-text-3);text-align:center}
+html.ui2 .ui-empty__icon{display:grid;place-items:center;width:44px;height:44px;margin-bottom:var(--ui-space-1);border-radius:var(--ui-radius-md);background:var(--ui-surface-3);color:var(--ui-text-2)}
+html.ui2 .ui-empty b{color:var(--ui-text);font-size:var(--ui-text-md);font-weight:var(--ui-weight-semibold)}
+
+/* ---------- Skeleton ---------- */
+html.ui2 .ui-skeleton{position:relative;overflow:hidden;border-radius:var(--ui-radius-md);background:var(--ui-surface-2)}
+html.ui2 .ui-skeleton::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.045),transparent);animation:ui-shimmer 1.4s var(--ui-ease-in-out) infinite}
+
+/* ---------- Avatar / Divider ---------- */
+html.ui2 .ui-avatar{display:inline-grid;place-items:center;flex:none;width:32px;height:32px;border-radius:var(--ui-radius-md);background:var(--ui-accent-gradient);color:#fff;font-size:var(--ui-text-xs);font-weight:var(--ui-weight-bold);letter-spacing:.02em;box-shadow:var(--ui-shadow-inset)}
+html.ui2 .ui-divider{height:1px;margin:0;border:0;background:var(--ui-border)}
+
+/* ---------- Animacje wspólne ---------- */
+@keyframes ui-spin{to{transform:rotate(360deg)}}
+@keyframes ui-shimmer{to{transform:translateX(100%)}}
+@keyframes ui-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes ui-fade{from{opacity:0}to{opacity:1}}
+@keyframes ui-pop{0%{opacity:0;transform:scale(.96)}100%{opacity:1;transform:none}}
+html.ui2 .ui-animate-rise{animation:ui-rise var(--ui-duration-slow) var(--ui-ease-out) backwards}
+html.ui2 .ui-stagger>*{animation:ui-rise var(--ui-duration-slow) var(--ui-ease-out) backwards}
+html.ui2 .ui-stagger>*:nth-child(2){animation-delay:40ms}
+html.ui2 .ui-stagger>*:nth-child(3){animation-delay:80ms}
+html.ui2 .ui-stagger>*:nth-child(4){animation-delay:120ms}
+html.ui2 .ui-stagger>*:nth-child(n+5){animation-delay:160ms}
+
+/* ==========================================================================
+   2) PODNIESIENIE ISTNIEJĄCYCH ELEMENTÓW DO TOKENÓW
+   ========================================================================== */
+
+/* Przyciski ogólne — spokojne tło, wyraźny hover i „wciśnięcie” zamiast unoszenia. */
+html.ui2 .shell button:not(.ui-btn):not(.ui-icon-btn){
+ border-radius:var(--ui-radius-sm);
+ transition:background-color var(--ui-duration-fast) var(--ui-ease-standard),border-color var(--ui-duration-fast) var(--ui-ease-standard),color var(--ui-duration-fast) var(--ui-ease-standard),box-shadow var(--ui-duration-base) var(--ui-ease-standard),transform var(--ui-duration-instant) var(--ui-ease-standard);
+}
+html.ui2 .shell button:hover:not(:disabled){transform:none}
+html.ui2 .shell button:active:not(:disabled){transform:scale(.97)}
+
+/* Przycisk główny — jeden kolor akcji w całej aplikacji. */
+html.ui2 .shell .primary,html.ui2 .modal .primary,html.ui2 .plannerModal .primary{
+ border-color:transparent;background:var(--ui-accent-gradient);color:#fff;font-weight:var(--ui-weight-semibold);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 4px 14px rgba(212,61,101,.28);
+}
+html.ui2 .shell .primary:hover:not(:disabled),html.ui2 .modal .primary:hover:not(:disabled),html.ui2 .plannerModal .primary:hover:not(:disabled){border-color:transparent;background:linear-gradient(180deg,#e5527a,#b52f53);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 8px 24px rgba(212,61,101,.4)}
+/* workshop-ergonomics.css wymusza .primary {background:#e52532!important}. W UI 2.0 akcja główna
+   zostaje wyraźna, ale w kolorze marki — jeden przycisk główny w całej aplikacji. */
+html.ui2 :is(.primary,.releaseVehicleButton){border-color:transparent!important;background:var(--ui-accent-gradient)!important;color:#fff!important}
+html.ui2 :is(.primary,.releaseVehicleButton):hover:not(:disabled){background:linear-gradient(180deg,#e5527a,#b52f53)!important}
+html.ui2.workshopOutdoor :is(.primary,.releaseVehicleButton):not(:disabled){background:linear-gradient(180deg,#ef3f5c,#c41f3f)!important;box-shadow:0 0 0 2px rgba(255,214,224,.35),0 6px 20px rgba(239,63,92,.45)}
+
+/* Pola formularzy */
+html.ui2 :where(.shell,.modal,.plannerModal) :where(input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea){
+ border:1px solid var(--ui-border-strong);border-radius:var(--ui-radius-sm);background:var(--ui-surface-inset);color:var(--ui-text);
+ transition:border-color var(--ui-duration-fast) var(--ui-ease-standard),box-shadow var(--ui-duration-fast) var(--ui-ease-standard),background-color var(--ui-duration-fast) var(--ui-ease-standard);
+}
+html.ui2 :where(.shell,.modal,.plannerModal) :where(input,select,textarea):hover:not(:focus):not(:disabled){border-color:rgba(255,214,224,.24)}
+html.ui2 :where(.shell,.modal,.plannerModal) :where(input,select,textarea):focus{outline:none;border-color:var(--ui-border-focus);background:var(--ui-surface-1);box-shadow:var(--ui-ring)}
+html.ui2 :where(.shell,.modal,.plannerModal) :where(input,textarea)::placeholder{color:var(--ui-text-3)}
+html.ui2 :where(input[type=checkbox],input[type=radio],input[type=range],progress){accent-color:var(--ui-accent)}
+
+/* Panele i karty istniejących ekranów */
+html.ui2 .shell :where(.panel,.metric,.case,.kanCol,.studioPanel,.studioGoal,.studioKpi,.financeKpi,.careCard,.stockCard){
+ border-color:var(--ui-border);border-radius:var(--ui-radius-lg);
+ background:var(--ui-surface-1);
+ box-shadow:var(--ui-shadow-inset),var(--ui-shadow-sm);
+}
+html.ui2 .shell :where(.panelhead){border-color:var(--ui-border)}
+html.ui2 .shell :where(.panelhead h2,.panelhead h3,.studioPanelHead h3){color:var(--ui-text);font-weight:var(--ui-weight-semibold);letter-spacing:-.01em}
+html.ui2 .shell :where(.muted){color:var(--ui-text-3)}
+
+/* Tabele */
+html.ui2 .shell :where(th){background:var(--ui-surface-2);color:var(--ui-text-3);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase}
+html.ui2 .shell :where(td,th){border-color:var(--ui-border)}
+html.ui2 .shell :where(tbody tr){transition:background-color var(--ui-duration-fast) var(--ui-ease-standard)}
+html.ui2 .shell :where(tbody tr:hover){background:var(--ui-surface-2)}
+
+/* Okna dialogowe */
+html.ui2 :where(.modal,.plannerModal){border:1px solid var(--ui-border-strong);border-radius:var(--ui-radius-xl);background:var(--ui-surface-1);box-shadow:var(--ui-shadow-xl)}
+html.ui2 :where(.modalback,.plannerModalShade){background:rgba(6,3,4,.72)}
+html.ui2 :where(.modalhead,.plannerModalHead){border-color:var(--ui-border)}
+
+/* Statusy (StatusBadge z ui.jsx) — paleta semantyczna */
+html.ui2 .statusBadge{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border:0;border-radius:var(--ui-radius-full);background:var(--ui-surface-3);color:var(--ui-text-2);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:.01em;white-space:nowrap}
+html.ui2 .statusBadge>i{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.9}
+html.ui2 .statusBadge.info{background:var(--ui-info-soft);color:var(--ui-info-text)}
+html.ui2 .statusBadge.warning{background:var(--ui-warning-soft);color:var(--ui-warning-text)}
+html.ui2 .statusBadge.violet{background:var(--ui-violet-soft);color:var(--ui-violet-text)}
+html.ui2 .statusBadge.active{background:var(--ui-accent-soft);color:var(--ui-accent-text)}
+html.ui2 .statusBadge.success{background:var(--ui-success-soft);color:var(--ui-success-text)}
+html.ui2 .statusBadge.danger{background:var(--ui-danger-soft);color:var(--ui-danger-text)}
+html.ui2 .statusBadge.neutral{background:var(--ui-surface-3);color:var(--ui-text-3)}
+
+/* Komunikaty (toasty) */
+html.ui2 .appFeedbackToast{border:1px solid var(--ui-border-strong);border-radius:var(--ui-radius-lg);background:var(--ui-surface-overlay);box-shadow:var(--ui-shadow-lg);animation:ui-rise var(--ui-duration-slow) var(--ui-ease-emphasized) backwards}
+
+/* Paleta poleceń (Ctrl K) */
+html.ui2 .commandPalette{border:1px solid var(--ui-border-strong);border-radius:var(--ui-radius-xl);background:var(--ui-surface-1);box-shadow:var(--ui-shadow-xl);animation:ui-pop var(--ui-duration-base) var(--ui-ease-out) backwards}
+
+/* Ładowanie */
+html.ui2 .appLoadingState{border-color:var(--ui-border);border-radius:var(--ui-radius-lg);background:var(--ui-surface-1)}
+
+@media (prefers-reduced-motion:reduce){
+ html.ui2 .ui-skeleton::after,html.ui2 .ui-btn[aria-busy="true"]::after{animation-duration:2.4s}
+ html.ui2 :where(.ui-animate-rise,.ui-stagger>*,.appFeedbackToast,.commandPalette){animation:none!important}
+ html.ui2 :where(.ui-btn,.ui-icon-btn,.ui-card--interactive,.shell button):active{transform:none!important}
+}
