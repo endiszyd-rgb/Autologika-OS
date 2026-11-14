@@ -556,3 +556,19 @@ test('verified older A3 8L, Passat B5 and Golf V photos do not cross generations
  }
  assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Golf',generation:'V (1K)',year:2006,bodyType:'wagon'}),null)
 })
+
+test('Audi A4 B7 and VW Passat B6 sedan/wagon sources have body-accurate generation',()=>{
+ for(const [make,model,generation,year] of [
+  ['Audi','A4','B7 (8E)',2007],
+  ['Volkswagen','Passat','B6 (3C)',2007]
+ ]){
+  const sedan=resolveVerifiedVehiclePhoto({make,model,generation,year,bodyType:'sedan'})
+  const wagon=resolveVerifiedVehiclePhoto({make,model,generation,year,bodyType:'wagon'})
+  assert.ok(sedan,make+' '+model+' sedan')
+  assert.ok(wagon,make+' '+model+' wagon')
+  assert.equal(sedan.generation,generation)
+  assert.equal(wagon.generation,generation)
+  assert.notEqual(sedan.file,wagon.file)
+  assert.equal(resolveVerifiedVehiclePhoto({make,model,generation,year,bodyType:'suv'}),null)
+ }
+})
