@@ -1,6 +1,13 @@
 name: Vehicle photos quality checks
 
 on:
+  push:
+    branches: [feature/vehicle-model-photographs]
+    paths:
+      - 'src/vehicle-photo*'
+      - 'tests/vehicle-photo.test.mjs'
+      - 'scripts/*vehicle-photo*'
+      - '.github/workflows/vehicle-photos.yml'
   pull_request:
     paths:
       - 'src/vehicle-photo*'
@@ -16,6 +23,10 @@ on:
       - 'package.json'
       - '.github/workflows/vehicle-photos.yml'
   workflow_dispatch:
+
+concurrency:
+  group: vehicle-photo-checks-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   vehicle-photo-checks:
