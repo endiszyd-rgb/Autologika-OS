@@ -705,6 +705,16 @@ app.on('browser-window-created', (_, win) => {
       console.log('QUOTE_EDIT_RECALCULATE_APPROVE','source price edit recalculated one-source quote and local customer approval advanced the same order')
       await win.webContents.executeJavaScript(`document.querySelector('nav button[title="Zlecenia"]').click()`)
       await delay(350)
+      for(const width of [1500,1100]){
+        win.setContentSize(width,940)
+        await delay(700)
+        assert.equal(await win.webContents.executeJavaScript(`innerWidth`),width)
+        assert.equal((await inspect()).overflow,false,`Orders overflow at ${width}px`)
+        assert.equal(await win.webContents.executeJavaScript(`document.querySelector('[data-orders-view="active"]').getAttribute('aria-pressed')`),'true')
+        await capture(`orders-ui2-${width}`)
+      }
+      win.setSize(1500,940)
+      await delay(200)
       await win.webContents.executeJavaScript(`{
         const setValue=(element,value)=>{const prototype=element.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(prototype,'value').set.call(element,value);element.dispatchEvent(new Event('input',{bubbles:true}));element.dispatchEvent(new Event('change',{bubbles:true}))};
         setValue(document.querySelector('input[aria-label="Szukaj zlecenia"]'),'POTEST1');

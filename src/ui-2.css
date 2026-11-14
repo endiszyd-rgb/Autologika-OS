@@ -39,6 +39,33 @@
 .uiPageIntro h2{margin:8px 0;font-size:clamp(24px,2.4vw,34px);font-weight:600;letter-spacing:-.035em;line-height:1.15}
 .uiPageIntro .dashSummary{margin:0;color:var(--ui-muted);font-size:14px;line-height:1.6}
 .uiPageActions{flex-shrink:0}
+/* Orders migration: scoped surfaces preserve status and business controls. */
+.shell .uiOrdersPage{display:grid;gap:var(--ui-space-4);min-width:0}
+.shell .uiOrdersPage :is(.orderArchiveToolbar,.orderFilterBar){margin:0}
+.shell .uiOrdersPage .orderArchiveToolbar{flex-wrap:wrap;gap:12px}
+.shell .uiOrdersPage :is(.orderFilterBar,.ordersPreviewSplit>.panel){background:var(--ui-surface)!important;border:1px solid var(--ui-border);border-radius:var(--ui-radius-lg);box-shadow:var(--ui-shadow);min-width:0}
+.shell .uiOrdersPage .orderFilterBar{padding:16px;gap:12px;grid-template-columns:minmax(180px,1fr) minmax(130px,.4fr) minmax(130px,.4fr) auto auto}
+.shell .uiOrdersPage :is(.orderFilterBar label,.orderViewSwitch){background:var(--ui-bg)!important;border-color:var(--ui-border)!important}
+.shell .uiOrdersPage :is(.orderFilterBar input,.orderFilterBar select,.orderFilterBar button,.orderArchiveToolbar button){min-height:44px;font-size:13px}
+.shell .uiOrdersPage .orderViewSwitch button{color:var(--ui-muted)}
+.shell .uiOrdersPage .orderViewSwitch button.active{background:var(--ui-accent-soft)!important;border-color:var(--ui-accent)!important;color:var(--ui-text)}
+.shell .uiOrdersPage .orderFilterBar>span{color:var(--ui-muted);font-size:12px}
+.shell .uiOrdersPage .orderFilterBar>span b{color:var(--ui-text)}
+.shell .uiOrdersPage .panelhead{border-color:var(--ui-border)}
+.shell .uiOrdersPage .panelhead h2{font-size:16px}
+.shell .uiOrdersPage .orderrow{padding:16px;border-color:var(--ui-border);transition:background-color var(--ui-fast)}
+.shell .uiOrdersPage .orderrow:hover{background:var(--ui-raised)}
+.shell .uiOrdersPage .orderrow:focus-visible{outline:3px solid var(--ui-focus);outline-offset:-3px;background:var(--ui-raised)}
+.shell .uiOrdersPage .orderrow :is(span,small){color:var(--ui-muted)}
+.shell .uiOrdersPage .orderrow small{font-size:12px}
+@media(max-width:1200px){.shell .uiOrdersPage .orderFilterBar{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.shell .uiOrdersPage .orderFilterBar>label{grid-column:1/-1}}
+@media(max-width:600px){
+ .shell .uiOrdersPage .orderFilterBar{grid-template-columns:minmax(0,1fr);padding:12px}
+ .shell .uiOrdersPage .orderArchiveToolbar>.grow{display:none}
+ .shell .uiOrdersPage .orderArchiveToolbar>.primary,.shell .uiOrdersPage .orderViewSwitch{width:100%}
+ .shell .uiOrdersPage .orderViewSwitch button{flex:1}
+ .shell .uiOrdersPage .orderrow{padding:12px;overflow-wrap:anywhere}
+}
 .shell .studioDashboard :is(.studioOverview,.studioKpis,.studioWorkGrid){margin:0;gap:16px}
 .shell .studioDashboard :is(.studioPanel,.studioGoal,.studioKpi){background:var(--ui-surface);border:1px solid var(--ui-border);border-radius:var(--ui-radius-lg);box-shadow:var(--ui-shadow)}
 .shell .studioDashboard .studioKpi{padding:22px;text-align:left;min-width:0}

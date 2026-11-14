@@ -52,3 +52,18 @@ na fizycznym iPhonie ani instalacji PWA na Androidzie.
 - Pierwsze próby PWA wymagały konfiguracji fixture oraz ustawienia oczekiwanego
   nagłówka testu. Końcowe uruchomienie zakończyło się kodem 0.
 - Zrzuty i logi: `artifacts/ui/`. Brak testów na fizycznych urządzeniach.
+
+## Drugi etap — lista zleceń (2026-11-14)
+
+- Wspólny `PageIntro`, grafitowe panele i filtry oparte na tokenach UI 2.0.
+- Kontrolki filtrów mają minimum 44 px; na wąskim ekranie układają się pionowo.
+- Przełącznik aktywne/archiwum udostępnia stan przez `aria-pressed`, a wiersze
+  zleceń mają widoczny fokus klawiatury. Filtrowanie, zapis i akcje pozostają bez zmian.
+- `npm test`: 244 CJS + 193 MJS, audyt połączeń UI OK.
+- Build i kontrola PWA OK. Pełny smoke Electron: kod procesu 0,
+  `RENDERER_ERRORS []`; log `artifacts/ui/ui2-orders-smoke.log`.
+- Smoke listy sprawdza rzeczywiste szerokości treści Electron 1500 i 1100 px
+  (`setContentSize` oraz asercja `innerWidth`), zapisuje `orders-ui2-*.png`.
+  Minimalna szerokość okna desktopowego wynosi 1100 px, dlatego jego zmniejszanie
+  do 430 px nie stanowi testu mobilnego. Walidacja tego etapu na PWA i urządzeniach
+  Android/iOS pozostaje do wykonania.
