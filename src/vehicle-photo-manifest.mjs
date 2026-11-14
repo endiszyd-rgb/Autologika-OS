@@ -104,7 +104,7 @@ export const verifiedVehiclePhotos=[
   make:"Volkswagen",model:"Golf",generation:"V (1K)",from:2004,to:2008,
   file:"VW golf V.jpg",source:"https://commons.wikimedia.org/wiki/File:VW_golf_V.jpg",
   author:"Stahlkocher (pierwotny autor; późniejsze wersje: Head)",license:"CC BY-SA 3.0",
-  licenseUrl:'https://creativecommons.org/licenses/by-sa/3.0/',note:"Golf V hatchback; fotografia z 2004 roku"
+  licenseUrl:'https://creativecommons.org/licenses/by-sa/3.0/',bodyType:"hatchback",note:"Golf V hatchback; fotografia z 2004 roku"
  },
  {
   make:"Opel",model:"Corsa",from:2006,to:2010,
