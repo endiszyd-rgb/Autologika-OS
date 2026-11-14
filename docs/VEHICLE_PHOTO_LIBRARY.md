@@ -262,3 +262,12 @@ Dodano 7 fotografii z ręcznie potwierdzonych stron Wikimedia Commons:
 **Weryfikacja zewnętrzna:** GitHub Actions `43557264378`: 214/214 plików potwierdzonych z metadanymi autora i licencji, 0 błędów, 0 brakujących. Dla pliku Audi A3 8V ujednolicono zapis `CC0 1.0` → `CC0` zgodnie z aktualną nazwą licencji w metadanych Commons. Test poprawiono tak, by dopuszczał adres dedykacji CC0 (`/publicdomain/zero/`). Dla Passata B6 zapis bez typu nadwozia celowo nie wybiera losowo sedana ani kombi — test regresji używa jawnie `bodyType='sedan'`.
 
 **Stan:** 214 przypisań, 171/171 modeli podstawowych. Pełne pokrycie generacji i nadwozi wciąż nieukończone. Rozszerzono workflow kontroli na commit push na gałęzi roboczej i anulowanie zbędnych wcześniejszych uruchomień CI. PR pozostaje draftem bez merge.
+
+### CI po uszczelnieniu wyboru zdjęć — 14.11.2026
+Wystąpił błąd testu dla VW Golf V (2006): przy istniejącej fotografii opisanej jako `hatchback` oraz starszej fotografii bez `bodyType` system odrzucał oba wpisy jako niejednoznaczne. Naprawiono stare metadane `VW golf V.jpg` oraz nadano wyższy priorytet rekordom dokładnie dopasowanym do wskazanej generacji przed sprawdzaniem typu nadwozia. Nie rozluźniono zabezpieczenia przed pomyleniem sedan/kombi. Poprawiono też test walidacji odnośnika CC0 i wymaganie nadwozia przy Passacie B6.
+
+**Kontrola CI:** [GitHub Actions #43557585517](https://github.com/endiszyd-rgb/Autologika-OS/actions/runs/43557585517): **48/48 testów, 0 błędów, kompilacja Vite pomyślna**. Wynik audytu generacji rocznik po roczniku: **40/48 generacji ma fotografię dla przynajmniej jednego rocznika; 4 są pokryte w całym okresie, 36 częściowo, 8 bez dopasowania**. Pozostałe braki roczników i nadwozi są widoczne w Ustawieniach.
+
+**Audyt zewnętrzny:** [Actions #43557264378](https://github.com/endiszyd-rgb/Autologika-OS/actions/runs/43557264378) sprawdził **214/214 zdjęć** bez niezgodności. Skrypt audytu metadanych ma teraz zwracać niezerowy kod zakończenia przy brakującym pliku lub rozbieżnej licencji, aby błędny wynik blokował CI zamiast tylko pokazywać ostrzeżenie.
+
+PR #2 nadal pozostaje draftem; przed scaleniem konieczna jest jeszcze kontrola zdjęć w UI i rzeczywista weryfikacja generacji/nadwozi.
