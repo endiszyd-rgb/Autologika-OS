@@ -100,6 +100,52 @@ async function fullApi(cloud){
  return (await import(`data:text/javascript;base64,${Buffer.from(apiSource).toString('base64')}`)).createPwaApi()
 }
 
+test('PWA quote edits and removal synchronize settlement and immutable audit records',async()=>{
+ const {cloud,order,fail,recover}=await fixture(),api=await fullApi(cloud)
+ const row=await api.quotes.addItem(order.id,{kind:'CZESC',name:'Part',qty:2,unit_price:50,unit_cost:20})
+ assert.equal((await api.orders.get(order.id)).total,100)
+ await api.quotes.updateItem(row.id,{unit_price:75})
+ assert.equal((await api.quotes.get(order.id)).total,150)
+ assert.equal((await api.orders.get(order.id)).total,150)
+ const count=(await cloud.list('order_events')).length
+ fail();await assert.rejects(api.quotes.updateItem(row.id,{unit_price:999}),/Connection lost/);recover()
+ assert.equal((await cloud.list('order_events')).length,count)
+ assert.equal((await api.orders.get(order.id)).total,150)
+ await api.quotes.removeItem(row.id)
+ assert.equal((await api.orders.get(order.id)).total,0)
+ const events=await cloud.list('order_events')
+ assert.equal(events.length,3)
+ assert.equal(JSON.parse(events[1].details).before.unit_price,50)
+ assert.equal(JSON.parse(events[1].details).after.unit_price,75)
+ assert.equal(JSON.parse(events[2].details).after,null)
+})
+
+test('PWA labor edit updates repair and billing together and logs original values',async()=>{
+ const {cloud,order,api:repairs}=await fixture(),api=await fullApi(cloud)
+ const job=await repairs.createBundle(order.id,bundle())
+ await api.quotes.updateItem(job.orderItemId,{labor_hours:2,labor_rate:300})
+ assert.equal((await api.orders.get(order.id)).total,600)
+ assert.equal((await repairs.list(order.id))[0].estimate.laborNet,600)
+ const event=(await cloud.list('order_events')).find(row=>row.event_type==='REPAIR_UPDATED')
+ assert.equal(JSON.parse(event.details).before.labor_rate,220)
+ assert.equal(JSON.parse(event.details).after.labor_rate,300)
+ await cloud.upsert('orders',{status:'WYDANE'},order.cloud_id)
+ await assert.rejects(api.quotes.updateItem(job.orderItemId,{labor_rate:1}),/tylko do odczytu/)
+})
+
+test('PWA removal of unused repair deletes its scope and billing in the same batch',async()=>{
+ const {cloud,order,api:repairs}=await fixture(),api=await fullApi(cloud)
+ const job=await repairs.createBundle(order.id,bundle())
+ const part=(await cloud.list('repair_parts'))[0]
+ await cloud.upsert('repair_parts',{reserved_qty:1},part.cloud_id)
+ await assert.rejects(api.items.remove(job.orderItemId),/rezerwacje/)
+ assert.equal((await repairs.list(order.id)).length,1)
+ await cloud.upsert('repair_parts',{reserved_qty:0},part.cloud_id)
+ await api.items.remove(job.orderItemId)
+ for(const entity of ['order_items','order_repair_operations','repair_parts','work_procedure_runs','job_part_orders','order_qc'])assert.equal((await cloud.list(entity)).length,0,entity)
+ assert.equal((await api.orders.get(order.id)).total,0)
+})
+
 test('quick intake accepts decoded flat form and links customer, vehicle and order',async()=>{
  const {cloud}=await fixture(),api=await fullApi(cloud)
  const created=await api.intake.create({customer_name:'Jan Kowalski',plate:'ZPL 123',vin:'TESTVIN',make:'Toyota',title:'Przyjęcie AZTEC',complaint:'Nie odpala',intake_notes:'Skan dowodu'})

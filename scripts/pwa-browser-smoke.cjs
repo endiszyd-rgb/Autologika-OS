@@ -8,7 +8,7 @@ setTimeout(()=>{console.error('PWA browser smoke timeout');app.exit(1)},120000).
 
 app.whenReady().then(async()=>{
   const win=new BrowserWindow({show:false,width:430,height:932,useContentSize:true,webPreferences:{contextIsolation:true,nodeIntegration:false}})
-  win.webContents.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1')
+  win.webContents.setUserAgent(process.env.PWA_TEST_UA||'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1')
   await win.loadURL(url)
   if(process.env.PWA_FAKE_AUTH==='1'){
     await win.webContents.executeJavaScript(`localStorage.setItem('autologika.pwa.session.v1',JSON.stringify({access_token:'test-token',refresh_token:'test-refresh',expires_at:Date.now()+3600000,user:{id:'00000000-0000-4000-8000-000000000001',email:'test@example.invalid'}}))`)

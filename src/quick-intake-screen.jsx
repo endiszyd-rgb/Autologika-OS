@@ -1,3 +1,4 @@
+import {useWorkshopRate} from './repair-pricing.jsx'
 import React,{useEffect,useRef,useState} from 'react'
 import {VoiceTextarea} from './voice-entry.jsx'
 import {IntakeVehicleCard} from './order-hub.jsx'
@@ -12,10 +13,11 @@ const canonicalVehicleForm=form=>{const make=catalogMatch(vehicleMakes,form?.mak
 
 export function QuickIntake({changed,initialScan,openOrder,api,Panel,VehicleIntakePanel}){
  const intakeKey=useRef(crypto.randomUUID())
- const blank={customer_id:'',vehicle_id:'',customer_name:'',customer_phone:'',customer_email:'',company:'',plate:'',vin:'',make:'',model:'',generation:'',year:'',engine:'',power_hp:'',engine_code:'',mileage:'',title:'Diagnostyka / naprawa',complaint:'',diagnosis_limit:350,labor_rate:220,diagnosis_fee:0,priority:'NORMALNY',source:'nieznane',due_at:'',intake_notes:''}
+ const blank={customer_id:'',vehicle_id:'',customer_name:'',customer_phone:'',customer_email:'',company:'',plate:'',vin:'',make:'',model:'',generation:'',year:'',engine:'',power_hp:'',engine_code:'',mileage:'',title:'Diagnostyka / naprawa',complaint:'',diagnosis_limit:350,labor_rate:'',diagnosis_fee:0,priority:'NORMALNY',source:'nieznane',due_at:'',intake_notes:''}
  const initial=()=>{const registration=canonicalVehicleForm(initialScan?.registration?.form||{});return {...blank,...registration,vin:registration.vin||initialScan?.vin||'',intake_notes:registration.intake_notes||(initialScan?.vin?`VIN odczytany skanerem Zebra ${new Date(initialScan.capturedAt||Date.now()).toLocaleString('pl-PL')}`:'')}}
  const[d,setD]=useState(initial),[saving,setSaving]=useState(false),[created,setCreated]=useState(null),[customers,setCustomers]=useState([]),[vehicles,setVehicles]=useState([]),[activeOrders,setActiveOrders]=useState([]),[customerQuery,setCustomerQuery]=useState(''),[loadingRecords,setLoadingRecords]=useState(true),[loadError,setLoadError]=useState(''),[saveError,setSaveError]=useState(''),[allowDuplicate,setAllowDuplicate]=useState(false)
  const[cameraAvailable,setCameraAvailable]=useState(false),[cameraOpen,setCameraOpen]=useState(false),[decoding,setDecoding]=useState(false),[scanError,setScanError]=useState(''),[scanned,setScanned]=useState(initialScan)
+ useWorkshopRate(api,setD)
  useEffect(()=>{let alive=true;Promise.resolve(api.zebra?.environment?.()).then(environment=>{if(alive)setCameraAvailable(Boolean(environment?.camera))}).catch(()=>{});return()=>{alive=false}},[api])
  const acceptScan=async payload=>{setCameraOpen(false);setDecoding(true);setScanError('');try{const registration=await api.zebra.decodeRegistration(payload);if(!registration?.ok)throw new Error('Nie udało się odczytać dowodu rejestracyjnego.');const scan={registration,vin:registration.form?.vin};setD(current=>canonicalVehicleForm(applyIntakeScan(current,scan,vehicles,customers)));setScanned(scan);setAllowDuplicate(false);setSaveError('')}catch(error){setScanError(error.message||String(error))}finally{setDecoding(false)}}
  useEffect(()=>{let alive=true;setLoadingRecords(true);Promise.all([api.customers.list(''),api.vehicles.list(),api.orders.list('ACTIVE')]).then(([customerRows,vehicleRows,orderRows])=>{if(!alive)return;setCustomers(customerRows);setVehicles(vehicleRows);setActiveOrders(orderRows);const scanned=findScannedIntakeVehicle(vehicleRows,initialScan);if(scanned)setD(current=>selectIntakeVehicle(current,scanned,customerRows))}).catch(error=>alive&&setLoadError(error.message||String(error))).finally(()=>alive&&setLoadingRecords(false));return()=>{alive=false}},[])

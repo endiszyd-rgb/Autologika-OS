@@ -36,7 +36,8 @@ function parseItemLine(line){
   if(!name||name.length<3)return null
   const values=decimals.slice(qtyIndex).map(match=>polishNumber(match[0]))
   const qty=values[0],scannedUnitCost=values[1],netTotal=values[2]
-  const vatMatch=normalized.slice(qtyMatch.index).match(/(?:^|\s)(8|23)(?:\s|$)/)
+  const netMatch=decimals[qtyIndex+2]
+  const vatMatch=normalized.slice(netMatch.index+netMatch[0].length).match(/^\s*(0|5|8|23)\s*%?(?:\s|$)/)
   const vatRate=vatMatch?Number(vatMatch[1]):23
   const vatAmount=values.length>=5?values[values.length-2]:values[3]
   const grossTotal=values.length>=5?values[values.length-1]:roundMoney(netTotal+vatAmount)
@@ -107,11 +108,12 @@ function itemSimilarity(left,right){
   return Math.max(tokenScore,diceSimilarity(left.name,right.name))
 }
 function mergeDocumentRows(primary,detail){
-  const merged=primary.items.map(item=>({...item}))
+  const merged=primary.items.map(item=>({...item})),matched=new Set()
   for(const candidate of detail.items){
     let bestIndex=-1,bestScore=0
-    merged.forEach((item,index)=>{const score=itemSimilarity(item,candidate);if(score>bestScore){bestIndex=index;bestScore=score}})
-    if(bestIndex<0||bestScore<.55){merged.push(candidate);continue}
+    merged.forEach((item,index)=>{if(matched.has(index))return;const score=itemSimilarity(item,candidate);if(score>bestScore){bestIndex=index;bestScore=score}})
+    if(bestIndex<0||bestScore<.55){matched.add(merged.length);merged.push(candidate);continue}
+    matched.add(bestIndex)
     const existing=merged[bestIndex]
     if(existing.confidence==='GOOD'&&candidate.confidence!=='GOOD')continue
     if(candidate.confidence==='GOOD'&&existing.confidence!=='GOOD'){merged[bestIndex]=candidate;continue}

@@ -1,3 +1,4 @@
+const {withQuoteHistory}=require('../electron/quote-history.cjs')
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
 const { DatabaseSync } = require('node:sqlite')
@@ -19,15 +20,25 @@ function setup(t) {
   db.exec('ALTER TABLE vehicles ADD COLUMN generation TEXT; ALTER TABLE vehicles ADD COLUMN engine_code TEXT')
   db.exec("ALTER TABLE orders ADD COLUMN wait_state TEXT DEFAULT 'BRAK'")
   db.exec("PRAGMA foreign_keys=OFF; INSERT INTO vehicles(id,customer_id,plate,make,model) VALUES (1,1,'PO 12345','Audi','A4'); INSERT INTO orders(id,vehicle_id,title) VALUES (1,1,'Test'); INSERT INTO quotes(id,order_id) VALUES (1,1),(10,1)")
-  db.transaction = fn => (...args) => { db.exec('BEGIN'); try { const value=fn(...args); db.exec('COMMIT'); return value } catch(error) { db.exec('ROLLBACK'); throw error } }
+  db.transaction = fn => (...args) => { if(db.isTransaction)return fn(...args); db.exec('BEGIN'); try { const value=fn(...args); db.exec('COMMIT'); return value } catch(error) { db.exec('ROLLBACK'); throw error } }
   const handlers = {}
   const source = fs.readFileSync(require.resolve('../electron/main.cjs'), 'utf8')
   vm.runInNewContext(source.slice(source.indexOf("ipcMain.handle('quotes:get'"), source.indexOf("ipcMain.handle('attachments:list'")), {
     ipcMain: { handle: (name, callback) => { handlers[name] = callback } },
-    getDb: () => db, findQuoteApproval, assertQuoteEditable, assertApprovalQuoteAmount, replaceQuoteWithOrderSnapshot, materializeApprovedQuote, requireEditableOrder, wholePartQuantity, partMarkup: () => 0.2, normalizeBarcode:value=>String(value||''), syncOrderItemTotals: () => {},
+    getDb: () => db, withQuoteHistory, findQuoteApproval, assertQuoteEditable, assertApprovalQuoteAmount, replaceQuoteWithOrderSnapshot, materializeApprovedQuote, requireEditableOrder, wholePartQuantity, partMarkup: () => 0.2, normalizeBarcode:value=>String(value||''), syncOrderItemTotals: () => {},
   })
   return { db, call: (name, arg) => handlers[`quotes:${name}`](null, arg) }
 }
+
+test('explicit zero part price is preserved and invalid financial inputs are rejected',t=>{
+ const {db,call}=setup(t)
+ const item=call('addItem',{orderId:1,data:{kind:'CZESC',name:'Warranty',qty:1,unit_cost:100,unit_price:0}})
+ assert.equal(db.prepare('SELECT unit_price FROM quote_items WHERE id=?').get(item.id).unit_price,0)
+ const events=db.prepare('SELECT COUNT(*) n FROM order_events').get().n
+ assert.throws(()=>call('addItem',{orderId:1,data:{kind:'ROBOCIZNA',name:'Invalid',labor_hours:1,labor_rate:-1}}))
+ assert.throws(()=>call('addItem',{orderId:1,data:{kind:'ROBOCIZNA',name:'Invalid',labor_hours:Infinity,labor_rate:1}}))
+ assert.equal(db.prepare('SELECT COUNT(*) n FROM order_events').get().n,events)
+})
 
 test('quote identifier is read safely from SQLite records without a prototype', () => {
   const approval = Object.assign(Object.create(null), { scope: 'Wycena #17 · dodatkowy zakres' })

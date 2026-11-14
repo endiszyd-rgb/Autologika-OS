@@ -52,7 +52,7 @@ test('imports new rows, increments an existing part and blocks a duplicate docum
   CREATE TABLE inventory_parts(id INTEGER PRIMARY KEY AUTOINCREMENT,part_no TEXT,name TEXT,category TEXT,lookup_source TEXT,stock REAL,min_stock REAL,unit_cost REAL,sell_price REAL,supplier_id INTEGER,notes TEXT,updated_at TEXT);
   INSERT INTO inventory_parts(part_no,name,stock,unit_cost,sell_price) VALUES ('KTCZETR1345','Uszczelniacz półosi',3,15,22);
  `)
- db.transaction=fn=>()=>fn()
+ db.transaction=fn=>()=>{db.exec('BEGIN');try{const result=fn();db.exec('COMMIT');return result}catch(error){db.exec('ROLLBACK');throw error}}
  const document=parseDeliveryDocument(sample)
  const payload={source_hash:'abc123',source_file:'C:/scan.jpg',document}
  const result=importDeliveryDocument(db,payload)
@@ -67,6 +67,11 @@ test('imports new rows, increments an existing part and blocks a duplicate docum
   assert.equal(JSON.parse(history.items_json)[0].part_no,'KTCZETR1345')
  assert.throws(()=>importDeliveryDocument(db,payload),/już przyjęty/)
  assert.throws(()=>importDeliveryDocument(db,{...payload,source_hash:'different-photo'}),/tego dostawcy został już przyjęty/)
+ db.prepare("INSERT INTO inventory_parts(part_no,name,stock,unit_cost) VALUES ('KTCZETR1345','Duplikat',1,10)").run()
+ assert.throws(()=>importDeliveryDocument(db,{...payload,source_hash:'new-photo',document:{...document,document_no:'NEW/2026/1'}}),/powielone numery/)
+ assert.equal(db.prepare('SELECT COUNT(*) count FROM purchase_orders').get().count,1)
+ assert.equal(db.prepare('SELECT SUM(stock) stock FROM inventory_parts WHERE part_no=?').get('KTCZETR1345').stock,6)
+
  db.close()
 })
 
@@ -78,9 +83,24 @@ test('delivery import rejects fractional quantities of parts',()=>{
   CREATE TABLE purchase_order_items(id INTEGER PRIMARY KEY AUTOINCREMENT,purchase_order_id INTEGER,inventory_part_id INTEGER,part_no TEXT,name TEXT,qty REAL,unit_cost REAL,received_qty REAL);
   CREATE TABLE inventory_parts(id INTEGER PRIMARY KEY AUTOINCREMENT,part_no TEXT,name TEXT,category TEXT,lookup_source TEXT,stock REAL,min_stock REAL,unit_cost REAL,sell_price REAL,supplier_id INTEGER,notes TEXT,updated_at TEXT);
  `)
- db.transaction=fn=>()=>fn()
+ db.transaction=fn=>()=>{db.exec('BEGIN');try{const result=fn();db.exec('COMMIT');return result}catch(error){db.exec('ROLLBACK');throw error}}
  const document=parseDeliveryDocument(sample)
  document.items[0].qty=1.97
  assert.throws(()=>importDeliveryDocument(db,{source_hash:'fractional',source_file:'C:/scan.jpg',document}),/liczbą całkowitą/)
  db.close()
+})
+
+
+test('OCR accepts explicit zero and five percent VAT',()=>{
+ for(const [rate,tax,gross] of [[0,'0.00','20.00'],[5,'1.00','21.00']]){
+  const parsed=parseDeliveryDocument(`Faktura nr FV/11/2026
+1 AB123 FILTR OLEJU 2.00 SZT 10.00 20.00 ${rate} ${tax} ${gross}`)
+  assert.equal(parsed.items[0].vat_rate,rate)
+  assert.equal(parsed.items[0].gross_total,Number(gross))
+ }
+})
+test('second OCR pass retains repeated part rows for user review',()=>{
+ const row={part_no:'AB123',name:'FILTR OLEJU',qty:1,gross_total:12.3,confidence:'GOOD'}
+ assert.equal(mergeDocumentRows({items:[row]},{items:[row,{...row}]}).length,2)
+ assert.equal(mergeDocumentRows({items:[row,row]},{items:[row,row]}).length,2)
 })

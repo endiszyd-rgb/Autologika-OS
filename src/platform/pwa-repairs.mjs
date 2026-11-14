@@ -65,6 +65,7 @@ export function createPwaRepairs(cloud){
   const entries=[{entity:'order_repair_operations',cloudId:operation.cloud_id,payload}]
   if(operation.order_item_cloud_id)entries.push({entity:'order_items',cloudId:operation.order_item_cloud_id,payload:{name:next.title,work_name:next.title,variant_name:next.variant,customer_description:next.customer_description,technical_description:next.technical_description,notes:next.customer_description,qty:next.planned_hours,unit_cost:next.labor_cost_rate,unit_price:next.labor_rate,labor_hours:next.planned_hours,labor_rate:next.labor_rate,hours_snapshot:next.planned_hours,price_snapshot:money(next.planned_hours*next.labor_rate)}})
   if(operation.procedure_run_cloud_id)entries.push({entity:'work_procedure_runs',cloudId:operation.procedure_run_cloud_id,payload:{title:next.title,variant:next.variant,technical_description:next.technical_description}})
+  entries.push({entity:'order_events',cloudId:crypto.randomUUID(),payload:{order_cloud_id:cloud.resolveCloudId('orders',operation.order_id),event_type:'REPAIR_UPDATED',title:'Zmieniono wycene naprawy',details:JSON.stringify({version:1,before:operation,after:next}),created_at:new Date().toISOString()}})
   await cloud.upsertMany(entries)
   return {operationId:id,estimate:repairEstimate(next,(await forOrder('repair_parts',operation.order_id)).filter(part=>same(part.repair_operation_id,id)))}
  }

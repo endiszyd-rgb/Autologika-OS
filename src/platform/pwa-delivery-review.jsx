@@ -1,3 +1,4 @@
+import review from '../../shared/delivery-review.cjs'
 import React,{useId} from 'react'
 import {deliveryReviewSummary,stepQuantity} from '../parts-model.mjs'
 
@@ -7,7 +8,7 @@ const itemsLabel=count=>count===1?'pozycję':count%10>=2&&count%10<=4&&(count%10
 
 export function PwaDeliveryReview({document,setDocument,disabled}){
  const uid=useId()
- const update=(index,key,value)=>setDocument(current=>({...current,items:current.items.map((item,i)=>i===index?{...item,[key]:value}:item)}))
+ const update=(index,key,value)=>setDocument(current=>({...current,items:current.items.map((item,i)=>i===index?review.editDeliveryItem(item,key,value):item)}))
  const summary=deliveryReviewSummary(document)
  return <div className="pwaDeliveryReview">
   <div className="pwaReviewHead"><h3>Sprawdź odczytane części</h3><p>Po zatwierdzeniu ilości zwiększą stan magazynowy, a ceny netto zaktualizują koszt zakupu.</p></div>
@@ -22,8 +23,10 @@ export function PwaDeliveryReview({document,setDocument,disabled}){
    <label>Numer części<input value={item.part_no} onChange={e=>update(index,'part_no',e.target.value)} autoCapitalize="characters" autoCorrect="off" spellCheck={false}/></label>
    <label>Nazwa<input value={item.name} onChange={e=>update(index,'name',e.target.value)}/></label>
    <div className="pwaDeliveryNumbers"><div className="pwaQtyField"><span id={qtyId}>Ilość</span><div className="pwaQtyStepper"><button type="button" aria-label={`Zmniejsz ilość — pozycja ${index+1}`} disabled={Number(item.qty)<=1} onClick={()=>update(index,'qty',stepQuantity(item.qty,-1))}>−</button><input aria-labelledby={qtyId} type="number" inputMode="numeric" min="1" step="1" value={item.qty} onChange={e=>update(index,'qty',e.target.value)}/><button type="button" aria-label={`Zwiększ ilość — pozycja ${index+1}`} onClick={()=>update(index,'qty',stepQuantity(item.qty,1))}>+</button></div></div><label>Zakup netto / szt. [zł]<input type="number" inputMode="decimal" min="0" step="0.01" value={item.unit_cost} onChange={e=>update(index,'unit_cost',e.target.value)}/></label></div>
+   <div className="pwaDeliveryNumbers"><label>VAT [%]<input type="number" inputMode="decimal" min="0" max="100" value={item.vat_rate??23} onChange={e=>update(index,'vat_rate',e.target.value)}/></label><label>Wartość brutto pozycji [zł]<input type="number" inputMode="decimal" min="0" step="0.01" value={item.gross_total??''} onChange={e=>update(index,'gross_total',e.target.value)}/></label></div>
+   {item.source_line&&<small>Odczyt OCR: {item.source_line}</small>}
    <div className="pwaItemTotal"><span>Wartość netto</span><b>{money(Number(item.qty||0)*Number(item.unit_cost||0))}</b></div>
   </fieldset>})}
-  <button className="pwaAddItem" disabled={disabled} type="button" onClick={()=>setDocument({...document,items:[...document.items,{part_no:'',name:'',qty:1,unit_cost:0,confidence:'CHECK'}]})}>+ Dodaj pominiętą pozycję</button>
+  <button className="pwaAddItem" disabled={disabled} type="button" onClick={()=>setDocument({...document,items:[...document.items,{part_no:'',name:'',qty:1,unit_cost:0,vat_rate:23,gross_total:0,confidence:'CHECK'}]})}>+ Dodaj pominiętą pozycję</button>
  </div>
 }

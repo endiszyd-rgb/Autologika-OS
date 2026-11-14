@@ -21,6 +21,30 @@ function database(){
  return db
 }
 
+test('repair labor edit and removal keep operation totals and related scope consistent',()=>{
+ const db=database()
+ db.exec(`ALTER TABLE order_items ADD COLUMN repair_operation_id INTEGER;
+ ALTER TABLE job_part_orders ADD COLUMN repair_operation_id INTEGER;
+ CREATE TABLE order_repair_operations(id INTEGER PRIMARY KEY,title TEXT,planned_hours REAL,labor_rate REAL,labor_cost_rate REAL,customer_description TEXT,updated_at TEXT);
+ CREATE TABLE repair_parts(id INTEGER PRIMARY KEY,repair_operation_id INTEGER,reserved_qty REAL,issued_qty REAL,returned_qty REAL,installed_qty REAL,order_item_id INTEGER);
+ CREATE TABLE order_qc(id INTEGER PRIMARY KEY,repair_operation_id INTEGER);
+ CREATE TABLE work_procedure_runs(id INTEGER PRIMARY KEY,repair_operation_id INTEGER);
+ INSERT INTO order_repair_operations VALUES(1,'Labor',1,200,0,'',NULL);
+ INSERT INTO order_items(id,order_id,kind,name,qty,unit_price,repair_operation_id) VALUES(1,3,'ROBOCIZNA','Labor',1,200,1);
+ INSERT INTO repair_parts VALUES(1,1,1,0,0,0,NULL);
+ INSERT INTO order_qc VALUES(1,1);
+ INSERT INTO work_procedure_runs VALUES(1,1);`)
+ updateOrderItem(db,1,{name:'Labor',qty:2,unit_price:300,unit_cost:0})
+ const op=db.prepare('SELECT * FROM order_repair_operations').get()
+ assert.equal(op.planned_hours*op.labor_rate,600)
+ assert.throws(()=>removeOrderItem(db,1),/rezerwacje/)
+ assert.equal(db.prepare('SELECT COUNT(*) n FROM order_items').get().n,1)
+ db.exec('UPDATE repair_parts SET reserved_qty=0')
+ removeOrderItem(db,1)
+ for(const table of ['order_items','order_repair_operations','repair_parts','order_qc','work_procedure_runs'])assert.equal(db.prepare(`SELECT COUNT(*) n FROM ${table}`).get().n,0)
+ db.close()
+})
+
 test('wydanie części zmniejsza stan i dodaje wycenioną pozycję do zlecenia',()=>{
  const db=database()
  const result=issueInventoryPart(db,{inventoryPartId:7,orderId:3,qty:2,oeNumber:'11428507683'})

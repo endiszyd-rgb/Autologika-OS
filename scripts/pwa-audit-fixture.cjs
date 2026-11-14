@@ -93,8 +93,9 @@ async function auditModules(win){
   for(let attempt=0;attempt<300&&!deliveryCapture.querySelector('.pwaDeliveryItem');attempt++){await wait(150);if(deliveryCapture.querySelector('[role=alert]'))throw new Error('Browser OCR failed: '+deliveryCapture.querySelector('[role=alert]').textContent)}
   if(!deliveryCapture.querySelector('.pwaDeliveryItem'))throw new Error('Browser OCR did not find invoice items')
   const receive=[...deliveryCapture.querySelectorAll('button')].find(button=>button.textContent==='Przyjmij części do magazynu');if(!receive||receive.disabled)throw new Error('Cannot confirm recognized delivery')
-  receive.click();await wait(400)
+  const originalFetch=window.fetch;let deliveryWrites=0;window.fetch=(...args)=>{if(String(args[0]).includes('/rpc/import_mobile_delivery'))deliveryWrites++;return originalFetch(...args)};window.confirm=()=>false;receive.click();await wait(100);if(deliveryWrites!==0||deliveryCapture.textContent.includes('Dostawa przyjęta'))throw new Error('Canceled delivery was saved');window.confirm=()=>true;receive.click();await wait(400)
   if(!deliveryCapture.textContent.includes('Dostawa przyjęta do magazynu'))throw new Error('Delivery RPC failed: '+deliveryCapture.textContent)
+  if(deliveryWrites!==1)throw new Error('Expected exactly one confirmed delivery write');window.fetch=originalFetch;window.confirm=originalConfirm
   ;[...deliveryCapture.querySelectorAll('button')].find(button=>button.textContent==='Przejdź do magazynu').click();await wait(200)
   if(document.querySelector('.pwaDocumentCapture')||document.querySelector('.shell>aside nav button[aria-current=page]')?.title!=='Części / magazyn')throw new Error('Dashboard delivery did not open inventory after import')
   for(const name of names){
