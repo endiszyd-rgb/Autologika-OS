@@ -5,6 +5,7 @@ const paths = {
  intake:'M12 5v14 M5 12h14',
  center:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8',
  schedule:'M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2 M7 3v4 M17 3v4 M3 10h18 M7 14h3 M14 14h3',
+ hala:'M3 10l9-6 9 6v10H3z M9 20v-6h6v6',
  kanban:'M3 4h5v12H3z M10 4h5v16h-5z M17 4h4v9h-4z',
  notifications:'M12 8v5 M12 17h.01 M10 3 2 18a2 2 0 0 0 2 3h16a2 2 0 0 0 2-3L14 3a2 2 0 0 0-4 0',
  orders:'M6 3h12v18H6z M9 7h6 M9 11h6 M9 15h4',

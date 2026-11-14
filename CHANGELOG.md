@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.9 — 2026-11-14
+
+### Hala na żywo
+
+- Nowy ekran „Hala na żywo” (Warsztat): stanowiska z ustawień warsztatu, postęp zlecenia, mechanik z aktywnego timera, szacowany koniec i następna wizyta z terminarza.
+- Kliknięcie stanowiska przypisuje zlecenie z Centrum zlecenia (przypisanie przenosi auto z poprzedniego stanowiska); zmiana i zwolnienie stanowiska; synchronizacja PC ↔ telefon.
+- „Co wymaga Ciebie” z modułu „Do uwagi” oraz „Puls dnia” z obłożenia stanowisk w terminarzu.
+- Wiadomości RSS (Motofakty, Interia Motoryzacja, MotoFocus, autoGALERIA) i kursy NBP: cache 1 h, tryb offline z ostatnimi danymi; w PWA kursy NBP.
+- Ustawienia → „Ekran Hala na żywo”: imię do powitania, nazwa warsztatu, kolor akcentu.
+- Bez zmian schematu bazy; ustawienia Hali w istniejącej tabeli app_settings.
+
 ## 1.1.8 — 2026-11-14
 
 - Zachowano UI 2.0 opublikowane w wersji 1.1.7.

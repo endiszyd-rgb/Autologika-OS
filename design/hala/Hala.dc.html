@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Hala na żywo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0308}
+a{color:#D9A3B2;text-decoration:none}a:hover{color:#FFFFFF}
+*{box-sizing:border-box}
+@keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(244,63,94,.6)}70%{box-shadow:0 0 0 14px rgba(244,63,94,0)}100%{box-shadow:0 0 0 0 rgba(244,63,94,0)}}
+@keyframes radar{to{transform:rotate(360deg)}}
+@keyframes idle{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes hoist{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes ekg{to{stroke-dashoffset:0}}
+@keyframes glowline{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes sheen{0%{transform:translateX(-120%) skewX(-18deg)}100%{transform:translateX(220%) skewX(-18deg)}}
+@keyframes spark{0%{transform:scale(.4);opacity:0}30%{opacity:1}100%{transform:scale(1.6);opacity:0}}
+@keyframes scan{0%{transform:translateX(-10%)}100%{transform:translateX(110%)}}
+@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.rise{animation:rise .8s cubic-bezier(.2,.8,.2,1) both}
+.d1{animation-delay:.08s}.d2{animation-delay:.18s}.d3{animation-delay:.28s}.d4{animation-delay:.38s}.d5{animation-delay:.5s}
+.panel{background:linear-gradient(170deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.08);border-radius:24px;backdrop-filter:blur(18px);position:relative;transition:border-color .35s,box-shadow .35s,transform .35s cubic-bezier(.2,.8,.2,1)}
+.panel:hover{border-color:rgba(244,63,94,.35);box-shadow:0 30px 80px -30px rgba(244,63,94,.35)}
+.bay{position:relative;border-radius:20px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(0,0,0,.25));min-height:330px;padding:18px;display:flex;flex-direction:column;cursor:pointer;color:#F4E7EC;font-family:Inter,sans-serif;text-align:left;overflow:hidden;transition:all .4s cubic-bezier(.2,.8,.2,1)}
+.bay:hover{transform:translateY(-6px);border-color:rgba(244,63,94,.5);box-shadow:0 30px 60px -24px rgba(244,63,94,.5)}
+.bay::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 40%,rgba(255,255,255,.07) 50%,transparent 60%);transform:translateX(-120%) skewX(-18deg)}
+.bay:hover::after{animation:sheen .9s ease}
+.floor{position:absolute;left:0;right:0;bottom:64px;height:2px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent)}
+.car-idle{animation:idle 3.2s ease-in-out infinite}
+.car-lift{animation:hoist 5s ease-in-out infinite}
+.scanline{position:absolute;top:60px;bottom:70px;width:3px;background:linear-gradient(180deg,transparent,#FB7185,transparent);filter:blur(1px);animation:scan 3.4s ease-in-out infinite alternate;opacity:.8}
+.dot{width:8px;height:8px;border-radius:50%;animation:pulse 1.8s infinite}
+.btn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#F4E7EC;font:500 14px Inter,sans-serif;cursor:pointer;transition:all .25s}
+.btn:hover{background:rgba(255,255,255,.09);transform:translateY(-1px)}
+.btn.pri{background:linear-gradient(135deg,#FB4D6D,#C8102E);border:none;box-shadow:0 12px 34px -10px rgba(244,63,94,.8);font-weight:600;color:#fff}
+.btn.pri:hover{filter:brightness(1.08);box-shadow:0 18px 40px -10px rgba(244,63,94,1)}
+.chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:99px;font:600 11.5px Inter,sans-serif;letter-spacing:.02em}
+.mono{font-family:'JetBrains Mono',monospace}
+.news{display:flex;gap:14px;padding:14px;border-radius:16px;border:1px solid transparent;transition:all .3s;text-align:left;background:transparent;color:#F4E7EC;cursor:pointer;font-family:Inter,sans-serif;width:100%}
+.news:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);transform:translateX(4px)}
+.ekg{stroke-dasharray:1400;stroke-dashoffset:1400;animation:ekg 3.2s cubic-bezier(.2,.8,.2,1) forwards}
+.sparkle{position:absolute;width:10px;height:10px;border-radius:50%;background:#FFB3C1;animation:spark 2.6s ease-out infinite}
+.tick{display:flex;gap:48px;white-space:nowrap;animation:ticker 40s linear infinite}
+@media (max-width:900px){.rail{display:none}}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap; font-family: Inter, sans-serif; color: #F4E7EC; background: radial-gradient(1000px 560px at 0% 0%, rgba(244,63,94,.16), transparent 60%), radial-gradient(800px 500px at 100% 100%, rgba(244,63,94,.10), transparent 60%), linear-gradient(180deg, #120510, #0A0308 50%, #0D0309); position: relative; overflow: hidden">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 48px 48px; mask-image: radial-gradient(800px 500px at 40% 30%, #000, transparent 75%); pointer-events: none"></div>
+
+<nav class="rail" aria-label="Menu" style="width: 84px; padding: 22px 0; display: flex; flex-direction: column; align-items: center; gap: 10px; border-right: 1px solid rgba(255,255,255,.07); background: rgba(10,3,8,.6); backdrop-filter: blur(20px); position: relative; z-index: 2">
+  <div style="width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, {{accent}}, #7A0A22); display: grid; place-items: center; box-shadow: 0 14px 30px -10px {{accent}}; margin-bottom: 14px">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M3 13l2-5h14l2 5v6H3z"/><circle cx="7.5" cy="16.5" r="1.5"/><circle cx="16.5" cy="16.5" r="1.5"/></svg>
+  </div>
+  <a href="Hala.dc.html" aria-label="Hala" style="width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: linear-gradient(135deg, rgba(244,63,94,.35), rgba(244,63,94,.08)); border: 1px solid rgba(244,63,94,.4); color: #fff"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 10l9-6 9 6v10H3z"/><path d="M9 20v-6h6v6"/></svg></a>
+  <a href="Main.dc.html" aria-label="Pulpit" style="width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></a>
+  <a href="Zlecenie.dc.html" aria-label="Zlecenia" style="width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 3h6l1 3h4v15H4V6h4z"/><path d="M9 12h6M9 16h4"/></svg></a>
+  <a href="Main.dc.html" aria-label="Klienci" style="width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></a>
+  <a href="Main.dc.html" aria-label="Terminarz" style="width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18M8 2v4M16 2v4"/></svg></a>
+  <div style="margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 6px"><span class="dot" style="background: #34D399"></span><span style="font-size: 10px; color: #9C7F89; letter-spacing: .1em">LIVE</span></div>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; padding: 26px 32px 40px; display: flex; flex-direction: column; gap: 22px; position: relative; z-index: 1">
+
+  <header class="rise" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px">
+    <div style="flex: 1 1 320px">
+      <div style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: #D9A3B2; letter-spacing: .14em; font-weight: 600"><span class="dot" style="background: {{accent}}"></span>NITROPOINT · SOBOTA 14 LISTOPADA · {{ clock }}</div>
+      <h1 style="margin: 6px 0 0; font: 800 38px/1.05 Outfit, sans-serif; letter-spacing: -.03em">Dzień dobry, Endi</h1>
+      <div style="font-size: 15px; color: #9C7F89; margin-top: 8px">Oba stanowiska zajęte · najbliższy odbiór o <span class="mono" style="color: #F4E7EC">15:30</span> · obrót dziś <span class="mono" style="color: #F4E7EC">{{ rev }} zł</span></div>
+    </div>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap">
+      <button class="btn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Skanuj dokument</button>
+      <button class="btn pri" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Przyjmij auto</button>
+    </div>
+  </header>
+
+  <section style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px">
+
+    <div class="panel rise d1" style="grid-column: span 8; padding: 24px; overflow: hidden">
+      <div aria-hidden="true" style="position: absolute; right: -80px; top: -80px; width: 320px; height: 320px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 70%, rgba(244,63,94,.22) 90%, transparent 100%); animation: radar 6s linear infinite; filter: blur(2px); pointer-events: none"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; position: relative">
+        <div><h2 style="margin: 0; font: 700 20px Outfit, sans-serif">Hala</h2><div style="font-size: 13px; color: #9C7F89; margin-top: 2px">Kliknij stanowisko — szczegóły po prawej</div></div>
+        <div style="display: flex; gap: 14px; font-size: 12px; color: #9C7F89"><span style="display: flex; gap: 6px; align-items: center"><i style="width: 10px; height: 10px; border-radius: 50%; background: {{accent}}"></i>W pracy</span><span style="display: flex; gap: 6px; align-items: center"><i style="width: 10px; height: 10px; border-radius: 50%; background: #F5B544"></i>Czeka</span><span style="display: flex; gap: 6px; align-items: center"><i style="width: 10px; height: 10px; border-radius: 50%; background: #34D399"></i>Gotowe</span></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; position: relative">
+        <sc-for list="{{ bays }}" as="b" hint-placeholder-count="2">
+          <button class="bay" type="button" onClick="{{ b.pick }}" style="border-color: {{ b.border }}; box-shadow: {{ b.shadow }}">
+            <div style="display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1">
+              <span class="mono" style="font-size: 11px; color: #9C7F89; letter-spacing: .1em">{{ b.label }}</span>
+              <span class="chip" style="background: {{ b.chipBg }}; color: {{ b.chipFg }}">{{ b.status }}</span>
+            </div>
+            <div class="floor" aria-hidden="true"></div>
+            <sc-if value="{{ b.scan }}" hint-placeholder-val="{{ false }}"><div class="scanline" aria-hidden="true"></div></sc-if>
+            <div style="flex: 1; display: grid; place-items: end center; padding: 10px 0 0; position: relative">
+              <svg width="300" height="170" viewBox="0 0 300 170" role="img" aria-label="{{ b.car }}">
+                <sc-if value="{{ b.lift }}" hint-placeholder-val="{{ true }}">
+                  <g>
+                    <rect x="40" y="10" width="10" height="150" rx="3" fill="#2A1119"/><rect x="250" y="10" width="10" height="150" rx="3" fill="#2A1119"/>
+                    <rect x="40" y="10" width="10" height="150" rx="3" fill="none" stroke="rgba(255,255,255,.12)"/><rect x="250" y="10" width="10" height="150" rx="3" fill="none" stroke="rgba(255,255,255,.12)"/>
+                    <g class="car-lift"><rect x="50" y="118" width="200" height="8" rx="3" fill="{{ b.glow }}" opacity=".85"/><rect x="60" y="126" width="30" height="5" rx="2" fill="#3A1A24"/><rect x="210" y="126" width="30" height="5" rx="2" fill="#3A1A24"/></g>
+                  </g>
+                </sc-if>
+                <g class="{{ b.carClass }}" transform="{{ b.carY }}">
+                  <ellipse cx="150" cy="142" rx="110" ry="6" fill="rgba(0,0,0,.55)"/>
+                  <path d="M36 112 L44 86 Q70 78 100 74 L126 48 Q140 40 170 40 L206 42 Q222 44 236 60 L250 80 Q272 84 272 100 L272 112 Q272 120 262 120 L46 120 Q36 120 36 112 Z" fill="{{ b.body }}"/>
+                  <path d="M36 112 L44 86 Q70 78 100 74 L126 48 Q140 40 170 40 L206 42 Q222 44 236 60 L250 80 Q272 84 272 100 L272 112 Q272 120 262 120 L46 120 Q36 120 36 112 Z" fill="url(#shine)" opacity=".35"/>
+                  <path d="M130 52 Q142 46 168 46 L200 48 Q212 50 224 62 L236 78 L132 78 Z" fill="#0E0B14" opacity=".9"/>
+                  <path d="M134 56 Q144 50 166 50 L176 50 L176 76 L136 76 Z" fill="rgba(255,255,255,.14)"/>
+                  <path d="M184 50 L200 51 Q210 53 222 64 L232 76 L184 76 Z" fill="rgba(255,255,255,.1)"/>
+                  <rect x="150" y="84" width="40" height="3" rx="1.5" fill="rgba(0,0,0,.35)"/>
+                  <rect x="40" y="90" width="26" height="9" rx="4" fill="#FFF3B0" opacity=".95"/>
+                  <rect x="254" y="92" width="18" height="8" rx="4" fill="{{ b.tail }}"/>
+                  <rect x="30" y="108" width="240" height="4" rx="2" fill="rgba(0,0,0,.25)"/>
+                  <circle cx="86" cy="118" r="22" fill="#120A0E"/><circle cx="86" cy="118" r="13" fill="#2C2731"/><circle cx="86" cy="118" r="5" fill="#6B6470"/>
+                  <circle cx="220" cy="118" r="22" fill="#120A0E"/><circle cx="220" cy="118" r="13" fill="#2C2731"/><circle cx="220" cy="118" r="5" fill="#6B6470"/>
+                </g>
+                <defs><linearGradient id="shine" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+              </svg>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 12px; position: relative; z-index: 1">
+              <div><div style="font: 700 18px Outfit, sans-serif">{{ b.car }}</div><div style="font-size: 12.5px; color: #9C7F89; margin-top: 2px">{{ b.job }}</div></div>
+              <div style="text-align: right"><div class="mono" style="font-size: 20px; font-weight: 600; color: {{ b.glow }}">{{ b.pct }}</div><div style="font-size: 11px; color: #9C7F89">koniec {{ b.eta }}</div></div>
+            </div>
+            <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,.06)"><div style="height: 100%; width: {{ b.pct }}; background: {{ b.glow }}; transition: width 1.4s cubic-bezier(.2,.8,.2,1); box-shadow: 0 0 12px {{ b.glow }}"></div></div>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <aside class="panel rise d2" style="grid-column: span 4; padding: 24px; display: flex; flex-direction: column; gap: 16px; overflow: hidden">
+      <div class="sparkle" style="top: 30px; right: 40px"></div>
+      <div class="sparkle" style="top: 80px; right: 90px; animation-delay: 1.1s"></div>
+      <div style="font-size: 12px; color: #D9A3B2; letter-spacing: .14em; font-weight: 600">{{ sel.label }}</div>
+      <div style="font: 700 26px/1.1 Outfit, sans-serif; letter-spacing: -.02em">{{ sel.car }}</div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap"><span class="mono chip" style="background: rgba(255,255,255,.07); color: #F4E7EC">{{ sel.plate }}</span><span class="chip" style="background: {{ sel.chipBg }}; color: {{ sel.chipFg }}">{{ sel.status }}</span></div>
+      <div style="font-size: 14px; color: #D9A3B2; line-height: 1.55">{{ sel.story }}</div>
+
+      <div style="display: flex; align-items: center; gap: 18px; padding: 16px; border-radius: 18px; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.06)">
+        <svg width="92" height="92" viewBox="0 0 92 92" role="img" aria-label="Postęp"><circle cx="46" cy="46" r="38" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="8"/><circle cx="46" cy="46" r="38" fill="none" stroke="{{ sel.glow }}" stroke-width="8" stroke-linecap="round" stroke-dasharray="239" stroke-dashoffset="{{ sel.dash }}" transform="rotate(-90 46 46)" style="transition: stroke-dashoffset 1.4s cubic-bezier(.2,.8,.2,1); filter: drop-shadow(0 0 8px {{ sel.glow }})"/><text x="46" y="51" text-anchor="middle" fill="#F4E7EC" font-family="JetBrains Mono, monospace" font-size="17" font-weight="600">{{ sel.pct }}</text></svg>
+        <div style="flex: 1">
+          <div style="font-size: 12px; color: #9C7F89">Mechanik</div>
+          <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px"><span style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, {{accent}}, #7A0A22); display: grid; place-items: center; font: 700 11px Outfit, sans-serif; color: #fff">{{ sel.ini }}</span><span style="font-weight: 600; font-size: 14px">{{ sel.mech }}</span></div>
+          <div style="font-size: 12px; color: #9C7F89; margin-top: 10px">Szacowany koniec</div>
+          <div class="mono" style="font-weight: 600; font-size: 16px">{{ sel.eta }}</div>
+        </div>
+      </div>
+      <div style="padding: 14px; border-radius: 14px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06)">
+        <div style="font-size: 11px; color: #9C7F89; letter-spacing: .08em; font-weight: 600">NASTĘPNE NA TO STANOWISKO</div>
+        <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 13px"><span style="font-weight: 600">{{ sel.nextCar }}</span><span class="mono" style="color: #9C7F89">{{ sel.nextAt }}</span></div>
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: auto">
+        <a href="Zlecenie.dc.html" class="btn pri" style="flex: 1; justify-content: center">Otwórz zlecenie</a>
+        <button class="btn" type="button" aria-label="Wyślij SMS do klienta" style="width: 44px; padding: 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg></button>
+      </div>
+    </aside>
+
+    <div class="panel rise d3" style="grid-column: span 7; padding: 24px; overflow: hidden">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px">
+        <div><h2 style="margin: 0; font: 700 20px Outfit, sans-serif">Ze świata motoryzacji</h2><div style="font-size: 13px; color: #9C7F89; margin-top: 2px">Branża, przepisy, technika — odświeżane co godzinę</div></div>
+        <div style="display: flex; gap: 6px">
+          <button class="chip" type="button" style="border: none; cursor: pointer; background: rgba(244,63,94,.18); color: #FB7185">Wszystko</button>
+          <button class="chip" type="button" style="border: 1px solid rgba(255,255,255,.1); cursor: pointer; background: transparent; color: #9C7F89">Przepisy</button>
+          <button class="chip" type="button" style="border: 1px solid rgba(255,255,255,.1); cursor: pointer; background: transparent; color: #9C7F89">Tuning</button>
+          <button class="chip" type="button" style="border: 1px solid rgba(255,255,255,.1); cursor: pointer; background: transparent; color: #9C7F89">Części</button>
+        </div>
+      </div>
+
+      <div style="margin: 16px -24px 0; padding: 10px 0; border-top: 1px solid rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06); overflow: hidden; background: rgba(0,0,0,.2)">
+        <div class="tick" aria-hidden="true">
+          <span class="mono" style="font-size: 12px; color: #D9A3B2">EUR/PLN <span style="color: #F4E7EC">4,39</span> <span style="color: #6E5560">NBP 6 XI</span></span><span class="mono" style="font-size: 12px; color: #D9A3B2">USD/PLN <span style="color: #F4E7EC">3,93</span></span><span class="mono" style="font-size: 12px; color: #D9A3B2">ON <span style="color: #F4E7EC">~8,75 zł/l</span> <span style="color: #FB7185">▲ po CPN</span></span><span class="mono" style="font-size: 12px; color: #D9A3B2">PB95 <span style="color: #F4E7EC">~7,89 zł/l</span></span><span class="mono" style="font-size: 12px; color: #D9A3B2">WEEKEND <span style="color: #6EE7B7">paliwo nieco tańsze</span></span><span class="mono" style="font-size: 12px; color: #D9A3B2">21 XI <span style="color: #F5C86E">nowe przepisy dla kierowców</span></span>
+          <span class="mono" style="font-size: 12px; color: #D9A3B2">EUR/PLN <span style="color: #F4E7EC">4,39</span> <span style="color: #6E5560">NBP 6 XI</span></span><span class="mono" style="font-size: 12px; color: #D9A3B2">USD/PLN <span style="color: #F4E7EC">3,93</span></span><span class="mono" style="font-size: 12px; color: #D9A3B2">ON <span style="color: #F4E7EC">~8,75 zł/l</span> <span style="color: #FB7185">▲ po CPN</span></span><span class="mono" style="font-size: 12px; color: #D9A3B2">PB95 <span style="color: #F4E7EC">~7,89 zł/l</span></span><span class="mono" style="font-size: 12px; color: #D9A3B2">WEEKEND <span style="color: #6EE7B7">paliwo nieco tańsze</span></span><span class="mono" style="font-size: 12px; color: #D9A3B2">21 XI <span style="color: #F5C86E">nowe przepisy dla kierowców</span></span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 12px">
+        <a class="news" href="https://motofakty.pl/">
+          <div style="width: 64px; height: 64px; border-radius: 14px; flex: none; background: linear-gradient(135deg, rgba(244,63,94,.4), rgba(122,10,34,.6)); display: grid; place-items: center; color: #fff"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+          <div style="flex: 1; min-width: 0"><div style="display: flex; gap: 8px; align-items: center; font-size: 11px; color: #FB7185; font-weight: 600; letter-spacing: .08em">PRZEPISY · <span style="color: #9C7F89; font-weight: 500">Motofakty · 13 lis</span></div><div style="font-weight: 600; font-size: 15px; margin-top: 4px; line-height: 1.3; color: #F4E7EC">Zmiany dla kierowców od 21 listopada — za to będą tracić prawo jazdy na trzy miesiące</div><div style="font-size: 12.5px; color: #9C7F89; margin-top: 4px">Do tego pierwsza taka podwyżka opłat od 12 lat. Warto uprzedzić klientów flotowych.</div></div>
+        </a>
+        <a class="news" href="https://warsztat.pl/">
+          <div style="width: 64px; height: 64px; border-radius: 14px; flex: none; background: linear-gradient(135deg, rgba(124,108,255,.4), rgba(60,40,160,.6)); display: grid; place-items: center; color: #fff"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg></div>
+          <div style="flex: 1; min-width: 0"><div style="display: flex; gap: 8px; align-items: center; font-size: 11px; color: #B9B0FF; font-weight: 600; letter-spacing: .08em">WARSZTAT · <span style="color: #9C7F89; font-weight: 500">warsztat.pl · 13 lis</span></div><div style="font-weight: 600; font-size: 15px; margin-top: 4px; line-height: 1.3; color: #F4E7EC">Coraz więcej automatów. Co to zmienia w warsztatach?</div><div style="font-size: 12.5px; color: #9C7F89; margin-top: 4px">Manualne skrzynie szybko tracą udział w Europie — rośnie popyt na serwis i diagnostykę automatów.</div></div>
+        </a>
+        <a class="news" href="https://motofocus.pl/szkolenia/144054/szkolenia-bosch-listopad-2026">
+          <div style="width: 64px; height: 64px; border-radius: 14px; flex: none; background: linear-gradient(135deg, rgba(245,181,68,.4), rgba(160,100,10,.6)); display: grid; place-items: center; color: #fff"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h8M8 11h6"/></svg></div>
+          <div style="flex: 1; min-width: 0"><div style="display: flex; gap: 8px; align-items: center; font-size: 11px; color: #F5C86E; font-weight: 600; letter-spacing: .08em">SZKOLENIA · <span style="color: #9C7F89; font-weight: 500">MotoFocus · Bosch</span></div><div style="font-weight: 600; font-size: 15px; margin-top: 4px; line-height: 1.3; color: #F4E7EC">Szkolenia Bosch w listopadzie: diagnostyka z testerem KTS i oscyloskopem</div><div style="font-size: 12.5px; color: #9C7F89; margin-top: 4px">24–25.11 diagnostyka w praktyce · 26–27.11 automatyczne skrzynie biegów · 30.11 klimatyzacja.</div></div>
+        </a>
+        <a class="news" href="https://autogaleria.pl/">
+          <div style="width: 64px; height: 64px; border-radius: 14px; flex: none; background: linear-gradient(135deg, rgba(52,211,153,.35), rgba(10,110,70,.6)); display: grid; place-items: center; color: #fff"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 13l2-5h14l2 5v6H3z"/><circle cx="7.5" cy="16.5" r="1.5"/><circle cx="16.5" cy="16.5" r="1.5"/></svg></div>
+          <div style="flex: 1; min-width: 0"><div style="display: flex; gap: 8px; align-items: center; font-size: 11px; color: #6EE7B7; font-weight: 600; letter-spacing: .08em">RYNEK · <span style="color: #9C7F89; font-weight: 500">autoGALERIA · 13 lis</span></div><div style="font-weight: 600; font-size: 15px; margin-top: 4px; line-height: 1.3; color: #F4E7EC">Diesel powoli znika z rynku. Škoda Octavia żegna się ze skrótem TDI</div><div style="font-size: 12.5px; color: #9C7F89; margin-top: 4px">Park TDI na drogach zostaje na lata — to Twoi klienci od DPF, EGR i Stage 1.</div></div>
+        </a>
+        <a class="news" href="https://motoryzacja.interia.pl/wiadomosci/news-trzesienie-ziemi-w-nvidii-mercedes-volkswagen-i-inni-moga-mi,nId,23573076">
+          <div style="width: 64px; height: 64px; border-radius: 14px; flex: none; background: linear-gradient(135deg, rgba(77,163,255,.35), rgba(20,70,140,.6)); display: grid; place-items: center; color: #fff"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg></div>
+          <div style="flex: 1; min-width: 0"><div style="display: flex; gap: 8px; align-items: center; font-size: 11px; color: #8FC3FF; font-weight: 600; letter-spacing: .08em">TECHNOLOGIA · <span style="color: #9C7F89; font-weight: 500">Interia · dziś</span></div><div style="font-weight: 600; font-size: 15px; margin-top: 4px; line-height: 1.3; color: #F4E7EC">Trzęsienie ziemi w Nvidii. Mercedes, Volkswagen i inni mogą mieć problem</div><div style="font-size: 12.5px; color: #9C7F89; margin-top: 4px">Układy do systemów pokładowych — kolejny front w dostępności elektroniki.</div></div>
+        </a>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.06); font-size: 11.5px; color: #6E5560"><span>Źródła: Motofakty · warsztat.pl · MotoFocus · autoGALERIA · Interia · NBP</span><span class="mono">odświeżono 14.11 · 14:30</span></div>
+    </div>
+
+    <div class="panel rise d4" style="grid-column: span 5; padding: 24px; display: flex; flex-direction: column; gap: 14px; overflow: hidden">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <h2 style="margin: 0; font: 700 20px Outfit, sans-serif">Co wymaga Ciebie</h2>
+        <span class="chip" style="background: rgba(244,63,94,.16); color: #FB7185">3</span>
+      </div>
+      <button type="button" style="display: flex; gap: 14px; align-items: center; padding: 14px; border-radius: 16px; border: 1px solid rgba(245,181,68,.3); background: linear-gradient(135deg, rgba(245,181,68,.12), transparent); color: #F4E7EC; text-align: left; cursor: pointer; font-family: Inter, sans-serif"><span style="width: 42px; height: 42px; border-radius: 12px; background: rgba(245,181,68,.18); display: grid; place-items: center; color: #F5C86E; flex: none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v4M12 18h.01"/></svg></span><span style="flex: 1"><span style="display: block; font-weight: 600; font-size: 14px">Audi A6 czeka na EGR od 2 dni</span><span style="display: block; font-size: 12px; color: #9C7F89">Dostawca milczy · zadzwoń lub zamów u innego</span></span><span style="color: #F5C86E">→</span></button>
+      <button type="button" style="display: flex; gap: 14px; align-items: center; padding: 14px; border-radius: 16px; border: 1px solid rgba(244,63,94,.3); background: linear-gradient(135deg, rgba(244,63,94,.12), transparent); color: #F4E7EC; text-align: left; cursor: pointer; font-family: Inter, sans-serif"><span style="width: 42px; height: 42px; border-radius: 12px; background: rgba(244,63,94,.18); display: grid; place-items: center; color: #FB7185; flex: none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span><span style="flex: 1"><span style="display: block; font-weight: 600; font-size: 14px">Wycena Passata bez akceptacji 4h</span><span style="display: block; font-size: 12px; color: #9C7F89">Klient otworzył link, nie kliknął · przypomnij SMS-em</span></span><span style="color: #FB7185">→</span></button>
+      <button type="button" style="display: flex; gap: 14px; align-items: center; padding: 14px; border-radius: 16px; border: 1px solid rgba(52,211,153,.3); background: linear-gradient(135deg, rgba(52,211,153,.12), transparent); color: #F4E7EC; text-align: left; cursor: pointer; font-family: Inter, sans-serif"><span style="width: 42px; height: 42px; border-radius: 12px; background: rgba(52,211,153,.18); display: grid; place-items: center; color: #6EE7B7; flex: none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span><span style="flex: 1"><span style="display: block; font-weight: 600; font-size: 14px">Vito gotowy — klient o 15:30</span><span style="display: block; font-size: 12px; color: #9C7F89">Faktura opłacona · wystarczy wydać kluczyki</span></span><span style="color: #6EE7B7">→</span></button>
+
+      <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.06)">
+        <div style="display: flex; justify-content: space-between; align-items: center"><div style="font-size: 12px; color: #9C7F89; letter-spacing: .08em; font-weight: 600">PULS DNIA</div><span class="chip" style="background: rgba(52,211,153,.14); color: #6EE7B7">Tempo dobre</span></div>
+        <svg viewBox="0 0 400 90" style="width: 100%; height: 90px; margin-top: 6px" role="img" aria-label="Obciążenie dnia">
+          <defs><linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="{{accent}}" stop-opacity=".45"/><stop offset="1" stop-color="{{accent}}" stop-opacity="0"/></linearGradient></defs>
+          <path d="M0 70 L30 60 L60 64 L90 36 L120 30 L150 46 L180 16 L210 24 L240 12 L270 30 L300 22 L330 40 L360 34 L400 56 L400 90 L0 90Z" fill="url(#g1)"/>
+          <path class="ekg" d="M0 70 L30 60 L60 64 L90 36 L120 30 L150 46 L180 16 L210 24 L240 12 L270 30 L300 22 L330 40 L360 34 L400 56" fill="none" stroke="{{accent}}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" style="filter: drop-shadow(0 0 8px {{accent}})"/>
+          <line x1="176" y1="6" x2="176" y2="84" stroke="#fff" stroke-opacity=".5" stroke-dasharray="3 4" style="animation: glowline 2s infinite"/>
+          <g font-family="JetBrains Mono, monospace" font-size="9" fill="#9C7F89"><text x="0" y="88">07</text><text x="192" y="88">13</text><text x="386" y="88">19</text></g>
+        </svg>
+      </div>
+    </div>
+
+  </section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#F43F5E","options":["#F43F5E","#3EE0C8","#4DA3FF","#F5B544"],"section":"Styl"},"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  constructor(p){ super(p); this.state = { t: 0, picked: 1 }; }
+  componentDidMount(){
+    const start = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / 1500);
+      this.setState({ t: 1 - Math.pow(1 - t, 3) });
+      if (t < 1) this._raf = requestAnimationFrame(tick);
+    };
+    this._raf = requestAnimationFrame(tick);
+  }
+  componentWillUnmount(){ if (this._raf) cancelAnimationFrame(this._raf); }
+  renderVals(){
+    const accent = this.props.accent ?? '#F43F5E';
+    const t = this.state.t;
+    const kinds = {
+      work: { glow: accent, chipBg: 'rgba(244,63,94,.18)', chipFg: '#FB7185' },
+      wait: { glow: '#F5B544', chipBg: 'rgba(245,181,68,.18)', chipFg: '#F5C86E' },
+      done: { glow: '#34D399', chipBg: 'rgba(52,211,153,.18)', chipFg: '#6EE7B7' }
+    };
+    const raw = [
+      {label:'STANOWISKO 01 · PODNOŚNIK', car:'VW Passat B8 2.0 TDI', plate:'WE 4521K', job:'Wymiana DPF + adaptacja', status:'W pracy', kind:'work', pct:62, lift:true, scan:false, body:'#C7CBD4', tail:'#FF5A6E', mech:'Paweł K.', ini:'PK', eta:'12:40', nextCar:'Fiat Ducato · olej + filtry', nextAt:'13:00', story:'Stary filtr już na dole, nowy czeka na stole. Po montażu adaptacja i ok. 20 minut jazdy próbnej — Passat zjedzie z podnośnika przed 13:00.'},
+      {label:'STANOWISKO 02 · DIAGNOSTYKA / TUNING', car:'BMW 330d F30', plate:'WX 88210', job:'Stage 1 · EDC17CP45 · zapis OBD', status:'Flash', kind:'work', pct:88, lift:false, scan:true, body:'#2B2F3A', tail:'#FF5A6E', mech:'Endi', ini:'EN', eta:'11:05', nextCar:'Audi A6 C7 · EGR (gdy dojdzie część)', nextAt:'pon.', story:'Zapis Stage 1 w toku, blok 14 z 16. Nie odłączaj zasilania. Po zapisie log z jazdy próbnej i porównanie przed/po — klient prosił o wykres.'}
+    ];
+    const bays = raw.map((b, i) => {
+      const k = kinds[b.kind], on = this.state.picked === i;
+      return Object.assign({}, b, k, {
+        carClass: b.lift ? 'car-lift' : 'car-idle',
+        carY: b.lift ? 'translate(0,-34)' : 'translate(0,0)',
+        pct: Math.round(b.pct * t) + '%',
+        dash: Math.round(239 - 239 * (b.pct / 100) * t),
+        border: on ? k.glow : 'rgba(255,255,255,.08)',
+        shadow: on ? '0 24px 50px -20px ' + k.glow : 'none',
+        pick: () => this.setState({ picked: i })
+      });
+    });
+    const sel = bays[this.state.picked];
+    return { accent, bays, sel, clock: '10:52', rev: Math.round(4860 * t).toLocaleString('pl-PL') };
+  }
+}
+</script>
+</body>
+</html>

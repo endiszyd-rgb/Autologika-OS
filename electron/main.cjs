@@ -488,6 +488,31 @@ ipcMain.handle('finance:analytics',()=>{
 })
 ipcMain.handle('settings:getWorkshopLayout',()=>getWorkshopLayout(getDb()))
 ipcMain.handle('settings:setWorkshopLayout',(_e,value)=>setWorkshopLayout(getDb(),value))
+const halaSettings=require('../shared/hala-settings.cjs')
+const newsFeed=require('../shared/news-feed.cjs')
+function readHalaSettings(){const row=getDb().prepare('SELECT value FROM app_settings WHERE setting_key=? LIMIT 1').get(halaSettings.HALA_SETTINGS_KEY);return halaSettings.parseHalaSettings(row?.value)}
+ipcMain.handle('settings:getHala',()=>readHalaSettings())
+ipcMain.handle('settings:setHala',(_e,value)=>{const next=halaSettings.normalizeHalaSettings(value);getDb().prepare(`INSERT INTO app_settings(setting_key,value,cloud_id,updated_at) VALUES (?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET value=excluded.value,cloud_id=COALESCE(app_settings.cloud_id,excluded.cloud_id),updated_at=CURRENT_TIMESTAMP`).run(halaSettings.HALA_SETTINGS_KEY,JSON.stringify(next),halaSettings.HALA_SETTINGS_CLOUD_ID);return next})
+const newsCachePath=()=>path.join(app.getPath('userData'),'news-feed-cache.json')
+const NEWS_MAX_BYTES=1_500_000
+// Odczyt z limitem bajtów w trakcie pobierania (nie dopiero po wczytaniu całości)
+async function newsFetch(url,kind){
+  const response=await net.fetch(url,{headers:{'User-Agent':'AutoLogika OS (warsztat)',Accept:kind==='json'?'application/json':'application/rss+xml, application/xml, text/xml'},signal:AbortSignal.timeout(10000)})
+  if(!response.ok)throw new Error(`HTTP ${response.status}`)
+  if(Number(response.headers.get('content-length'))>NEWS_MAX_BYTES)throw new Error('Za duża odpowiedź')
+  const reader=response.body.getReader(),chunks=[];let size=0
+  for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>NEWS_MAX_BYTES){await reader.cancel();throw new Error('Za duża odpowiedź')}chunks.push(value)}
+  const body=Buffer.concat(chunks.map(chunk=>Buffer.from(chunk))).toString('utf8')
+  return kind==='json'?JSON.parse(body):body
+}
+let newsInflight=null
+async function writeNewsCache(value){const target=newsCachePath(),temp=`${target}.${process.pid}.tmp`;await fs.promises.writeFile(temp,JSON.stringify(value));await fs.promises.rename(temp,target)}
+// Równoległe wywołania (odświeżenie ręczne + automatyczne, kilka okien) dzielą jedno pobieranie
+ipcMain.handle('news:feed',(_e,options={})=>{
+  if(newsInflight)return newsInflight
+  newsInflight=newsFeed.getNewsFeed({force:Boolean(options?.force),fetchText:url=>newsFetch(url,'text'),fetchJson:url=>newsFetch(url,'json'),readCache:async()=>{try{return JSON.parse(await fs.promises.readFile(newsCachePath(),'utf8'))}catch{return null}},writeCache:writeNewsCache}).finally(()=>{newsInflight=null})
+  return newsInflight
+})
 
 ipcMain.handle('customers:list',(_,q='')=>getDb().prepare(`SELECT c.*, COUNT(DISTINCT v.id) vehicles, COUNT(DISTINCT o.id) orders FROM customers c LEFT JOIN vehicles v ON v.customer_id=c.id LEFT JOIN orders o ON o.vehicle_id=v.id WHERE c.name LIKE ? OR COALESCE(c.phone,'') LIKE ? OR COALESCE(c.company,'') LIKE ? GROUP BY c.id ORDER BY c.created_at DESC`).all(`%${q}%`,`%${q}%`,`%${q}%`))
 ipcMain.handle('customers:profile',(_,id)=>customerProfile(getDb(),id))
