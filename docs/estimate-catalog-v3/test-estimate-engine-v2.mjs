@@ -1,0 +1,10 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {calculateEstimate,validateQuoteInputs} from './estimate-engine-v2.mjs';
+const seed={baseMinutes:90,laborRateCentsPerHour:20000,parts:[{unitPriceCents:12300,quantity:1}],materials:[],taxBps:2300};
+test('correctly computes cents',()=>{let r=calculateEstimate(seed);assert.equal(r.laborCents,30000);assert.equal(r.netCents,42300);assert.equal(r.taxCents,9729);assert.equal(r.grossCents,52029)});
+test('manual corrosion requires customer approval',()=>assert.throws(()=>calculateEstimate({...seed,difficulties:[{code:'CORRODED_FASTENERS',minutes:30,reason:'korozja',mechanicId:'m',evidenceId:'photo'}]}),/acceptance/));
+test('approved corrosion adds 30min',()=>{let r=calculateEstimate({...seed,difficulties:[{code:'CORRODED_FASTENERS',minutes:30,reason:'zapieczone śruby',mechanicId:'m',evidenceId:'photo',approvedByCustomer:true}]});assert.equal(r.extraMinutes,30);assert.equal(r.laborCents,40000)});
+test('cannot double charge overlap without rule',()=>assert.throws(()=>calculateEstimate({...seed,overlaps:[{minutes:25,source:'guessed',referenceId:'x'}]}),/Unverified/));
+test('valid overlap adjusts base minutes',()=>assert.equal(calculateEstimate({...seed,overlaps:[{minutes:30,source:'verified_workshop_rule',referenceId:'rule-1'}]}).billableMinutes,60));
+test('negative inputs rejected',()=>assert.throws(()=>calculateEstimate({...seed,baseMinutes:-1}),/nonnegative/));
+test('quote cannot be final with unverified time',()=>assert.equal(validateQuoteInputs({vehicleConfirmed:true,workScopeConfirmed:true,baseTimeSource:'web_forum',partsVerified:true}).ready,false));
