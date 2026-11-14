@@ -29,6 +29,11 @@ app.on('browser-window-created', (_, win) => {
         }
         throw lastError
       }
+      const execute = win.webContents.executeJavaScript.bind(win.webContents)
+      win.webContents.executeJavaScript = async (...args) => {
+        try { return await execute(...args) }
+        catch (error) { console.error('FAILED_UI_SCRIPT', args[0]); await capture('failed-ui-script'); throw error }
+      }
       await delay(450)
       await win.webContents.executeJavaScript(`window.autologika.settings.setCatalogOverride('__repair_pricing_v1',{hourlyRate:220,corrosionMultiplier:1,accessMultiplier:1})`)
       // Ekran powitalny znika, gdy tylko aplikacja jest gotowa (bez sztucznego czekania 1 s).

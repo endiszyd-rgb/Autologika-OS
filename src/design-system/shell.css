@@ -1,0 +1,468 @@
+/* ==========================================================================
+   AutoLogika UI 2.0 — powłoka aplikacji
+   Menu boczne, górny pasek, nagłówek strony, dolny dock (PWA) i pulpit.
+
+   Układ responsywny:
+   • ≥1280 px  — menu przypięte (256 px) albo pasek ikon (76 px), wybór użytkownika
+                 (html[data-sidebar], przycisk w nagłówku menu, zapamiętany lokalnie).
+   • 601–1279  — pasek ikon; po najechaniu / fokusie z klawiatury rozwija się nad treścią.
+                 Dotyczy Windows (min. 1100 px) i tabletów PWA (iPad, Android).
+   • ≤600 px   — PWA na telefonie: dolny dock z bezpiecznymi obszarami iOS/Android.
+
+   Ikony w menu nie zmieniają położenia przy rozwijaniu (stały padding), a etykiety
+   sekcji zawsze zajmują tę samą wysokość — podświetlenie .navPill się nie rozjeżdża.
+   ========================================================================== */
+
+/* ---------- Tło aplikacji ---------- */
+html.ui2 .shell{
+ font-family:var(--ui-font-sans);color:var(--ui-text);
+ background:
+  radial-gradient(1100px 520px at 78% -12%,rgba(212,61,101,.10),transparent 70%),
+  radial-gradient(800px 600px at -10% 110%,rgba(143,34,65,.08),transparent 70%),
+  var(--ui-bg);
+}
+html.ui2 .shell::before{display:none}
+
+/* ==========================================================================
+   MENU BOCZNE (Windows, przeglądarka, tablet PWA)
+   ========================================================================== */
+@media (min-width:601px){
+ html.ui2{--sb-w:var(--ui-sidebar-rail)}
+ html.ui2 .shell{display:grid!important;grid-template-columns:var(--sb-w) minmax(0,1fr)!important;min-height:100vh;min-height:100dvh;transition:grid-template-columns var(--ui-duration-slow) var(--ui-ease-standard)}
+
+ html.ui2 .shell>aside{
+  position:sticky;top:0;z-index:var(--ui-z-sidebar);
+  display:flex;flex-direction:column;gap:var(--ui-space-2);
+  width:var(--sb-w);height:100vh;height:100dvh;box-sizing:border-box;
+  margin:0;padding:var(--ui-space-3) var(--ui-space-3) var(--ui-space-3);
+  padding-top:max(var(--ui-space-3),var(--ui-safe-top));
+  padding-left:max(var(--ui-space-3),var(--ui-safe-left));
+  padding-bottom:max(var(--ui-space-3),var(--ui-safe-bottom));
+  overflow:hidden;
+  border:0;border-right:1px solid var(--ui-border);
+  background:linear-gradient(180deg,var(--ui-bg-subtle),var(--ui-bg));
+  box-shadow:none;
+  transition:width var(--ui-duration-slow) var(--ui-ease-standard),box-shadow var(--ui-duration-slow) var(--ui-ease-standard),background-color var(--ui-duration-slow) var(--ui-ease-standard);
+ }
+
+ /* Nagłówek menu: sygnet (pasek ikon) / pełne logo (rozwinięte) + przełącznik */
+ html.ui2 .shell>aside .brand{
+  position:relative;display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:var(--ui-space-2);
+  height:52px;min-height:52px;margin:0 0 var(--ui-space-1);padding:0 0 0 8px;border:0;
+ }
+ html.ui2 .shell>aside .brand>div{display:none}
+ html.ui2 .shell>aside .brandMark2{flex:none;display:block;filter:drop-shadow(0 6px 16px rgba(212,61,101,.35));transition:opacity var(--ui-duration-base) var(--ui-ease-standard),transform var(--ui-duration-slow) var(--ui-ease-out)}
+ html.ui2 .shell>aside .brandLogo{position:absolute;left:4px;top:50%;width:150px;max-width:none;height:auto;opacity:0;transform:translate(-8px,-50%);pointer-events:none;filter:none;transition:opacity var(--ui-duration-base) var(--ui-ease-standard),transform var(--ui-duration-slow) var(--ui-ease-out)}
+ html.ui2 .shell>aside .sidebarToggle{
+  display:none;place-items:center;flex:none;margin-left:auto;
+  width:32px;height:32px;min-height:32px;padding:0;
+  border:1px solid transparent!important;border-radius:var(--ui-radius-sm);
+  background:transparent!important;box-shadow:none!important;color:var(--ui-text-3);
+  opacity:0;transition:opacity var(--ui-duration-base) var(--ui-ease-standard),color var(--ui-duration-fast) var(--ui-ease-standard),background-color var(--ui-duration-fast) var(--ui-ease-standard);
+ }
+ html.ui2 .shell>aside .sidebarToggle:hover{color:var(--ui-text);background:var(--ui-surface-3)!important}
+ html.ui2[data-sidebar="expanded"] .shell>aside .sidebarToggle svg{transform:none}
+ html.ui2[data-sidebar="collapsed"] .shell>aside .sidebarToggle svg{transform:scaleX(-1)}
+
+ /* Nawigacja */
+ html.ui2 .shell>aside nav{
+  position:relative;flex:1;min-height:0;
+  margin:0 -4px;padding:2px 4px var(--ui-space-2);
+  overflow-y:auto;overflow-x:hidden;scrollbar-width:none;
+ }
+ html.ui2 .shell>aside nav::-webkit-scrollbar{display:none}
+ html.ui2 .shell>aside .navSection{position:static;margin:0;padding:0;border:0!important}
+ html.ui2 .shell>aside .navSection+.navSection{margin-top:var(--ui-space-1);padding-top:0}
+ html.ui2 .shell>aside .navSection>small{
+  position:relative;display:flex!important;align-items:flex-end;
+  height:28px;margin:0;padding:0 0 6px 14px;
+  color:transparent;font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase;white-space:nowrap;
+  transition:color var(--ui-duration-base) var(--ui-ease-standard);
+ }
+ html.ui2 .shell>aside .navSection>small::before{content:"";position:absolute;left:18px;right:18px;bottom:12px;height:1px;background:var(--ui-border);transition:opacity var(--ui-duration-base) var(--ui-ease-standard)}
+ html.ui2 .shell>aside .navSection:first-child>small{height:8px;padding:0;color:transparent!important}
+ html.ui2 .shell>aside .navSection:first-child>small::before{display:none}
+
+ html.ui2 .shell>aside .navSection button{
+  position:relative;z-index:1;
+  display:flex;align-items:center;justify-content:flex-start;gap:12px;
+  width:100%;min-width:0!important;max-width:100%;height:40px;min-height:40px;margin:0 0 2px;padding:0 0 0 16px;
+  border:0!important;border-radius:var(--ui-radius-md);
+  background:transparent!important;box-shadow:none!important;transform:none!important;
+  color:var(--ui-text-3);font-size:var(--ui-text-sm);font-weight:var(--ui-weight-medium);
+  white-space:nowrap;overflow:hidden;cursor:pointer;
+  transition:color var(--ui-duration-fast) var(--ui-ease-standard),background-color var(--ui-duration-fast) var(--ui-ease-standard);
+ }
+ html.ui2 .shell>aside .navSection button::before,html.ui2 .shell>aside .navSection button::after{display:none!important}
+ html.ui2 .shell>aside .navSection button span{flex:none;display:grid;place-items:center;width:20px;height:20px;color:inherit;filter:none!important;transition:transform var(--ui-duration-base) var(--ui-ease-emphasized)}
+ html.ui2 .shell>aside .navSection button em{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;font-style:normal;font-size:var(--ui-text-sm);font-weight:var(--ui-weight-medium);opacity:0;transform:translateX(-4px);transition:opacity var(--ui-duration-base) var(--ui-ease-standard),transform var(--ui-duration-slow) var(--ui-ease-out)}
+ html.ui2 .shell>aside .navSection button:hover{color:var(--ui-text);background:rgba(255,214,224,.045)!important}
+ html.ui2 .shell>aside .navSection button:hover span{transform:scale(1.06)}
+ html.ui2 .shell>aside .navSection button:active span{transform:scale(.92)}
+ html.ui2 .shell>aside .navSection button.active{color:var(--ui-text);background:transparent!important}
+ html.ui2 .shell>aside .navSection button.active span{color:var(--ui-accent-text)}
+ html.ui2 .shell>aside .navSection button:focus-visible{outline:2px solid var(--ui-border-focus);outline-offset:-2px}
+
+ /* Licznik „Do uwagi” — kropka na ikonie w pasku, pastylka po rozwinięciu */
+ html.ui2 .shell>aside .navCount{
+  position:absolute;left:30px;top:5px;margin:0;
+  min-width:16px;height:16px;padding:0 4px;border-radius:var(--ui-radius-full);
+  background:var(--ui-warning)!important;color:#2a1700!important;box-shadow:0 0 0 2px var(--ui-bg-subtle);
+  font:var(--ui-weight-bold) 10px/16px var(--ui-font-sans);font-style:normal;text-align:center;font-variant-numeric:tabular-nums;
+  transition:left var(--ui-duration-slow) var(--ui-ease-out),top var(--ui-duration-slow) var(--ui-ease-out);
+ }
+
+ /* Podświetlenie aktywnej pozycji (NavPill w main.jsx) */
+ html.ui2 .navPill{
+  position:absolute;left:4px;right:4px;z-index:0;pointer-events:none;
+  border-radius:var(--ui-radius-md);
+  background:linear-gradient(90deg,rgba(212,61,101,.24),rgba(212,61,101,.09));
+  box-shadow:inset 0 0 0 1px rgba(255,138,166,.16),0 6px 18px rgba(212,61,101,.12);
+ }
+ html.ui2 .navPill::before{content:"";position:absolute;left:0;top:50%;width:3px;height:18px;border-radius:0 3px 3px 0;background:var(--ui-wine-300);transform:translateY(-50%);box-shadow:0 0 12px rgba(255,138,166,.7)}
+
+ /* Stopka menu */
+ html.ui2 .shell>aside .sidefoot{
+  position:static;display:grid;gap:var(--ui-space-2);width:auto;
+  margin:0;padding:var(--ui-space-2) 0 0;border:0;border-top:1px solid var(--ui-border);border-radius:0;
+  background:transparent;box-shadow:none;color:var(--ui-text-3);
+  font-size:var(--ui-text-xs);letter-spacing:0;line-height:1.4;text-align:left;white-space:nowrap;overflow:hidden;
+ }
+ html.ui2 .shell>aside .sideModeButtons{display:grid;gap:2px;margin:0;padding:0;opacity:1!important;pointer-events:auto!important}
+ html.ui2 .shell>aside .sideModeButtons button{
+  display:flex;align-items:center;gap:12px;
+  width:100%;height:36px;min-height:36px;padding:0 0 0 16px;
+  border:0!important;border-radius:var(--ui-radius-sm);background:transparent!important;box-shadow:none!important;
+  color:var(--ui-text-3);font-size:var(--ui-text-xs);font-weight:var(--ui-weight-medium);text-align:left;overflow:hidden;
+ }
+ html.ui2 .shell>aside .sideModeButtons button svg{flex:none}
+ html.ui2 .shell>aside .sideModeButtons button em{font-style:normal;opacity:0;transition:opacity var(--ui-duration-base) var(--ui-ease-standard)}
+ html.ui2 .shell>aside .sideModeButtons button:hover{color:var(--ui-text);background:var(--ui-surface-3)!important}
+ html.ui2 .shell>aside .sideModeButtons button.active{color:var(--ui-warning-text);background:var(--ui-warning-soft)!important}
+ html.ui2 .shell>aside .sideStatus{
+  display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 0 6px 10px;
+  border:1px solid transparent;border-radius:var(--ui-radius-md);
+  transition:background-color var(--ui-duration-base) var(--ui-ease-standard),border-color var(--ui-duration-base) var(--ui-ease-standard);
+ }
+ html.ui2 .shell>aside .sideStatusIcon{position:relative;display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:var(--ui-radius-sm);background:var(--ui-surface-3);color:var(--ui-text-2)}
+ html.ui2 .shell>aside .sideStatusIcon .statusDot{position:absolute;right:-2px;bottom:-2px;display:block;width:10px;height:10px;margin:0;border:2px solid var(--ui-bg);border-radius:50%;background:var(--ui-success);box-shadow:none}
+ html.ui2 .shell>aside .sideStatusText{display:grid;gap:1px;min-width:0;opacity:0;transition:opacity var(--ui-duration-base) var(--ui-ease-standard)}
+ html.ui2 .shell>aside .sideStatusText b{overflow:hidden;color:var(--ui-text);font-size:var(--ui-text-xs);font-weight:var(--ui-weight-semibold);text-overflow:ellipsis}
+ html.ui2 .shell>aside .sideStatusText small{overflow:hidden;color:var(--ui-text-3);font-size:var(--ui-text-2xs);text-overflow:ellipsis}
+ /* Stary styl ukrywał tekst stopki w zwiniętym menu kolorem — w UI 2.0 robi to przezroczystość. */
+ html.ui2 .shell>aside:not(:hover) .sidefoot{color:var(--ui-text-3)}
+
+ /* --- Stan „otwarty”: menu przypięte (≥1280 px) albo pasek ikon pod kursorem / fokusem --- */
+ html.ui2 .shell>aside:has(:focus-visible){width:var(--ui-sidebar-expanded);box-shadow:24px 0 64px rgba(0,0,0,.5);background:var(--ui-bg-subtle)}
+ html.ui2 .shell>aside:has(:focus-visible) .brandMark2{opacity:0;transform:scale(.85)}
+ html.ui2 .shell>aside:has(:focus-visible) .brandLogo{opacity:1;transform:translate(0,-50%)}
+ html.ui2 .shell>aside:has(:focus-visible) .navSection>small{color:var(--ui-text-3)}
+ html.ui2 .shell>aside:has(:focus-visible) .navSection>small::before{opacity:0}
+ html.ui2 .shell>aside:has(:focus-visible) .navSection button em,
+ html.ui2 .shell>aside:has(:focus-visible) .sideModeButtons button em{opacity:1;transform:none}
+ html.ui2 .shell>aside:has(:focus-visible) .sideStatusText{opacity:1}
+ html.ui2 .shell>aside:has(:focus-visible) .sideStatus{border-color:var(--ui-border);background:var(--ui-surface-1)}
+ html.ui2 .shell>aside:has(:focus-visible) .navCount{left:auto;right:10px;top:12px}
+}
+
+@media (min-width:1280px){
+ html.ui2 .shell>aside .sidebarToggle{display:grid}
+ html.ui2 .shell>aside:has(:focus-visible) .sidebarToggle{opacity:1}
+ html.ui2[data-sidebar="expanded"]{--sb-w:var(--ui-sidebar-expanded)}
+ html.ui2[data-sidebar="expanded"] .shell>aside{box-shadow:none!important;background:linear-gradient(180deg,var(--ui-bg-subtle),var(--ui-bg))}
+ html.ui2[data-sidebar="expanded"] .shell>aside .sidebarToggle{opacity:1}
+ html.ui2[data-sidebar="expanded"] .shell>aside .brandMark2{opacity:0;transform:scale(.85)}
+ html.ui2[data-sidebar="expanded"] .shell>aside .brandLogo{opacity:1;transform:translate(0,-50%)}
+ html.ui2[data-sidebar="expanded"] .shell>aside .navSection>small{color:var(--ui-text-3)}
+ html.ui2[data-sidebar="expanded"] .shell>aside .navSection>small::before{opacity:0}
+ html.ui2[data-sidebar="expanded"] .shell>aside .navSection button em,
+ html.ui2[data-sidebar="expanded"] .shell>aside .sideModeButtons button em{opacity:1;transform:none}
+ html.ui2[data-sidebar="expanded"] .shell>aside .sideStatusText{opacity:1}
+ html.ui2[data-sidebar="expanded"] .shell>aside .sideStatus{border-color:var(--ui-border);background:var(--ui-surface-1)}
+ html.ui2[data-sidebar="expanded"] .shell>aside .navCount{left:auto;right:10px;top:12px}
+}
+
+
+/* Rozwijanie paska ikon kursorem tylko na urządzeniach z precyzyjnym wskaźnikiem.
+   Na tabletach dotykowych :hover „przykleja się” po dotknięciu i menu zasłaniałoby treść. */
+@media (min-width:601px) and (hover:hover) and (pointer:fine){
+ html.ui2 .shell>aside:hover{width:var(--ui-sidebar-expanded);box-shadow:24px 0 64px rgba(0,0,0,.5);background:var(--ui-bg-subtle)}
+ html.ui2 .shell>aside:hover .brandMark2{opacity:0;transform:scale(.85)}
+ html.ui2 .shell>aside:hover .brandLogo{opacity:1;transform:translate(0,-50%)}
+ html.ui2 .shell>aside:hover .navSection>small{color:var(--ui-text-3)}
+ html.ui2 .shell>aside:hover .navSection>small::before{opacity:0}
+ html.ui2 .shell>aside:hover .navSection button em,
+ html.ui2 .shell>aside:hover .sideModeButtons button em{opacity:1;transform:none}
+ html.ui2 .shell>aside:hover .sideStatusText{opacity:1}
+ html.ui2 .shell>aside:hover .sideStatus{border-color:var(--ui-border);background:var(--ui-surface-1)}
+ html.ui2 .shell>aside:hover .navCount{left:auto;right:10px;top:12px}
+}
+@media (min-width:1280px) and (hover:hover) and (pointer:fine){
+ html.ui2 .shell>aside:hover .sidebarToggle{opacity:1}
+}
+
+/* ==========================================================================
+   GÓRNY PASEK I NAGŁÓWEK STRONY (≥601 px)
+   ========================================================================== */
+@media (min-width:601px){
+ html.ui2 .shell>main{min-width:0;max-width:none;padding:0 max(var(--ui-space-7),var(--ui-safe-right)) var(--ui-space-8) var(--ui-space-7);background:transparent}
+ /* Nagłówek nie tworzy własnego pudełka: pasek przykleja się do całej kolumny treści. */
+ html.ui2 .shell>main>header.appTop{display:contents}
+ html.ui2 .shell .topBar{
+  position:sticky;top:0;z-index:var(--ui-z-sticky);
+  display:flex;flex-wrap:nowrap;align-items:center;gap:var(--ui-space-3);
+  min-height:var(--ui-topbar-height);
+  margin:0 calc(-1 * var(--ui-space-7));padding:10px var(--ui-space-7);
+  padding-top:max(10px,var(--ui-safe-top));
+  border:0;border-bottom:1px solid var(--ui-border);border-radius:0;
+  background:rgba(11,6,8,.92);box-shadow:none;
+ }
+ html.ui2 .shell .crumbs{display:flex;align-items:center;gap:8px;flex:0 1 auto;min-width:0;color:var(--ui-text-3);font-size:var(--ui-text-sm);white-space:nowrap}
+ html.ui2 .shell .crumbs>span:first-child{overflow:hidden;text-overflow:ellipsis}
+ html.ui2 .shell .crumbs b{overflow:hidden;color:var(--ui-text);font-weight:var(--ui-weight-medium);text-overflow:ellipsis}
+
+ html.ui2 .shell .topBar .commandLauncher{
+  display:flex;align-items:center;gap:10px;
+  flex:1 1 280px;max-width:460px;min-width:180px;height:38px;min-height:38px;margin:0 auto;padding:0 8px 0 12px;
+  border:1px solid var(--ui-border-strong);border-radius:var(--ui-radius-md);
+  background:var(--ui-surface-1);color:var(--ui-text-3);font-size:var(--ui-text-sm);font-weight:var(--ui-weight-regular);
+  box-shadow:var(--ui-shadow-inset);text-align:left;
+ }
+ html.ui2 .shell .topBar .commandLauncher>span{display:grid;place-items:center;flex:none;color:var(--ui-text-3)}
+ html.ui2 .shell .topBar .commandLauncher .commandLauncherText{flex:1;min-width:0;overflow:hidden;font-style:normal;text-overflow:ellipsis;white-space:nowrap}
+ html.ui2 .shell .topBar .commandLauncher:hover{border-color:rgba(255,214,224,.24);background:var(--ui-surface-2);color:var(--ui-text-2)}
+ html.ui2 .shell .topBar .commandLauncher kbd{flex:none;margin-left:auto;height:22px;display:inline-flex;align-items:center;padding:0 7px;border:1px solid var(--ui-border-strong);border-bottom-width:2px;border-radius:var(--ui-radius-xs);background:var(--ui-surface-inset);color:var(--ui-text-3);font:var(--ui-weight-medium) 10.5px/1 var(--ui-font-sans)}
+
+ html.ui2 .shell .topBar .topStatus{display:flex;align-items:center;gap:var(--ui-space-2);flex:none;margin-left:0}
+ html.ui2 .shell .topBar .live{display:inline-flex;align-items:center;gap:7px;height:30px;min-height:30px;padding:0 11px;border:1px solid rgba(62,207,142,.18);border-radius:var(--ui-radius-full);background:var(--ui-success-soft);color:var(--ui-success-text);font:var(--ui-weight-medium) var(--ui-text-xs) var(--ui-font-sans);letter-spacing:0;text-transform:none}
+ html.ui2 .shell .topBar .live span{width:7px;height:7px;border-radius:50%;background:var(--ui-success);box-shadow:0 0 0 3px rgba(62,207,142,.18)}
+ html.ui2 .shell .topBar .dateChip{display:inline-flex;align-items:center;height:30px;min-height:30px;padding:0 11px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-full);background:transparent;color:var(--ui-text-2);font:var(--ui-weight-medium) var(--ui-text-xs) var(--ui-font-sans);font-variant-numeric:tabular-nums}
+ html.ui2 .shell .topBar .attentionLauncher{position:relative;display:inline-flex;align-items:center;gap:6px;height:38px;min-height:38px;padding:0 12px;border:1px solid var(--ui-border-strong);border-radius:var(--ui-radius-md);background:var(--ui-surface-1);color:var(--ui-text-2);font-weight:var(--ui-weight-semibold);font-variant-numeric:tabular-nums;box-shadow:var(--ui-shadow-inset)}
+ html.ui2 .shell .topBar .attentionLauncher:hover{background:var(--ui-surface-2);color:var(--ui-text)}
+ html.ui2 .shell .topBar .attentionLauncher.hasAttention{border-color:rgba(245,177,66,.38);background:var(--ui-warning-soft);color:var(--ui-warning-text)}
+ html.ui2 .shell .topBar .attentionLauncher.stale{border-color:rgba(245,177,66,.55)}
+ html.ui2 .shell .topBar .attentionLauncher .attentionStaleDot{border-color:var(--ui-bg);background:var(--ui-warning)}
+ html.ui2 .shell .topBar .topNew{display:inline-flex;align-items:center;gap:8px;height:38px;min-height:38px;padding:0 16px;border-radius:var(--ui-radius-md);white-space:nowrap}
+
+ html.ui2 .shell .appTop .titleBlock{display:block;margin:var(--ui-space-6) 0 var(--ui-space-5);padding:0;animation:ui-rise var(--ui-duration-slow) var(--ui-ease-out) backwards}
+ html.ui2 .shell .appTop .titleBlock .eyebrow{display:block;margin:0 0 6px;color:var(--ui-accent-text);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase;opacity:.9}
+ html.ui2 .shell .appTop .titleBlock h1{margin:0;color:var(--ui-text);font-size:var(--ui-text-3xl);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-tight);line-height:var(--ui-leading-tight)}
+ html.ui2 .shell .appTop .titleBlock p{margin:6px 0 0;max-width:72ch;color:var(--ui-text-2);font-size:var(--ui-text-md);line-height:var(--ui-leading-normal)}
+
+ html.ui2 .shell .pageBody{animation:ui-rise var(--ui-duration-slow) var(--ui-ease-out) backwards}
+}
+@media (min-width:601px) and (max-width:1279px){
+ html.ui2 .shell>main{padding:0 var(--ui-space-5) var(--ui-space-7)}
+ html.ui2 .shell .topBar{margin:0 calc(-1 * var(--ui-space-5));padding-left:var(--ui-space-5);padding-right:var(--ui-space-5)}
+ html.ui2 .shell .topBar .dateChip{display:none}
+ html.ui2 .shell .appTop .titleBlock h1{font-size:var(--ui-text-2xl)}
+}
+@media (min-width:601px) and (max-width:900px){
+ html.ui2 .shell .topBar .live,html.ui2 .shell .crumbs>span:first-child,html.ui2 .shell .crumbs>span[aria-hidden]{display:none}
+ html.ui2 .shell .topBar .commandLauncher .commandLauncherText{display:none}
+ html.ui2 .shell .topBar .commandLauncher{flex:0 0 auto;min-width:0;width:auto;margin:0 0 0 auto}
+}
+
+/* ==========================================================================
+   PWA NA TELEFONIE (iOS / Android) — dolny dock i kompaktowy nagłówek
+   ========================================================================== */
+@media (max-width:600px){
+ html.ui2.pwaPlatform .shell{padding-bottom:calc(var(--ui-dock-height) + 18px + var(--ui-safe-bottom))}
+ html.ui2.pwaPlatform .shell>aside{
+  z-index:var(--ui-z-dock);
+  padding:6px max(8px,var(--ui-safe-right)) calc(6px + var(--ui-safe-bottom)) max(8px,var(--ui-safe-left));
+  border-top:1px solid var(--ui-border-strong);
+  background:rgba(14,8,10,.97);
+  box-shadow:0 -12px 40px rgba(0,0,0,.5);
+ }
+ html.ui2.pwaPlatform .shell>aside .brand,html.ui2.pwaPlatform .shell>aside .sidefoot,html.ui2.pwaPlatform .shell>aside .navSection>small{display:none}
+ html.ui2.pwaPlatform .shell>aside nav{gap:2px;scroll-padding-inline:8px}
+ html.ui2.pwaPlatform .shell>aside .navSection button{
+  position:relative;flex:0 0 72px;min-width:72px;min-height:var(--ui-dock-height);gap:4px;padding:6px 2px 4px;
+  border:0;border-radius:var(--ui-radius-md);background:transparent;box-shadow:none;color:var(--ui-text-3);
+  -webkit-tap-highlight-color:transparent;
+ }
+ html.ui2.pwaPlatform .shell>aside .navSection button span{
+  display:grid;place-items:center;width:52px;height:30px;border-radius:var(--ui-radius-full);
+  transition:background-color var(--ui-duration-base) var(--ui-ease-standard),color var(--ui-duration-base) var(--ui-ease-standard),transform var(--ui-duration-base) var(--ui-ease-emphasized);
+ }
+ html.ui2.pwaPlatform .shell>aside .navSection button em{max-width:68px;color:var(--ui-text-3);font-size:10.5px;font-weight:var(--ui-weight-medium);letter-spacing:0}
+ html.ui2.pwaPlatform .shell>aside .navSection button:active span{transform:scale(.9)}
+ html.ui2.pwaPlatform .shell>aside .navSection button.active{border:0;background:transparent;box-shadow:none}
+ html.ui2.pwaPlatform .shell>aside .navSection button.active span{background:var(--ui-accent-soft-strong);color:var(--ui-wine-100)}
+ html.ui2.pwaPlatform .shell>aside .navSection button.active em{color:var(--ui-text);font-weight:var(--ui-weight-semibold)}
+ html.ui2.pwaPlatform .shell>aside .navCount{top:4px;right:10px;min-width:17px;height:17px;padding:0 4px;border-radius:var(--ui-radius-full);background:var(--ui-warning)!important;color:#2a1700!important;box-shadow:0 0 0 2px rgba(14,8,10,.97);font:var(--ui-weight-bold) 9.5px/17px var(--ui-font-sans);font-style:normal}
+
+ html.ui2.pwaPlatform .shell>main{padding:0 14px 22px}
+ html.ui2.pwaPlatform .shell>main>header{
+  margin:0 -14px 14px;padding:calc(8px + var(--ui-safe-top)) 14px 10px;
+  border-bottom:1px solid var(--ui-border);background:rgba(11,6,8,.96);
+ }
+ html.ui2.pwaPlatform .shell .topBar{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+ html.ui2.pwaPlatform .shell .topBar .commandLauncher{flex:0 0 44px;width:44px;min-width:44px;max-width:44px;height:44px;min-height:44px;margin:0;padding:0;display:grid;place-items:center;font-size:0}
+ html.ui2.pwaPlatform .shell .topBar .commandLauncher>span{display:grid;place-items:center;color:var(--ui-text-2)}
+ html.ui2.pwaPlatform .shell .topBar .commandLauncher kbd{display:none}
+ html.ui2.pwaPlatform .shell .topBar .topStatus{display:flex;align-items:center;gap:8px;margin-left:auto;flex:0 1 auto;min-width:0}
+ html.ui2.pwaPlatform .shell .topBar .attentionLauncher{display:inline-flex;align-items:center;justify-content:center;gap:4px;width:auto;min-width:44px;height:44px;min-height:44px;padding:0 10px}
+ html.ui2.pwaPlatform .shell .topBar .crumbs{display:none}
+ html.ui2.pwaPlatform .shell .commandLauncher .commandLauncherText{display:none}
+ html.ui2.pwaPlatform .shell :is(.attentionLauncher,.commandLauncher){border:1px solid var(--ui-border-strong);background:var(--ui-surface-1);color:var(--ui-text-2);border-radius:var(--ui-radius-md)}
+ html.ui2.pwaPlatform .shell .attentionLauncher.hasAttention{border-color:rgba(245,177,66,.38);background:var(--ui-warning-soft);color:var(--ui-warning-text)}
+ html.ui2.pwaPlatform .shell .topNew{display:inline-flex;align-items:center;gap:6px;height:44px;min-height:44px;padding:0 14px;border-radius:var(--ui-radius-md);white-space:nowrap}
+ html.ui2.pwaPlatform .titleBlock .eyebrow{display:none}
+ html.ui2.pwaPlatform .titleBlock h1{color:var(--ui-text);font-size:var(--ui-text-xl);font-weight:var(--ui-weight-semibold);letter-spacing:-.01em}
+ html.ui2.pwaPlatform :where(.panel,.studioPanel,.studioKpi,.studioGoal){border-radius:var(--ui-radius-lg)}
+}
+/* Przeglądarka (nie-PWA) na wąskim ekranie — menu ukryte jak wcześniej, ale nowa typografia nagłówka. */
+@media (max-width:600px){
+ html.ui2:not(.pwaPlatform) .shell>main{padding:0 14px 24px}
+ html.ui2:not(.pwaPlatform) .shell .topBar{gap:8px;flex-wrap:wrap}
+}
+
+/* ==========================================================================
+   PULPIT 2.0
+   ========================================================================== */
+html.ui2 .studioDashboard{gap:var(--ui-space-5)}
+html.ui2 .studioHeading.dashHero{
+ display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--ui-space-4) var(--ui-space-6);
+ margin:0;padding:var(--ui-space-6);
+ border:1px solid var(--ui-border);border-radius:var(--ui-radius-xl);
+ background:
+  radial-gradient(90% 160% at 100% 0%,rgba(212,61,101,.20),transparent 60%),
+  linear-gradient(180deg,var(--ui-surface-2),var(--ui-surface-1));
+ box-shadow:var(--ui-shadow-inset),var(--ui-shadow-md);
+ animation:ui-rise var(--ui-duration-slow) var(--ui-ease-out) backwards;
+}
+html.ui2 .dashHeroCopy{display:grid;gap:6px;min-width:0}
+html.ui2 .dashHeroCopy .ui-eyebrow{color:var(--ui-accent-text)}
+html.ui2 .studioHeading .dashGreeting{margin:0;max-width:none;color:var(--ui-text);font-size:var(--ui-text-3xl);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-tight);line-height:var(--ui-leading-tight)}
+html.ui2 .dashSummary{margin:0;color:var(--ui-text-2);font-size:var(--ui-text-md)}
+html.ui2 .dashSummary b{color:var(--ui-text);font-weight:var(--ui-weight-semibold);font-variant-numeric:tabular-nums}
+html.ui2 .dashQuickActions{display:flex;flex-wrap:wrap;gap:var(--ui-space-2)}
+html.ui2 .dashQuickActions .studioDocumentScan{border-color:transparent}
+
+/* Przegląd: przepływ + cel miesiąca */
+html.ui2 .studioOverview{gap:var(--ui-space-5)}
+html.ui2 .flowPanel{padding:var(--ui-space-5);gap:var(--ui-space-4)}
+html.ui2 .flowPanel .studioPanelHead{padding:0}
+html.ui2 .flowPanel .studioPanelHead h3{margin:0;font-size:var(--ui-text-lg)}
+html.ui2 .flowHint{color:var(--ui-text-3);font-size:var(--ui-text-xs)}
+html.ui2 .flowBars{gap:var(--ui-space-2)}
+html.ui2 .flowStage{gap:6px;padding:12px 10px 10px;border:1px solid var(--ui-border)!important;border-radius:var(--ui-radius-md);background:var(--ui-surface-inset)!important;box-shadow:none;transition:border-color var(--ui-duration-fast) var(--ui-ease-standard),background-color var(--ui-duration-fast) var(--ui-ease-standard),transform var(--ui-duration-instant) var(--ui-ease-standard)}
+html.ui2 .flowStage:hover{border-color:var(--ui-border-strong)!important;background:var(--ui-surface-2)!important}
+html.ui2 .flowStage.selected{border-color:rgba(255,138,166,.5)!important;background:var(--ui-accent-soft)!important}
+html.ui2 .flowLabel{color:var(--ui-text-3);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-medium)}
+html.ui2 .flowStage strong{color:var(--ui-text);font-size:var(--ui-text-2xl);font-weight:var(--ui-weight-semibold);font-variant-numeric:tabular-nums}
+html.ui2 .flowTrack{height:96px;border-radius:var(--ui-radius-sm);background:rgba(255,214,224,.035)}
+html.ui2 .flowTrack i{border-radius:var(--ui-radius-sm);background:linear-gradient(180deg,rgba(240,96,127,.55),rgba(143,34,65,.25))}
+html.ui2 .flowStage.selected .flowTrack i{background:linear-gradient(180deg,var(--ui-wine-400),var(--ui-wine-700))}
+
+html.ui2 .studioGoal{padding:var(--ui-space-5) var(--ui-space-5) 0;background:radial-gradient(120% 120% at 100% 0%,rgba(212,61,101,.22),transparent 55%),var(--ui-surface-1)}
+html.ui2 .studioPanelTitle span{color:var(--ui-text-3);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps)}
+html.ui2 .goalAmount{color:var(--ui-text);font-size:var(--ui-text-3xl);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-tight);font-variant-numeric:tabular-nums}
+html.ui2 .goalCaption{color:var(--ui-text-3)}
+html.ui2 .studioGoal .iconButton{display:grid;place-items:center;width:32px;height:32px;min-height:32px;padding:0;border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);background:var(--ui-surface-2);color:var(--ui-text-2)}
+html.ui2 .studioGoal .iconButton:hover{color:var(--ui-text);background:var(--ui-surface-hover)}
+
+/* KPI */
+html.ui2 .studioKpis{gap:var(--ui-space-4)}
+html.ui2 .studioKpi{
+ position:relative;display:flex;flex-direction:column;gap:var(--ui-space-3);
+ padding:var(--ui-space-4) var(--ui-space-5);border-radius:var(--ui-radius-lg);text-align:left;overflow:hidden;
+ transition:border-color var(--ui-duration-base) var(--ui-ease-standard),transform var(--ui-duration-base) var(--ui-ease-out),box-shadow var(--ui-duration-base) var(--ui-ease-standard),background-color var(--ui-duration-base) var(--ui-ease-standard);
+}
+html.ui2 .studioKpi::before{display:none}
+html.ui2 .shell .studioKpi:hover:not(:disabled){border-color:var(--ui-border-strong);background:var(--ui-surface-2);transform:translateY(-2px);box-shadow:var(--ui-shadow-inset),var(--ui-shadow-md)}
+html.ui2 .shell .studioKpi:active:not(:disabled){transform:translateY(0) scale(.99)}
+html.ui2 .studioKpis>.studioKpi:first-child{background:radial-gradient(120% 140% at 100% 0%,rgba(212,61,101,.26),transparent 60%),var(--ui-surface-1);border-color:rgba(255,138,166,.2)}
+html.ui2 .studioKpi .kpiTop{display:flex;align-items:center;justify-content:space-between;gap:var(--ui-space-2);color:var(--ui-text-2);font-size:var(--ui-text-xs);font-weight:var(--ui-weight-medium);letter-spacing:0;text-transform:none}
+html.ui2 .studioKpi .kpiIcon{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:var(--ui-radius-md);background:var(--ui-accent-soft);color:var(--ui-accent-text)}
+html.ui2 .studioKpi.warning .kpiIcon{background:var(--ui-warning-soft);color:var(--ui-warning-text)}
+html.ui2 .studioKpi.warning{border-color:rgba(245,177,66,.28)}
+html.ui2 .studioKpi>strong{color:var(--ui-text);font-size:var(--ui-text-3xl);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-tight);line-height:1;font-variant-numeric:tabular-nums}
+html.ui2 .studioKpi .kpiBottom{display:flex;align-items:center;justify-content:space-between;gap:var(--ui-space-2);color:var(--ui-text-3);font-size:var(--ui-text-xs)}
+html.ui2 .studioKpi .kpiBottom svg{flex:none;opacity:.5;transition:transform var(--ui-duration-base) var(--ui-ease-out),opacity var(--ui-duration-base) var(--ui-ease-standard)}
+html.ui2 .studioKpi:hover .kpiBottom svg{opacity:1;transform:translateX(3px)}
+
+/* Panele robocze */
+html.ui2 .studioWorkGrid{gap:var(--ui-space-5)}
+html.ui2 .studioWorkMain,html.ui2 .studioWorkSide{gap:var(--ui-space-5)}
+html.ui2 .studioPanel{overflow:hidden}
+html.ui2 .studioPanelHead{padding:var(--ui-space-5) var(--ui-space-5) var(--ui-space-4)}
+html.ui2 .studioPanelHead h3{display:flex;align-items:center;gap:8px;margin:0;color:var(--ui-text);font-size:var(--ui-text-lg);font-weight:var(--ui-weight-semibold);letter-spacing:-.01em}
+html.ui2 .sectionEyebrow{color:var(--ui-text-3);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps)}
+html.ui2 .countBadge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 7px;border:0;border-radius:var(--ui-radius-full);background:var(--ui-surface-3);color:var(--ui-text-2);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);font-variant-numeric:tabular-nums}
+html.ui2 .countBadge.amber{background:var(--ui-warning-soft);color:var(--ui-warning-text)}
+html.ui2 .studioTextButton{display:inline-flex;align-items:center;gap:6px;height:32px;min-height:32px;padding:0 10px;border:1px solid transparent;border-radius:var(--ui-radius-sm);background:transparent;color:var(--ui-text-2);font-size:var(--ui-text-xs);font-weight:var(--ui-weight-medium)}
+html.ui2 .studioTextButton:hover{background:var(--ui-surface-3);color:var(--ui-text)}
+
+html.ui2 .studioFilters{gap:4px;margin:0 var(--ui-space-5) var(--ui-space-2);padding:3px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface-inset);scrollbar-width:none}
+html.ui2 .studioFilters::-webkit-scrollbar{display:none}
+html.ui2 .studioFilters button{flex:none;height:28px;min-height:28px;padding:0 10px;border:0;border-radius:var(--ui-radius-sm);background:transparent;color:var(--ui-text-3);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-medium)}
+html.ui2 .studioFilters button:hover{background:var(--ui-surface-3);color:var(--ui-text)}
+html.ui2 .studioFilters button.active,html.ui2 .studioFilters button[aria-pressed="true"]{background:var(--ui-surface-hover);color:var(--ui-text);box-shadow:var(--ui-shadow-inset),var(--ui-shadow-xs)}
+
+html.ui2 .studioOrderLabels{padding:10px var(--ui-space-5);color:var(--ui-text-3);font-size:var(--ui-text-2xs);font-weight:var(--ui-weight-semibold);letter-spacing:var(--ui-tracking-caps);text-transform:uppercase}
+html.ui2 .studioOrder{border-top:1px solid var(--ui-border);padding:14px var(--ui-space-5);transition:background-color var(--ui-duration-fast) var(--ui-ease-standard)}
+html.ui2 .shell .studioOrder:hover{background:var(--ui-surface-2)}
+html.ui2 .studioOrder .studioVehicle b{color:var(--ui-text);font-weight:var(--ui-weight-semibold)}
+html.ui2 .studioOrder .studioVehicle b span{color:var(--ui-text-2);font-weight:var(--ui-weight-regular)}
+html.ui2 .studioOrder .studioVehicle small{color:var(--ui-text-3)}
+html.ui2 .studioOrder>strong{color:var(--ui-text);font-weight:var(--ui-weight-semibold);font-variant-numeric:tabular-nums}
+html.ui2 .studioOrder>svg{color:var(--ui-text-3);transition:transform var(--ui-duration-base) var(--ui-ease-out)}
+html.ui2 .studioOrder:hover>svg{transform:translateX(3px);color:var(--ui-text)}
+
+html.ui2 :is(.studioAttention,.studioAppointment,.studioTimer){border:0;border-top:1px solid var(--ui-border);border-radius:0;background:transparent;transition:background-color var(--ui-duration-fast) var(--ui-ease-standard)}
+html.ui2 .shell :is(.studioAttention,.studioAppointment,.studioTimer):hover{background:var(--ui-surface-2)}
+html.ui2 .attentionIcon{display:grid;place-items:center;border-radius:var(--ui-radius-sm);background:var(--ui-warning-soft);color:var(--ui-warning-text)}
+html.ui2 .appointmentTime b{color:var(--ui-text);font-variant-numeric:tabular-nums}
+html.ui2 .studioFullButton{display:flex;align-items:center;justify-content:center;gap:8px;width:calc(100% - 2 * var(--ui-space-5));height:38px;min-height:38px;margin:var(--ui-space-3) var(--ui-space-5) var(--ui-space-5);border:1px solid var(--ui-border-strong);border-radius:var(--ui-radius-md);background:var(--ui-surface-2);color:var(--ui-text-2);font-size:var(--ui-text-xs);font-weight:var(--ui-weight-medium)}
+html.ui2 .studioFullButton:hover{background:var(--ui-surface-hover);color:var(--ui-text)}
+html.ui2 .studioClear>span{background:var(--ui-success-soft);color:var(--ui-success-text);border-radius:var(--ui-radius-md)}
+html.ui2 .studioSourceTrack{border-radius:var(--ui-radius-full);background:rgba(255,214,224,.05)}
+html.ui2 .studioSourceTrack i{border-radius:var(--ui-radius-full);background:linear-gradient(90deg,var(--ui-wine-700),var(--ui-wine-400))}
+html.ui2 .studioFooter{color:var(--ui-text-3);border-color:var(--ui-border)}
+html.ui2 .studioFooter b{color:var(--ui-accent-text)}
+
+html.ui2 .studioSkeleton>div{border-radius:var(--ui-radius-lg);background:var(--ui-surface-1)}
+
+@media (max-width:1050px){
+ html.ui2 .studioHeading.dashHero{padding:var(--ui-space-5)}
+}
+@media (max-width:600px){
+ html.ui2 .studioDashboard{gap:var(--ui-space-4)}
+ html.ui2 .studioHeading.dashHero{align-items:stretch;padding:var(--ui-space-4);border-radius:var(--ui-radius-lg)}
+ html.ui2 .studioHeading .dashGreeting{font-size:var(--ui-text-2xl)}
+ html.ui2 .dashQuickActions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+ html.ui2 .dashQuickActions .ui-btn{flex-direction:column;gap:4px;height:auto;min-height:56px;padding:8px 6px;font-size:var(--ui-text-xs);line-height:1.15;white-space:normal;text-align:center}
+ html.ui2 .flowPanel{padding:var(--ui-space-4)}
+ html.ui2 .studioKpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ui-space-3)}
+ html.ui2 .studioKpi{padding:var(--ui-space-3) var(--ui-space-4)}
+ html.ui2 .studioKpi>strong{font-size:var(--ui-text-2xl)}
+ html.ui2 .studioKpi .kpiIcon{width:30px;height:30px}
+ html.ui2 .studioFilters{margin-left:var(--ui-space-3);margin-right:var(--ui-space-3)}
+ html.ui2 .studioOrder{padding-left:var(--ui-space-4);padding-right:var(--ui-space-4)}
+}
+@media (max-width:380px){
+ html.ui2 .dashQuickActions{grid-template-columns:1fr}
+ html.ui2 .studioKpis{grid-template-columns:1fr}
+}
+
+/* ==========================================================================
+   Ruch ograniczony
+   ========================================================================== */
+@media (prefers-reduced-motion:reduce){
+ html.ui2 .shell,html.ui2 .shell>aside,html.ui2 .shell>aside *,html.ui2 .navPill{transition:none!important}
+ html.ui2 :is(.studioHeading.dashHero,.shell .appTop .titleBlock,.shell .pageBody){animation:none!important}
+ html.ui2 .shell .studioKpi:is(:hover,:active):not(:disabled){transform:none}
+}
+
+/* ==========================================================================
+   Tryb warsztatowy — większe cele dotyku (rękawice, tablet na hali)
+   ========================================================================== */
+html.ui2.workshopOutdoor .shell>aside .navSection button{height:var(--ui-touch-min);min-height:var(--ui-touch-min);font-size:var(--ui-text-md)}
+html.ui2.workshopOutdoor .shell>aside .sideModeButtons button{height:var(--ui-touch-min);min-height:var(--ui-touch-min)}
+html.ui2.workshopOutdoor .shell .topBar :is(.commandLauncher,.attentionLauncher,.topNew){height:var(--ui-touch-min);min-height:var(--ui-touch-min)}
+html.ui2.workshopOutdoor :is(.studioTextButton,.studioFilters button,.studioFullButton,.studioGoal .iconButton){min-height:var(--ui-touch-min)}
+html.ui2.workshopOutdoor .studioGoal .iconButton{width:var(--ui-touch-min);height:var(--ui-touch-min)}
+html.ui2.workshopOutdoor .ui-btn{--btn-h:var(--ui-touch-min);--btn-fs:var(--ui-text-md)}

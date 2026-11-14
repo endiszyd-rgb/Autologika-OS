@@ -1,4 +1,16 @@
-# AutoLogika UI 2.0 — pierwszy etap
+# AutoLogika UI 2.0 — lista zleceń
+
+## Stan po integracji z main (2026-11-14)
+
+Zachowano opublikowany design system z `src/design-system/`, pulpit, Centrum
+zlecenia, magazyn i OCR oraz wersję 1.1.8. `src/ui-2.css` zawiera teraz wyłącznie
+rozszerzenie listy zleceń; nie nadpisuje globalnych tokenów, nawigacji ani pulpitu.
+`PageIntro` jest używany na liście zleceń. Poniższy opis pierwszego etapu jest
+zapisem historycznym, a nie opisem aktualnego globalnego wyglądu aplikacji.
+
+Po integracji: `npm test` — 244 CJS + 227 MJS, audyt połączeń UI OK.
+
+## Pierwszy etap — zapis historyczny
 
 Zakres: rama aplikacji, nawigacja, pulpit i fundamenty komponentów. Bez zmian API,
 obliczeń, zapisu danych, uprawnień i przepływów biznesowych.

@@ -66,3 +66,18 @@ końcowe 8 testów importu i obsługi uszkodzonego zdjęcia — PASS.
 Oba przebiegi Chromium (UA iPhone i Android), z OCR i kontrolą potwierdzenia
 zapisu — PASS. Build z atrapą konfiguracji służył wyłącznie smoke; po nim
 przywrócono build z domyślną lokalną konfiguracją.
+
+
+## Integracja wydania 1.1.8
+
+W czasie publikacji na main pojawiła się wersja 1.1.7 z niezależnym UI 2.0.
+Integracja bazuje na f747ba6 i zachowuje jego wygląd; lokalny alternatywny
+arkusz ui-2.css nie jest częścią wydania. Źródłowy wariant zachowano na
+branchu emdash/ui-2-0-5ljk6 (a660c10).
+
+Desktop używa ConfirmationHost, ze sprawdzeniem anulowania i dokładnie
+jednego wywołania importu po zatwierdzeniu. Testy po integracji: 244 CJS,
+227 MJS, audyt połączeń, build, desktop delivery-ui-smoke i estimate-ui-smoke
+zakończyły się powodzeniem. Pełny wcześniejszy ui-preview sprawdził przepływy
+bez błędów renderera, lecz końcowy capturePage nie miał dostępnej powierzchni
+ekranu; ten przebieg nie jest raportowany jako pełny PASS.

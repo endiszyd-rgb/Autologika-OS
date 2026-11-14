@@ -27,6 +27,17 @@ const paths = {
  play:'m8 4 12 8-12 8z',
  chevron:'m9 5 7 7-7 7',
  bolt:'m13 2-9 12h7l-1 8 10-12h-7z',
+ sidebar:'M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1 M9 4v16 M15 10l-2 2 2 2',
+ contrast:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M12 3v18 M12 7h5 M12 11h7 M12 15h6',
+ apps:'M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M17 14v6 M14 17h6',
+ cloud:'M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5 4.75 4.75 0 0 1 17.5 18z',
+ device:'M4 5h16v11H4z M2 19h20 M10 16v3 M14 16v3',
+ camera:'M4 8h3l2-3h6l2 3h3v11H4z M12 10.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z',
+ barcode:'M4 6v12 M7 6v12 M10 6v12 M14 6v12 M16 6v12 M20 6v12',
+ grid:'M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z',
+ list:'M8 6h12 M8 12h12 M8 18h12 M4 6h.01 M4 12h.01 M4 18h.01',
+ pin:'M12 21s-6-5.5-6-11a6 6 0 1 1 12 0c0 5.5-6 11-6 11z M12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+ plus:'M12 5v14 M5 12h14',
 }
 export function Icon({name,size=18,...props}) {
  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}><path d={paths[name]||paths.center}/></svg>
