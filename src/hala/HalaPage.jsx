@@ -43,7 +43,7 @@ export function HalaPage({api,go,openOrder,scanDocument,labels,refresh}){
     <p>{hala.hello.occupancy}{hala.hello.nextPickup&&<> · najbliższy odbiór o <span className="halaMono">{hala.hello.nextPickup}</span></>} · obrót dziś <span className="halaMono">{revenue} zł</span></p>
    </div>
    <div className="halaHeaderActions">
-    <button className="halaBtn" type="button" onClick={()=>scanDocument?.()}><Glyph name="scan" size={16}/>Skanuj dokument</button>
+    <button className="halaBtn halaScanDocument" type="button" onClick={()=>scanDocument?.()}><Glyph name="scan" size={16}/>Skanuj dokument</button>
     <button className="halaBtn halaPrimary" type="button" onClick={()=>go?.('intake')}><Glyph name="plus" size={16} width={2.4}/>Przyjmij auto</button>
    </div>
   </div>

@@ -16,12 +16,12 @@ export function HalaSettings({api,Panel}){
    // przypisania stanowisk mogły się zmienić na ekranie Hali — zapisujemy tylko pola z tego formularza
    const current=await api.settings.hala()
    const next=await api.settings.setHala({...current,greetingName:value.greetingName,workshopName:value.workshopName,accent:value.accent})
-   setValue(next);setMessage('Zapisano. Ekran Hala na żywo pokaże zmiany od razu.')
+   setValue(next);setMessage('Zapisano. Pulpit pokaże zmiany od razu.')
   }catch(reason){setError(`Nie udało się zapisać: ${reason?.message||reason}`)}
   finally{setBusy(false)}
  }
- return <Panel title="Ekran Hala na żywo">
-  <div className="notice"><b>Powitanie i wygląd</b><span>Imię i nazwa warsztatu pojawiają się w nagłówku ekranu Hala na żywo. Zlecenia przypisujesz do stanowisk, klikając stanowisko na tym ekranie.</span></div>
+ return <Panel title="Pulpit — Hala na żywo">
+  <div className="notice"><b>Powitanie i wygląd</b><span>Imię i nazwa warsztatu pojawiają się w nagłówku Pulpitu. Zlecenia przypisujesz do stanowisk, klikając stanowisko na Pulpicie.</span></div>
   {value?<form className="halaSettingsForm" onSubmit={save}>
    <div className="formgrid">
     <label>Imię do powitania<input value={value.greetingName} maxLength={40} placeholder="np. Endi" autoComplete="given-name" onChange={event=>setValue({...value,greetingName:event.target.value})}/></label>

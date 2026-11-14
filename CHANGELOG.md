@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.10 — 2026-11-14
+
+- Pulpit ma teraz wygląd „Hala na żywo”: stanowiska z przypisanymi zleceniami, „Co wymaga Ciebie”, puls dnia i wiadomości z branży. Poprzedni pulpit został zastąpiony; osobna pozycja „Hala na żywo” zniknęła z menu.
+- Ustawienia → „Pulpit — Hala na żywo”: imię do powitania, nazwa warsztatu i kolor akcentu.
+
 ## 1.1.9 — 2026-11-14
 
 ### Hala na żywo
