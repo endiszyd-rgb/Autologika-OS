@@ -32,11 +32,14 @@ export function resolveVerifiedVehiclePhoto(vehicle,records=verifiedVehiclePhoto
   if(knownForYear.length===1&&p.generation&&norm(p.generation)!==norm(knownForYear[0].generation))return false
   return true
  })
- // If one model/year has both wagon and sedan photos, a missing body type is not evidence
- // to choose either one. Require body selection to avoid a misleading picture.
- if(!requestedBody&&new Set(compatible.map(p=>canonicalBody(p.bodyType||'unknown'))).size>1)return null
- compatible.sort((a,b)=>Number(Boolean(b.generation))-Number(Boolean(a.generation))||(a.to-a.from)-(b.to-b.from))
- const photo=compatible[0]
+ // A precisely identified generation must take priority over older, generic photo
+ // records before checking ambiguous body variants.
+ const exactGeneration=generation?compatible.filter(p=>norm(p.generation)===generation):[]
+ const finalCandidates=exactGeneration.length?exactGeneration:compatible
+ // Without a body type, never guess among sedan, wagon, or unknown photo bodies.
+ if(!requestedBody&&new Set(finalCandidates.map(p=>canonicalBody(p.bodyType||'unknown'))).size>1)return null
+ finalCandidates.sort((a,b)=>Number(Boolean(b.generation))-Number(Boolean(a.generation))||(a.to-a.from)-(b.to-b.from))
+ const photo=finalCandidates[0]
  return photo?{...photo,src:'https://commons.wikimedia.org/wiki/Special:FilePath/'+encodeURIComponent(photo.file)}:null
 }
 export function photoCoverage(catalog,records=verifiedVehiclePhotos){
