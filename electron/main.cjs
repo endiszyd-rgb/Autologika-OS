@@ -1,3 +1,4 @@
+const {withQuoteHistory}=require('./quote-history.cjs')
 const { app, BrowserWindow, ipcMain, dialog, shell, clipboard, Notification, net, nativeImage } = require('electron')
 const path = require('path')
 const fs = require('fs')
@@ -407,7 +408,7 @@ function createMobileServer(port=8787){
           let v=vin?db.prepare('SELECT * FROM vehicles WHERE UPPER(vin)=? LIMIT 1').get(vin):null
           if(!v&&plate)v=db.prepare('SELECT * FROM vehicles WHERE customer_id=? AND UPPER(plate)=? ORDER BY id DESC LIMIT 1').get(c.id,plate)
           if(!v){const r=db.prepare('INSERT INTO vehicles(customer_id,plate,vin,make,model,year,engine,mileage,notes) VALUES (?,?,?,?,?,?,?,?,?)').run(c.id,plate,vin,d.make||'',d.model||'',null,d.engine||'',+d.mileage||0,'');v={id:r.lastInsertRowid}}
-          const o=db.prepare(`INSERT INTO orders(vehicle_id,title,complaint,status,priority,diagnosis_limit,labor_rate,diagnosis_fee,source,wait_state) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(v.id,d.title||'Diagnostyka / naprawa',d.complaint||'','PRZYJETE','NORMALNY',350,220,0,'mobile','BRAK')
+          const o=db.prepare(`INSERT INTO orders(vehicle_id,title,complaint,status,priority,diagnosis_limit,labor_rate,diagnosis_fee,source,wait_state) VALUES (?,?,?,?,?,?,?,?,?,?)`).run(v.id,d.title||'Diagnostyka / naprawa',d.complaint||'','PRZYJETE','NORMALNY',350,Number(readCatalogOverrides().__repair_pricing_v1?.hourlyRate||0),0,'mobile','BRAK')
           db.prepare(`INSERT INTO order_notes(order_id,intake_notes,release_notes,qc_notes) VALUES (?,?,?,?)`).run(o.lastInsertRowid,'','','')
           db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(o.lastInsertRowid,'INTAKE','Przyjęcie mobilne',d.complaint||'')
           return{order_id:o.lastInsertRowid}
@@ -651,8 +652,8 @@ ipcMain.handle('quotes:get',(_,orderId)=>{
   const approval=findQuoteApproval(db,orderId,q.id)
   return{...q,items,total,cost,margin:total-cost,approval:approval||null}
 })
-ipcMain.handle('quotes:importOrder',(_,orderId)=>{
-  const db=getDb();requireEditableOrder(db,orderId)
+ipcMain.handle('quotes:importOrder',(_,orderId)=>{const db=getDb();return withQuoteHistory(db,{orderId,action:'Import zakresu zlecenia'},()=>{
+  requireEditableOrder(db,orderId)
   return db.transaction(()=>{
     let quote=db.prepare("SELECT * FROM quotes WHERE order_id=? AND status='ROBOCZA' ORDER BY id DESC LIMIT 1").get(orderId)
     if(quote){
@@ -669,9 +670,9 @@ ipcMain.handle('quotes:importOrder',(_,orderId)=>{
     db.prepare('DELETE FROM quote_items WHERE quote_id=?').run(quote.id)
     return replaceQuoteWithOrderSnapshot(db,quote)
   })()
-})
-ipcMain.handle('quotes:addItem',(_,{orderId,data})=>{
-  const db=getDb();requireEditableOrder(db,orderId)
+})})
+ipcMain.handle('quotes:addItem',(_,{orderId,data})=>{const db=getDb();return withQuoteHistory(db,{orderId,action:'Dodano pozycję wyceny'},()=>{
+  requireEditableOrder(db,orderId)
   let quote=db.prepare("SELECT * FROM quotes WHERE order_id=? AND status='ROBOCZA' ORDER BY id DESC LIMIT 1").get(orderId)
   if(!quote){const created=db.prepare("INSERT INTO quotes(order_id,status) VALUES (?,'ROBOCZA')").run(orderId);quote=db.prepare('SELECT * FROM quotes WHERE id=?').get(created.lastInsertRowid)}
   assertQuoteEditable(db,quote)
@@ -679,8 +680,9 @@ ipcMain.handle('quotes:addItem',(_,{orderId,data})=>{
   const kind=data.kind||'CZESC'
   const qty=kind==='CZESC'?wholePartQuantity(data.qty||1):Number(data.qty||1)
   let price=Number(data.unit_price||0)
-  if(kind==='CZESC'&&!price)price=Math.round(Number(data.unit_cost||0)*(1+partMarkup(Number(data.unit_cost||0)))*100)/100
+  if(kind==='CZESC'&&data.unit_price==null)price=Math.round(Number(data.unit_cost||0)*(1+partMarkup(Number(data.unit_cost||0)))*100)/100
   const hours=Number(data.labor_hours||0),total=kind==='ROBOCIZNA'?hours*Number(data.labor_rate||0):qty*price
+  if(!String(data.name||'').trim()||![qty,hours,price,Number(data.labor_rate||0),Number(data.unit_cost||0)].every(n=>Number.isFinite(n)&&n>=0)||qty<=0||(kind==='ROBOCIZNA'&&hours<=0))throw new Error('Nieprawidlowe dane pozycji wyceny.')
   const created=db.prepare(`INSERT INTO quote_items(
     quote_id,kind,name,qty,unit_cost,unit_price,labor_hours,labor_rate,notes,
     catalog_work_id,catalog_variant_id,work_name,variant_name,customer_description,technical_description,hours_snapshot,price_snapshot,
@@ -691,9 +693,9 @@ ipcMain.handle('quotes:addItem',(_,{orderId,data})=>{
     data.part_no||'',data.oe_number||'',data.inventory_part_id||null,data.supplier_name||'',normalizeBarcode(data.barcode||''),data.brand||'',data.vehicle_fitment||'',data.cross_numbers||'',data.lookup_source||'',data.lookup_url||''
   )
   return{id:created.lastInsertRowid,recommendedPrice:price}
-})
-ipcMain.handle('quotes:updateItem',(_,{id,data})=>{
-  const db=getDb(),item=db.prepare('SELECT * FROM quote_items WHERE id=?').get(Number(id))
+})})
+ipcMain.handle('quotes:updateItem',(_,{id,data})=>{const db=getDb();return withQuoteHistory(db,{itemId:id,action:'Zmieniono pozycję wyceny'},()=>{
+  const item=db.prepare('SELECT * FROM quote_items WHERE id=?').get(Number(id))
   if(!item)throw new Error('Pozycja wyceny nie istnieje.')
   const quote=db.prepare('SELECT * FROM quotes WHERE id=?').get(item.quote_id)
   if(!quote)throw new Error('Wycena nie istnieje.')
@@ -713,8 +715,8 @@ ipcMain.handle('quotes:updateItem',(_,{id,data})=>{
     data.part_no||'',data.oe_number||'',data.inventory_part_id||null,data.supplier_name||'',normalizeBarcode(data.barcode||''),data.brand||'',data.vehicle_fitment||'',data.cross_numbers||'',data.lookup_source||'',data.lookup_url||'',item.id
   )
   return{ok:true,id:item.id,total}
-})
-ipcMain.handle('quotes:removeItem',(_,id)=>{const db=getDb(),item=db.prepare('SELECT * FROM quote_items WHERE id=?').get(id);if(!item)return true;const quote=db.prepare('SELECT * FROM quotes WHERE id=?').get(item.quote_id);requireEditableOrder(db,quote.order_id);assertQuoteEditable(db,quote);if(quote.source_type==='ORDER_SNAPSHOT')throw new Error('Pozycje tej wyceny pochodzą ze zlecenia. Usuń je w sekcji prac lub części i ponownie zaimportuj zakres.');db.prepare('DELETE FROM quote_items WHERE id=?').run(id);return true})
+})})
+ipcMain.handle('quotes:removeItem',(_,id)=>{const db=getDb();return withQuoteHistory(db,{itemId:id,action:'Usunięto pozycję wyceny'},()=>{const item=db.prepare('SELECT * FROM quote_items WHERE id=?').get(id);if(!item)return true;const quote=db.prepare('SELECT * FROM quotes WHERE id=?').get(item.quote_id);requireEditableOrder(db,quote.order_id);assertQuoteEditable(db,quote);if(quote.source_type==='ORDER_SNAPSHOT')throw new Error('Pozycje tej wyceny pochodzą ze zlecenia. Usuń je w sekcji prac lub części i ponownie zaimportuj zakres.');db.prepare('DELETE FROM quote_items WHERE id=?').run(id);return true})})
 ipcMain.handle('quotes:requestApproval',(_,id)=>{
   const db=getDb(); const q=db.prepare('SELECT * FROM quotes WHERE id=?').get(id); if(!q)return{ok:false}
   const existing=findQuoteApproval(db,q.order_id,id);if(existing)return{ok:true,approvalId:existing.id,total:Number(existing.amount||0),already:true}
@@ -1179,8 +1181,8 @@ ipcMain.handle('technicalManual:importOnlineSource',(_e,id)=>{
 // --- 0.34 DEV: custom workshop procedure templates ------------------------
 const parseWorkTemplate=x=>{if(!x)return x;for(const k of ['pre_json','steps_json','qc_json','parts_json','materials_json','recommendations_json','safety_json']){try{x[k.replace('_json','')]=JSON.parse(x[k]||'[]')}catch{x[k.replace('_json','')]=[]}}return x}
 ipcMain.handle('workTemplates:list',()=>getDb().prepare("SELECT * FROM work_templates WHERE deleted_at IS NULL AND active=1 ORDER BY group_name,name").all().map(parseWorkTemplate))
-ipcMain.handle('workTemplates:create',(_d,data)=>{const db=getDb();const j=x=>JSON.stringify(Array.isArray(x)?x:[]);const r=db.prepare(`INSERT INTO work_templates(name,group_name,variant,scope,hours,rate,pre_json,steps_json,qc_json,parts_json,materials_json,recommendations_json,safety_json,active) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)`).run(data.name||'Własna procedura',data.group_name||'Własne',data.variant||'standard',data.scope||'',+data.hours||1,+data.rate||220,j(data.pre),j(data.steps),j(data.qc),j(data.parts),j(data.materials),j(data.recommendations),j(data.safety));return{id:Number(r.lastInsertRowid)}})
-ipcMain.handle('workTemplates:update',(_d,{id,data})=>{const db=getDb();const j=x=>JSON.stringify(Array.isArray(x)?x:[]);db.prepare(`UPDATE work_templates SET name=?,group_name=?,variant=?,scope=?,hours=?,rate=?,pre_json=?,steps_json=?,qc_json=?,parts_json=?,materials_json=?,recommendations_json=?,safety_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(data.name||'Własna procedura',data.group_name||'Własne',data.variant||'standard',data.scope||'',+data.hours||1,+data.rate||220,j(data.pre),j(data.steps),j(data.qc),j(data.parts),j(data.materials),j(data.recommendations),j(data.safety),id);return true})
+ipcMain.handle('workTemplates:create',(_d,data)=>{const db=getDb();const j=x=>JSON.stringify(Array.isArray(x)?x:[]);const r=db.prepare(`INSERT INTO work_templates(name,group_name,variant,scope,hours,rate,pre_json,steps_json,qc_json,parts_json,materials_json,recommendations_json,safety_json,active) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)`).run(data.name||'Własna procedura',data.group_name||'Własne',data.variant||'standard',data.scope||'',+data.hours||1,Number(data.rate??0),j(data.pre),j(data.steps),j(data.qc),j(data.parts),j(data.materials),j(data.recommendations),j(data.safety));return{id:Number(r.lastInsertRowid)}})
+ipcMain.handle('workTemplates:update',(_d,{id,data})=>{const db=getDb();const j=x=>JSON.stringify(Array.isArray(x)?x:[]);db.prepare(`UPDATE work_templates SET name=?,group_name=?,variant=?,scope=?,hours=?,rate=?,pre_json=?,steps_json=?,qc_json=?,parts_json=?,materials_json=?,recommendations_json=?,safety_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(data.name||'Własna procedura',data.group_name||'Własne',data.variant||'standard',data.scope||'',+data.hours||1,Number(data.rate??0),j(data.pre),j(data.steps),j(data.qc),j(data.parts),j(data.materials),j(data.recommendations),j(data.safety),id);return true})
 ipcMain.handle('workTemplates:remove',(_d,id)=>{getDb().prepare('UPDATE work_templates SET active=0,deleted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(id);return true})
 
 ipcMain.handle('procedures:list',(_,orderId)=>getDb().prepare('SELECT * FROM work_procedure_runs WHERE order_id=? ORDER BY id DESC').all(orderId).map(x=>{for(const k of ['pre_json','steps_json','qc_json','recommendations_json','safety_json','parts_json','materials_json','technical_json','progress_json']){try{x[k.replace('_json','')]=JSON.parse(x[k]|| (k==='progress_json'?'{}':'[]'))}catch{x[k.replace('_json','')]=k==='progress_json'?{}:[]}}return x}))

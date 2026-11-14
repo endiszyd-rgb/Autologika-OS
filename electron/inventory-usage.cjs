@@ -73,6 +73,15 @@ function removeOrderItem(db,id){
     const row=db.prepare('SELECT * FROM order_items WHERE id=?').get(itemId)
     if(!row)return{removed:false,restored:0}
     requireEditableOrder(db,row.order_id)
+    if(row.repair_operation_id&&row.kind==='ROBOCIZNA'){
+      const parts=db.prepare('SELECT * FROM repair_parts WHERE repair_operation_id=?').all(row.repair_operation_id)
+      if(parts.some(part=>Number(part.reserved_qty)>0||Number(part.issued_qty)>Number(part.returned_qty)||Number(part.installed_qty)>0||part.order_item_id))throw new Error('Najpierw rozlicz rezerwacje, zwroty i zamontowane części tej naprawy.')
+      db.prepare('DELETE FROM order_qc WHERE repair_operation_id=?').run(row.repair_operation_id)
+      db.prepare('DELETE FROM work_procedure_runs WHERE repair_operation_id=?').run(row.repair_operation_id)
+      db.prepare('DELETE FROM job_part_orders WHERE repair_operation_id=?').run(row.repair_operation_id)
+      db.prepare('DELETE FROM repair_parts WHERE repair_operation_id=?').run(row.repair_operation_id)
+      db.prepare('DELETE FROM order_repair_operations WHERE id=?').run(row.repair_operation_id)
+    }
     let restored=0
     if(row.inventory_part_id){
       const changed=db.prepare('UPDATE inventory_parts SET stock=stock+?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(number(row.qty),row.inventory_part_id)
@@ -116,6 +125,7 @@ function updateOrderItem(db,id,input={}){
 
     const description=String(input.customer_description??input.notes??row.customer_description??row.notes??'').trim()
     const isLabor=row.kind==='ROBOCIZNA',hours=isLabor?qty:Number(row.hours_snapshot??qty),price=isLabor?Math.round(qty*unitPrice*100)/100:Number(row.price_snapshot??qty*unitPrice)
+    if(isLabor&&row.repair_operation_id)db.prepare('UPDATE order_repair_operations SET title=?,planned_hours=?,labor_rate=?,labor_cost_rate=?,customer_description=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(name,qty,unitPrice,unitCost,description,row.repair_operation_id)
     db.prepare(`UPDATE order_items SET name=?,qty=?,unit_cost=?,unit_price=?,part_no=?,oe_number=?,supplier=?,notes=?,customer_description=?,hours_snapshot=?,price_snapshot=? WHERE id=?`)
       .run(name,qty,unitCost,unitPrice,String(input.part_no||'').trim(),String(input.oe_number||'').trim(),String(input.supplier||'').trim(),description,description,hours,price,itemId)
     const linkedCloudId=linkedJobPartCloudId(row.technical_description)

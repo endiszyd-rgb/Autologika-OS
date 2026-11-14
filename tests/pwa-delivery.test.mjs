@@ -13,3 +13,13 @@ test('mobile import uses a stable photo hash and a server transaction rather tha
  await importMobileDelivery(cloud,{file,document});await importMobileDelivery(cloud,{file,document})
  assert.equal(calls[0][2],calls[2][2]);assert.equal(calls[1][1],'/rest/v1/rpc/import_mobile_delivery');assert.equal(calls[1][2].p_hash,calls[3][2].p_hash);assert.equal(calls[1][2].p_document.items[0].qty,2)
 })
+
+
+test('session change while reading photo prevents upload and inventory RPC',async()=>{
+ let epoch=1,writes=0
+ const file=new File(['photo'],'test.jpg',{type:'image/jpeg'})
+ file.arrayBuffer=async()=>{epoch=2;return new ArrayBuffer(1)}
+ const cloud={epoch:1,user:{id:'owner'},assertSession(value){if(value!==epoch)throw new Error('session changed')},async upload(){writes++},async request(){writes++}}
+ await assert.rejects(importMobileDelivery(cloud,{file,document:{items:[{part_no:'AB123',name:'Filtr',qty:1,unit_cost:10}]}}),/session changed/)
+ assert.equal(writes,0)
+})

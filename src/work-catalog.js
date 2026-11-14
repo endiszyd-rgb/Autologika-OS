@@ -2619,7 +2619,7 @@ export const WORK_CATALOG=RAW_WORK_CATALOG.map(group=>({
   ...group,
   jobs:group.jobs.map(job=>{
     const workId=stableId('work',group.group,job.name)
-    return {...job,id:workId,variants:(job.variants?.length?job.variants:['standard']).map(raw=>{
+    return {...job,price:null,id:workId,variants:(job.variants?.length?job.variants:['standard']).map(raw=>{
       const name=typeof raw==='string'?raw:raw.name
       return {
         ...(typeof raw==='object'?raw:{}),
@@ -2628,7 +2628,9 @@ export const WORK_CATALOG=RAW_WORK_CATALOG.map(group=>({
         work_name:job.name,
         name,
         hours:Number(typeof raw==='object'&&raw.hours!=null?raw.hours:job.hours),
-        price:Number(typeof raw==='object'&&raw.price!=null?raw.price:job.price),
+        price:null,
+        timeSource:'WORKSHOP_ESTIMATE',
+        priceSource:'UNCONFIGURED',
         customer_description:typeof raw==='object'&&raw.customer_description?raw.customer_description:customerDescription(job,name),
         technical_description:typeof raw==='object'&&raw.technical_description?raw.technical_description:'',
         procedureKey:typeof raw==='object'&&raw.procedureKey?raw.procedureKey:stableId('procedure',group.group,job.name,name),

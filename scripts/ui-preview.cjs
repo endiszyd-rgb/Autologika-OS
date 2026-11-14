@@ -30,6 +30,7 @@ app.on('browser-window-created', (_, win) => {
         throw lastError
       }
       await delay(450)
+      await win.webContents.executeJavaScript(`window.autologika.settings.setCatalogOverride('__repair_pricing_v1',{hourlyRate:220,corrosionMultiplier:1,accessMultiplier:1})`)
       // Ekran powitalny znika, gdy tylko aplikacja jest gotowa (bez sztucznego czekania 1 s).
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.bootSplash') === null`), true)
       await delay(750)
@@ -617,6 +618,9 @@ app.on('browser-window-created', (_, win) => {
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.repairWorkspaceQuickAdd').length`),1)
       await win.webContents.executeJavaScript(`document.querySelector('.repairAddButton').click()`)
       await delay(350)
+      assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.bundleModal .actionrow.right .primary').disabled`),true)
+      await win.webContents.executeJavaScript(`{const boxes=document.querySelectorAll('.bundleModal fieldset input[type=checkbox]');boxes[boxes.length-1].click()}`)
+      await delay(100)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.bundleModal .actionrow.right .primary').disabled`),false)
       await win.webContents.executeJavaScript(`document.querySelector('.bundleModal .actionrow.right .primary').click()`)
       await delay(650)
@@ -978,6 +982,7 @@ app.on('browser-window-created', (_, win) => {
       await delay(250)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.ptPreviewList').length`),6)
       await capture('procedure-template-preview')
+      await win.webContents.executeJavaScript(`window.autologika.settings.setCatalogOverride('__repair_pricing_v1',{hourlyRate:220,corrosionMultiplier:1,accessMultiplier:1})`)
       await win.webContents.executeJavaScript(`document.querySelector('.ptPreviewHead .primary').click()`)
       await delay(350)
       assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('.ptCustomCard').length`),1)

@@ -1,3 +1,4 @@
+const {validateDelivery}=require('../shared/delivery-review.cjs')
 const fs=require('fs')
 const path=require('path')
 const {wholePartQuantity}=require('./part-quantity.cjs')
@@ -33,7 +34,7 @@ async function recognizeDeliveryDocument(filePath,{cachePath,onProgress=()=>{},t
 function defaultMarkup(cost){return cost<50?.45:cost<200?.35:cost<500?.28:.22}
 
 function importDeliveryDocument(db,payload,{markup=defaultMarkup}={}){
-  const document=payload?.document||{},hash=String(payload?.source_hash||'').trim(),items=(document.items||[]).filter(item=>item?.enabled!==false)
+  const document=validateDelivery(payload?.document),hash=String(payload?.source_hash||'').trim(),items=(document.items||[]).filter(item=>item?.enabled!==false)
   if(!hash)throw new Error('Brakuje identyfikatora skanowanego dokumentu.')
   if(!items.length)throw new Error('Dokument nie zawiera pozycji wybranych do importu.')
   const duplicate=db.prepare('SELECT id,external_document_no FROM purchase_orders WHERE source_hash=?').get(hash)
@@ -57,6 +58,7 @@ function importDeliveryDocument(db,payload,{markup=defaultMarkup}={}){
     const order=db.prepare(`INSERT INTO purchase_orders(supplier_id,status,ordered_at,notes,external_document_no,document_date,source_file,source_hash,gross_total)
       VALUES (?,'ODEBRANE',?,?,?,?,?,?,?)`).run(supplier.id,document.document_date||new Date().toISOString(),`Automatyczny import OCR · ${path.basename(payload.source_file||'dokument')}`,document.document_no||'',document.document_date||null,payload.source_file||'',hash,roundMoney(document.gross_total||0))
     const allParts=db.prepare('SELECT * FROM inventory_parts').all(),byNumber=new Map(allParts.filter(part=>textKey(part.part_no)).map(part=>[textKey(part.part_no),part]))
+    const seen=new Set();for(const part of allParts){const key=textKey(part.part_no);if(!key)continue;if(seen.has(key)&&cleanItems.some(item=>textKey(item.part_no)===key))throw new Error(`W magazynie są powielone numery katalogowe: ${part.part_no}. Uporządkuj je przed importem.`);seen.add(key)}
     const insertPart=db.prepare(`INSERT INTO inventory_parts(part_no,name,category,lookup_source,stock,min_stock,unit_cost,sell_price,supplier_id,notes) VALUES (?,?,?,?,?,?,?,?,?,?)`)
     const updatePart=db.prepare(`UPDATE inventory_parts SET stock=?,unit_cost=?,supplier_id=COALESCE(supplier_id,?),updated_at=CURRENT_TIMESTAMP WHERE id=?`)
     const insertItem=db.prepare(`INSERT INTO purchase_order_items(purchase_order_id,inventory_part_id,part_no,name,qty,unit_cost,received_qty) VALUES (?,?,?,?,?,?,?)`)

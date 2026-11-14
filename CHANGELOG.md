@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.7 — 2026-11-14
+
+- Nowy interfejs UI 2.0: czytelniejszy pulpit, nawigacja i formularze napraw.
+- Konfiguracja stawek warsztatu, przeliczanie kosztorysu i historia zmian wycen.
+- Skanowanie faktur i WZ: lokalny OCR, ręczna korekta pozycji oraz potwierdzenie przed przyjęciem do magazynu.
+- Wspólna walidacja ilości, netto, VAT i brutto; ochrona przed duplikatami oraz niejednoznacznymi kartami części.
+- PWA: aparat i galeria na iOS/Android, ręczny wpis przy błędzie odczytu oraz ochrona zapisu po zmianie sesji.
+- Testy regresji i smoke z rzeczywistym OCR syntetycznej faktury. Fizyczne telefony i instalacja aktualizacji nie były testowane.
+
 ## 1.1.6 — 2026-11-12
 
 ### Zdjęcia pojazdów z weryfikowanymi źródłami

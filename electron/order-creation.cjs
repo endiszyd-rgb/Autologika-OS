@@ -20,7 +20,7 @@ function normalizeOrder(input={}){
     complaint:text(input.complaint),
     priority,
     diagnosis_limit:number(input.diagnosis_limit,'Limit diagnostyki',{max:1000000}),
-    labor_rate:number(input.labor_rate,'Stawka robocizny',{max:100000,fallback:220}),
+    labor_rate:number(input.labor_rate,'Stawka robocizny',{max:100000,fallback:0}),
     diagnosis_fee:number(input.diagnosis_fee,'Opłata diagnostyczna',{max:1000000}),
     source:text(input.source)||'nieznane',
     due_at:dueAt||null,
