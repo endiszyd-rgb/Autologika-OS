@@ -248,3 +248,17 @@ Wprowadzono **12 zdjęć** z ręcznie sprawdzonych stron Wikimedia Commons (mark
 Łącznie **207 przypisań fotografii, 171/171 nazw modeli w katalogu**. Nowa partia uzupełnia 10 kombinacji marka/model/generacja, ale nie wszystkie roczniki i typy nadwozi każdej generacji.
 
 **Status w chwili zapisu:** audyty źródeł i testy po ostatnich zmianach uruchomione przez GitHub Actions, ale wykonanie w kolejce; nie wolno uznawać ich za zaliczone bez wyniku. Ostatni w pełni zaliczony audyt przed tymi 12 zdjęciami dotyczył 195 plików.
+
+## Etap 17 — historyczne generacje VAG i naprawa CI (14.11.2026)
+Dodano 7 fotografii z ręcznie potwierdzonych stron Wikimedia Commons:
+- Audi A3 8L hatchback (1997–2003) — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Audi_A3_front_20080326.jpg
+- Volkswagen Passat B5/B5.5 (3B) sedan (1997–2000) — Rudolf Stricker, Public domain — https://commons.wikimedia.org/wiki/File:Volkswagen_Passat_B5_front_20070323.jpg
+- Volkswagen Golf V (1K) hatchback (2004–2008) — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:VW_Golf_V_front_20080123.jpg
+- Audi A4 B7 (8E) sedan (2005–2008) — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Audi_A4_B7_front_20080318.jpg
+- Audi A4 B7 (8E) Avant kombi (2005–2008) — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Audi_A4_B7_Avant_front_20080111.jpg
+- Volkswagen Passat B6 (3C) sedan (2005–2009) — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:VW_Passat_B6_front_20070926.jpg
+- Volkswagen Passat B6 (3C) Variant kombi (2005–2009) — Rudolf Stricker, CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:VW_Passat_B6_Kombi_front_20070518.jpg
+
+**Weryfikacja zewnętrzna:** GitHub Actions `43557264378`: 214/214 plików potwierdzonych z metadanymi autora i licencji, 0 błędów, 0 brakujących. Dla pliku Audi A3 8V ujednolicono zapis `CC0 1.0` → `CC0` zgodnie z aktualną nazwą licencji w metadanych Commons. Test poprawiono tak, by dopuszczał adres dedykacji CC0 (`/publicdomain/zero/`). Dla Passata B6 zapis bez typu nadwozia celowo nie wybiera losowo sedana ani kombi — test regresji używa jawnie `bodyType='sedan'`.
+
+**Stan:** 214 przypisań, 171/171 modeli podstawowych. Pełne pokrycie generacji i nadwozi wciąż nieukończone. Rozszerzono workflow kontroli na commit push na gałęzi roboczej i anulowanie zbędnych wcześniejszych uruchomień CI. PR pozostaje draftem bez merge.
