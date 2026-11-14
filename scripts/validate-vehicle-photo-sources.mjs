@@ -74,3 +74,11 @@ const summary={
 await writeFile(dest,JSON.stringify({generatedAt:new Date().toISOString(),summary,rows},null,2))
 console.log('Source audit complete:',JSON.stringify(summary))
 for(const r of rows.filter(r=>r.status!=='ok'))console.log('PHOTO AUDIT',r.status,r.make,r.model,r.file,(r.issues||[]).join('; ')||r.issue)
+
+if(summary.missing>0||summary.review>0){
+ console.error('Vehicle photo source audit failed: missing files or mismatched license/author metadata')
+ process.exitCode=1
+}
+if(summary.unavailable>0){
+ console.warn('Wikimedia API temporarily unavailable for '+summary.unavailable+' files; report is inconclusive for those rows')
+}
