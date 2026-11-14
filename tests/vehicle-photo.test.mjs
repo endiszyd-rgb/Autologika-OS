@@ -541,3 +541,18 @@ test('Audi A3 8L and VW Passat B5 source-verified pictures preserve generation a
  assert.equal(resolveVerifiedVehiclePhoto({make:'Audi',model:'A3',generation:'8P',year:2000,bodyType:'hatchback'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B6 (3C)',year:1999,bodyType:'sedan'}),null)
 })
+
+test('verified older A3 8L, Passat B5 and Golf V photos do not cross generations',()=>{
+ const cases=[
+  {make:'Audi',model:'A3',generation:'8L',year:2000,bodyType:'hatchback'},
+  {make:'Volkswagen',model:'Passat',generation:'B5/B5.5 (3B)',year:1999,bodyType:'sedan'},
+  {make:'Volkswagen',model:'Golf',generation:'V (1K)',year:2006,bodyType:'hatchback'}
+ ]
+ for(const vehicle of cases){
+  const photo=resolveVerifiedVehiclePhoto(vehicle)
+  assert.ok(photo,JSON.stringify(vehicle))
+  assert.equal(photo.generation,vehicle.generation)
+  assert.equal(photo.bodyType,vehicle.bodyType)
+ }
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Golf',generation:'V (1K)',year:2006,bodyType:'wagon'}),null)
+})
