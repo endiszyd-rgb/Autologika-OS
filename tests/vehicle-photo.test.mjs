@@ -526,3 +526,18 @@ test('Audi A4 B6 has distinct sedan/Avant images and W211 facelift is not W212',
  assert.notEqual(urls[0],urls[1])
  assert.equal(resolveVerifiedVehiclePhoto({make:'Mercedes-Benz',model:'Klasa E',generation:'W212',year:2007,bodyType:'sedan'}),null)
 })
+
+test('Audi A3 8L and VW Passat B5 source-verified pictures preserve generation and year',()=>{
+ const cases=[
+  {make:'Audi',model:'A3',generation:'8L',year:2000,bodyType:'hatchback'},
+  {make:'Volkswagen',model:'Passat',generation:'B5/B5.5 (3B)',year:1999,bodyType:'sedan'}
+ ]
+ for(const car of cases){
+  const photo=resolveVerifiedVehiclePhoto(car)
+  assert.ok(photo,JSON.stringify(car))
+  assert.equal(photo.generation,car.generation)
+  assert.equal(photo.bodyType,car.bodyType)
+ }
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Audi',model:'A3',generation:'8P',year:2000,bodyType:'hatchback'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Passat',generation:'B6 (3C)',year:1999,bodyType:'sedan'}),null)
+})
