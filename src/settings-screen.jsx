@@ -2,6 +2,7 @@ import React,{useEffect,useState} from 'react'
 import {PwaSettings} from './platform/pwa-settings.jsx'
 import {VehiclePhotoAttributions} from './vehicle-photo-attributions.jsx'
 import {HalaSettings} from './hala/hala-settings-panel.jsx'
+import {GraphicsSettings} from './graphics-settings-panel.jsx'
 
 function UpdateSettings({api,Panel}){
  const empty={state:'IDLE',currentVersion:'',availableVersion:'',channel:'STABLE',percent:0,lastChecked:'',releaseNotes:'',message:'Ładowanie informacji o aktualizacjach…',configured:false,canCheck:false,canDownload:false,canInstall:false}
@@ -19,7 +20,7 @@ function UpdateSettings({api,Panel}){
  </Panel>
 }
 
-export function Settings(props){const {platform}=props.api;return <><div>{platform?.isPwa?<PwaSettings {...props}/>:<DesktopSettings {...props}/>}</div><HalaSettings api={props.api} Panel={props.Panel}/><VehiclePhotoAttributions/></>}
+export function Settings(props){const {platform}=props.api;return <><div>{platform?.isPwa?<PwaSettings {...props}/>:<DesktopSettings {...props}/>}</div><GraphicsSettings api={props.api} Panel={props.Panel}/><HalaSettings api={props.api} Panel={props.Panel}/><VehiclePhotoAttributions/></>}
 
 function DesktopSettings({api,Panel,money,fileSize}){
  const[path,setPath]=useState(''),[msg,setMsg]=useState(''),[monthTarget,setMonthTarget]=useState(50000),[targetSaved,setTargetSaved]=useState(''),[srv,setSrv]=useState({running:false,port:8787,pin:null,urls:[],remoteUrls:[]}),[port,setPort]=useState(8787),[busy,setBusy]=useState(false),[remoteCfg,setRemoteCfg]=useState({port:8787,pin:'',autoStart:false}),[cloudCfg,setCloudCfg]=useState({enabled:false,url:'',key:'',keyConfigured:false,keyLength:0,keyHint:'',intervalSeconds:30,deviceName:'',workshopId:''}),[cloudStatus,setCloudStatus]=useState({configured:false,loggedIn:false,pending:0,failed:0,lastSync:'',queue:[],groups:[],lastResult:null}),[cloudBusy,setCloudBusy]=useState(false),[cloudAuth,setCloudAuth]=useState({email:'',password:''}),[cloudTest,setCloudTest]=useState(null),[cloudDeployment,setCloudDeployment]=useState(null)

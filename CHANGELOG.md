@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.11 — 2026-11-14
+
+- Płynne animacje i przejścia: aplikacja Windows domyślnie korzysta z akceleracji GPU (wcześniej obraz rysował procesor, przez co animacje się przycinały).
+- Ustawienia → „Grafika i animacje”: tryb zgodności (bez GPU) na wypadek czarnych lub migających okien, z ponownym uruchomieniem jednym kliknięciem.
+- Automatyczny powrót do trybu zgodności po powtarzających się awariach procesu grafiki; informacja, gdy Windows ma wyłączone efekty animacji.
+
 ## 1.1.10 — 2026-11-14
 
 - Pulpit ma teraz wygląd „Hala na żywo”: stanowiska z przypisanymi zleceniami, „Co wymaga Ciebie”, puls dnia i wiadomości z branży. Poprzedni pulpit został zastąpiony; osobna pozycja „Hala na żywo” zniknęła z menu.

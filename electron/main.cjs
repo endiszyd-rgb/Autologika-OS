@@ -1,5 +1,5 @@
 const {withQuoteHistory}=require('./quote-history.cjs')
-const { app, BrowserWindow, ipcMain, dialog, shell, clipboard, Notification, net, nativeImage } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, clipboard, Notification, net, nativeImage, systemPreferences } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const http = require('http')
@@ -40,8 +40,13 @@ const { wholePartQuantity } = require('./part-quantity.cjs')
 const { approvalDecision, approvalEntry, assertApprovalPending, paymentEntry } = require('./financial-entry.cjs')
 const localAI = require('./local-ai.cjs')
 
-// Stability: this workshop UI does not need GPU acceleration. Disabling it avoids intermittent black Chromium frames on some Windows/GPU driver combinations.
-app.disableHardwareAcceleration()
+// Grafika: domyślnie akceleracja GPU (płynne animacje i przejścia). Tryb zgodności (renderowanie programowe)
+// wyłącza GPU na sterownikach, które dawały czarne klatki — ręcznie w Ustawieniach albo automatycznie po awariach GPU.
+const graphicsSettings=require('./graphics-settings.cjs')
+const graphicsAtStart=graphicsSettings.readGraphics(app.getPath('userData'))
+const gpuDisabledAtStart=graphicsSettings.shouldDisableGpu(graphicsAtStart)
+if(gpuDisabledAtStart)app.disableHardwareAcceleration()
+app.on('child-process-gone',graphicsSettings.createGpuWatchdog(app.getPath('userData'),{log:message=>console.warn(message)}))
 
 function createWindow(){
   const win = new BrowserWindow({
@@ -819,6 +824,9 @@ ipcMain.handle('system:backup',async()=>{const {filePath,canceled}=await dialog.
 async function autoBackupDb(){const dir=path.join(app.getPath('userData'),'backups');fs.mkdirSync(dir,{recursive:true});const day=new Date().toISOString().slice(0,10);const dst=path.join(dir,`autologika-auto-${day}.db`);if(!fs.existsSync(dst)){await getDb().backup(dst);const files=fs.readdirSync(dir).filter(x=>/^autologika-auto-\d{4}-\d{2}-\d{2}\.db$/.test(x)).sort().reverse();for(const old of files.slice(14)){try{fs.unlinkSync(path.join(dir,old))}catch{}}}return {dir,file:dst,exists:fs.existsSync(dst)}}
 ipcMain.handle('system:autoBackup',()=>autoBackupDb())
 ipcMain.handle('system:autoBackupStatus',()=>{const dir=path.join(app.getPath('userData'),'backups');const files=fs.existsSync(dir)?fs.readdirSync(dir).filter(x=>x.startsWith('autologika-auto-')).sort().reverse():[];return {dir,count:files.length,last:files[0]||''}})
+ipcMain.handle('system:graphics',()=>{const stored=graphicsSettings.readGraphics(app.getPath('userData'));let animations=null;try{animations=systemPreferences.getAnimationSettings?.()||null}catch{}return{...stored,activeHardwareAcceleration:!gpuDisabledAtStart,restartRequired:stored.hardwareAcceleration===gpuDisabledAtStart&&process.env.AUTOLOGIKA_DISABLE_GPU==null,systemReducedMotion:Boolean(animations?.prefersReducedMotion)}})
+ipcMain.handle('system:setGraphics',(_e,value={})=>graphicsSettings.writeGraphics(app.getPath('userData'),{hardwareAcceleration:value?.hardwareAcceleration!==false,autoDisabled:false,reason:''}))
+ipcMain.handle('system:relaunch',()=>{app.relaunch();app.exit(0);return true})
 ipcMain.handle('system:health',()=>databaseHealth(getDb(),{dbPath:databasePath(),backupDir:backupDirectory(),schemaVersion:SCHEMA_VERSION}))
 ipcMain.handle('system:openBackupFolder',async()=>{const dir=backupDirectory();fs.mkdirSync(dir,{recursive:true});const error=await shell.openPath(dir);if(error)throw new Error(error);return true})
 

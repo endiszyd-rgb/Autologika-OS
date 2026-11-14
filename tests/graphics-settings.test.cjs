@@ -1,0 +1,36 @@
+const test=require('node:test')
+const assert=require('node:assert/strict')
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path')
+const graphics=require('../electron/graphics-settings.cjs')
+
+test('GPU acceleration is on by default and the compatibility mode is persisted',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'al-gfx-'))
+ assert.equal(graphics.readGraphics(dir).hardwareAcceleration,true)
+ assert.equal(graphics.shouldDisableGpu(graphics.readGraphics(dir),{}),false)
+ graphics.writeGraphics(dir,{hardwareAcceleration:false})
+ assert.equal(graphics.shouldDisableGpu(graphics.readGraphics(dir),{}),true)
+ assert.equal(graphics.shouldDisableGpu({hardwareAcceleration:false},{AUTOLOGIKA_DISABLE_GPU:'0'}),false,'zmienna środowiskowa ma pierwszeństwo')
+ assert.equal(graphics.shouldDisableGpu({hardwareAcceleration:true},{AUTOLOGIKA_DISABLE_GPU:'1'}),true)
+ fs.writeFileSync(path.join(dir,graphics.GRAPHICS_FILE),'{zepsuty')
+ assert.equal(graphics.readGraphics(dir).hardwareAcceleration,true,'uszkodzony plik = ustawienia domyślne')
+})
+
+test('repeated GPU crashes switch the next start to compatibility mode',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'al-gfx-'))
+ const watchdog=graphics.createGpuWatchdog(dir)
+ assert.equal(watchdog({type:'Utility',reason:'crashed'}),false)
+ assert.equal(watchdog({type:'GPU',reason:'clean-exit'}),false)
+ assert.equal(watchdog({type:'GPU',reason:'crashed'}),false,'jedna awaria nie wystarcza')
+ assert.equal(watchdog({type:'GPU',reason:'launch-failed'}),true)
+ const saved=graphics.readGraphics(dir)
+ assert.deepEqual([saved.hardwareAcceleration,saved.autoDisabled],[false,true])
+ assert.match(saved.reason,/launch-failed/)
+ assert.equal(watchdog({type:'GPU',reason:'crashed'}),false,'już w trybie zgodności')
+})
+
+test('main process no longer disables the GPU unconditionally',()=>{
+ const main=fs.readFileSync(path.join(__dirname,'..','electron','main.cjs'),'utf8')
+ assert.match(main,/if\(gpuDisabledAtStart\)app\.disableHardwareAcceleration\(\)/)
+ assert.doesNotMatch(main,/^app\.disableHardwareAcceleration\(\)/m)
+ for(const channel of ["'system:graphics'","'system:setGraphics'","'system:relaunch'"])assert.ok(main.includes(`ipcMain.handle(${channel}`),channel)
+})
