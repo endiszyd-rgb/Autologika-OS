@@ -64,7 +64,7 @@ test('every curated image has complete attribution and a unique source',()=>{
   assert.ok(item.file&&item.source&&item.author&&item.license&&item.licenseUrl)
   assert.equal(isPhotoLicenseAllowed(item.license),true,'Not permitted: '+item.license)
   assert.ok(item.source.startsWith('https://commons.wikimedia.org/wiki/File:'))
-  assert.ok(item.licenseUrl.startsWith('https://creativecommons.org/licenses/')||item.license==='Public domain')
+  assert.ok(item.licenseUrl.startsWith('https://creativecommons.org/licenses/')||item.licenseUrl.startsWith('https://creativecommons.org/publicdomain/zero/')||item.license==='Public domain')
   assert.ok(Number.isInteger(item.from)&&Number.isInteger(item.to)&&item.from<=item.to)
   assert.ok(!seen.has(item.source),'Duplicate source '+item.source)
   seen.add(item.source)
