@@ -288,3 +288,15 @@ Uzupełniono wszystkie **8 generacji**, które w audycie `43557585517` nie miał
 Zaktualizowano testy generacji. Naprawiono starą asercję oczekującą braku fotografii Tourana II oraz niepoprawne porównywanie dwóch poprawnie utworzonych obiektów zdjęcia po referencji zamiast po identyfikatorze pliku. Wynik pełnego CI należy potwierdzić po ostatnim commicie.
 
 **Nadal do zrobienia:** dopełnienie brakujących lat i odmian nadwoziowych, kontrola wizualna rzeczywistej zgodności obrazu, offline Windows oraz próby na urządzeniach iOS/Android.
+
+## Etap 19 — brakujące roczniki i warianty po faceliftingu (15.11.2026)
+Wprowadzono pięć kolejnych zdjęć z osobno zweryfikowanych kart Wikimedia Commons:
+- Audi A3 8P (trzeci lifting), 2010–2012, hatchback — M 93, CC BY-SA 3.0 DE — https://commons.wikimedia.org/wiki/File:Audi_A3_1.2_TFSI_Ambition_S-line_(8P,_3._Facelift)_–_Frontansicht,_17._Mai_2011,_Velbert.jpg
+- Škoda Octavia II 1Z po liftingu, 2010–2013, liftback — Vauxford, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2011_Skoda_Octavia_S_TSi_S-A_1.2_Front.jpg
+- Škoda Octavia III 5E po liftingu, 2017–2020, Combi — Vauxford, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2017_Skoda_Octavia_SE_L_TDi_S-A_Estate_2.0_Front.jpg
+- Mercedes-Benz klasy E W213 po liftingu, 2020–2023, sedan — Wikisympathisant, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2020-09-22_MB-E200_W213-Frontseite-MOPF.jpg
+- Volkswagen Passat B8 3G po liftingu, 2020–2023, Variant — Dorian Palinić, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Vw_passat_b8_may_9_2021.jpg
+
+**Stan manifestu: 227 zdjęć** przy zachowanym podstawowym pokryciu wszystkich 171 modeli i przynajmniej jednego rocznika z 48 generacji. Zakresy odzwierciedlają rozpoznane wersje i nie są obietnicą pełnego pokrycia wszystkich nadwozi ani liftingów.
+
+Zewnętrzny audyt GitHub Actions `43729148825` zakończony **227/227 poprawnych źródeł/licencji**, 0 brakujących. W testach zaktualizowano wcześniej prawidłowe oczekiwanie braku zdjęcia Octavii III 2018 oraz kontrolę brakującego roku 2023 Passata B8 — obecnie istnieje zdjęcie Variant, rok 2019 pozostaje niepokryty. Wynik testów i kompilacji należy potwierdzić po ostatnim commicie.
