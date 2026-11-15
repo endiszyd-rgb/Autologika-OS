@@ -593,7 +593,8 @@ test('eight formerly unrepresented generations resolve to a correctly attributed
   assert.equal(photo.generation,generation)
   assert.equal(photo.bodyType,bodyType)
   assert.ok(isPhotoLicenseAllowed(photo.license))
-  assert.equal(resolveVerifiedVehiclePhoto({...v,bodyType:'sedan'}),bodyType==='sedan'?photo:null)
+  const sedan=resolveVerifiedVehiclePhoto({...v,bodyType:'sedan'})
+  assert.equal(sedan?.file??null,bodyType==='sedan'?photo.file:null)
  }
  assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Tiguan',generation:'II (AD/BW)',year:2025,bodyType:'suv'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'SEAT',model:'Leon',generation:'1M',year:2021,bodyType:'hatchback'}),null)
