@@ -300,3 +300,16 @@ Wprowadzono pięć kolejnych zdjęć z osobno zweryfikowanych kart Wikimedia Com
 **Stan manifestu: 227 zdjęć** przy zachowanym podstawowym pokryciu wszystkich 171 modeli i przynajmniej jednego rocznika z 48 generacji. Zakresy odzwierciedlają rozpoznane wersje i nie są obietnicą pełnego pokrycia wszystkich nadwozi ani liftingów.
 
 Zewnętrzny audyt GitHub Actions `43729148825` zakończony **227/227 poprawnych źródeł/licencji**, 0 brakujących. W testach zaktualizowano wcześniej prawidłowe oczekiwanie braku zdjęcia Octavii III 2018 oraz kontrolę brakującego roku 2023 Passata B8 — obecnie istnieje zdjęcie Variant, rok 2019 pozostaje niepokryty. Wynik testów i kompilacji należy potwierdzić po ostatnim commicie.
+
+## Etap 20 — cztery generacje nowszych samochodów, sześć zdjęć (15.11.2026)
+W tej partii dodano zdjęcia przedstawiające potwierdzone liftingi i rodzaje nadwozia:
+- Volkswagen Golf VIII (CD) hatchback po liftingu, 2024–2026, M 93, CC BY-SA 3.0 DE — https://commons.wikimedia.org/wiki/File:VW_Golf_1.5_TSI_GOAL_(VIII,_Facelift)_–_f_31122024.jpg
+- Volkswagen Golf VIII (CD) Variant po liftingu, 2024–2026, Alexander Migl, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Volkswagen_Golf_VIII_Variant_Facelift_IMG_8874.jpg
+- Audi A3 8Y Sportback po liftingu, 2024–2026, M 93, CC BY-SA 3.0 DE — https://commons.wikimedia.org/wiki/File:Audi_A3_Sportback_(8Y,_Facelift)_–_f_03102025.jpg
+- BMW Seria 3 G20 sedan po liftingu, 2023–2025, Alexander Migl, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2024_BMW_G20_DSC_7350.jpg
+- BMW Seria 3 G21 Touring po liftingu, 2023–2025, Vauxford, CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2022_BMW_M340i_xDrive_MHEV_Automatic_Estate_facelift_3.0_Front.jpg
+- Mercedes-Benz C W206 sedan (rok 2025), M 93, CC BY-SA 3.0 DE — https://commons.wikimedia.org/wiki/File:Mercedes-Benz_C_200_AMG_Line_(W_206)_–_f_18042025.jpg
+
+**Stan:** 233 fotografii dla 171 modeli. Przedziały lat są ograniczone do rozpoznanych generacji i wersji. Nie przypisywano automatycznie mercedesa W206 z 2025 do modelu 2026 ani BMW G20/G21 do 2026. Przy braku nadwozia i dwóch możliwych zdjęciach UI nie losuje między sedanem/kombi.
+
+**Kontrola plików:** Wikimedia Commons audyt Actions `43759033119`: 233/233 źródła poprawne, 0 missing, 0 review, 0 unavailable. Dodatkowe testy regresji objęły cztery generacje, rozróżnienie nadwozia i ostrożne roczniki. Weryfikacja na rzeczywistych urządzeniach nadal do wykonania.
