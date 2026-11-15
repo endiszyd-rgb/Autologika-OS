@@ -156,7 +156,8 @@ test('four new verified models resolve only for their conservatively matched yea
   {make:'Toyota',model:'RAV4',year:2004,bodyType:'suv'}
  ]
  for(const v of examples)assert.ok(resolveVerifiedVehiclePhoto(v),JSON.stringify(v))
- assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Touran',generation:'II (5T)',year:2017}),null)
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Touran',generation:'II (5T)',year:2017,bodyType:'mpv'}))
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Touran',generation:'I FL (1T3)',year:2017,bodyType:'mpv'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Mazda',model:'3',year:2018,bodyType:'hatchback'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Hyundai',model:'Tucson',year:2007,bodyType:'sedan'}),null)
 })
