@@ -18,7 +18,7 @@ test('never show Golf VII for Golf IV or Golf VIII',()=>{
 test('strict year window prevents incorrect facelift',()=>{
  assert.equal(resolveVerifiedVehiclePhoto({make:'Ford',model:'Focus',year:2006}),null)
  assert.ok(resolveVerifiedVehiclePhoto({make:'Ford',model:'Focus',year:2016}))
- assert.equal(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Octavia',year:2018,generation:'III (5E)'}),null)
+ assert.ok(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Octavia',year:2018,generation:'III (5E)',bodyType:'wagon'}))
 })
 test('do not infer a generation without a year',()=>{
  assert.equal(resolveVerifiedVehiclePhoto({make:'Ford',model:'Focus'}),null)
@@ -603,4 +603,22 @@ test('every defined generation has at least one photo that resolves for a specif
  assert.equal(vehiclePhotoInventorySummary.generationCount,48)
  assert.equal(vehiclePhotoInventorySummary.generationMissing,0)
  assert.equal(vehiclePhotoInventorySummary.generationWithPhotos,48)
+})
+
+test('facelift photos complete targeted year gaps without confusing bodies',()=>{
+ const examples=[
+  {make:'Audi',model:'A3',generation:'8P',year:2011,bodyType:'hatchback'},
+  {make:'Skoda',model:'Octavia',generation:'II (1Z)',year:2012,bodyType:'liftback'},
+  {make:'Skoda',model:'Octavia',generation:'III (5E)',year:2018,bodyType:'wagon'},
+  {make:'Mercedes-Benz',model:'Klasa E',generation:'W213',year:2021,bodyType:'sedan'},
+  {make:'Volkswagen',model:'Passat',generation:'B8 (3G)',year:2021,bodyType:'wagon'}
+ ]
+ for(const car of examples){
+  const p=resolveVerifiedVehiclePhoto(car)
+  assert.ok(p,JSON.stringify(car))
+  assert.equal(p.generation,car.generation)
+  assert.equal(p.bodyType,car.bodyType)
+ }
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Octavia',generation:'III (5E)',year:2018,bodyType:'suv'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Mercedes-Benz',model:'Klasa E',generation:'W212',year:2021,bodyType:'sedan'}),null)
 })
