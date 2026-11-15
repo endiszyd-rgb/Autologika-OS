@@ -623,3 +623,26 @@ test('facelift photos complete targeted year gaps without confusing bodies',()=>
  assert.equal(resolveVerifiedVehiclePhoto({make:'Skoda',model:'Octavia',generation:'III (5E)',year:2018,bodyType:'suv'}),null)
  assert.equal(resolveVerifiedVehiclePhoto({make:'Mercedes-Benz',model:'Klasa E',generation:'W212',year:2021,bodyType:'sedan'}),null)
 })
+
+test('four latest-generation facelift ranges have accurate body-specific photos',()=>{
+ const cases=[
+  ['Volkswagen','Golf','VIII (CD)',2025,'hatchback'],
+  ['Volkswagen','Golf','VIII (CD)',2025,'wagon'],
+  ['Audi','A3','8Y',2025,'hatchback'],
+  ['BMW','Seria 3','G20/G21',2024,'sedan'],
+  ['BMW','Seria 3','G20/G21',2024,'wagon'],
+  ['Mercedes-Benz','Klasa C','W206',2025,'sedan']
+ ]
+ for(const [make,model,generation,year,bodyType] of cases){
+  const found=resolveVerifiedVehiclePhoto({make,model,generation,year,bodyType})
+  assert.ok(found,JSON.stringify({make,model,generation,year,bodyType}))
+  assert.equal(found.generation,generation)
+  assert.equal(found.bodyType,bodyType)
+  assert.ok(isPhotoLicenseAllowed(found.license))
+ }
+ const sedan=resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 3',generation:'G20/G21',year:2024,bodyType:'sedan'})
+ const wagon=resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 3',generation:'G20/G21',year:2024,bodyType:'wagon'})
+ assert.notEqual(sedan.file,wagon.file)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'BMW',model:'Seria 3',generation:'G20/G21',year:2024}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Mercedes-Benz',model:'Klasa C',generation:'W206',year:2026,bodyType:'sedan'}),null)
+})
