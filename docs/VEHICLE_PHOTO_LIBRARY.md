@@ -271,3 +271,20 @@ Wystąpił błąd testu dla VW Golf V (2006): przy istniejącej fotografii opisa
 **Audyt zewnętrzny:** [Actions #43557264378](https://github.com/endiszyd-rgb/Autologika-OS/actions/runs/43557264378) sprawdził **214/214 zdjęć** bez niezgodności. Skrypt audytu metadanych ma teraz zwracać niezerowy kod zakończenia przy brakującym pliku lub rozbieżnej licencji, aby błędny wynik blokował CI zamiast tylko pokazywać ostrzeżenie.
 
 PR #2 nadal pozostaje draftem; przed scaleniem konieczna jest jeszcze kontrola zdjęć w UI i rzeczywista weryfikacja generacji/nadwozi.
+
+## Etap 18 — zamknięcie ośmiu brakujących generacji (15.11.2026)
+Uzupełniono wszystkie **8 generacji**, które w audycie `43557585517` nie miały wcześniej żadnego dopasowania:
+- Audi A5 8T/8F, coupé 2008–2011 — Samoborac, CC BY-SA 3.0: https://commons.wikimedia.org/wiki/File:Audi_A5_front_20080129.JPG
+- Mercedes-Benz Klasa C W203 (S203 kombi), 2001–2006 — Rudolf Stricker, CC BY-SA 3.0: https://commons.wikimedia.org/wiki/File:Mercedes_S203_front_20080312.jpg
+- Mercedes-Benz Klasa E W212 sedan, 2010–2012 — Georgy90, CC BY-SA 3.0: https://commons.wikimedia.org/wiki/File:Mercedes_E-Class_W212.jpg
+- Volkswagen Touran I po drugim liftingu (1T3), 2011–2014 — Thomas doerfer, CC BY 3.0: https://commons.wikimedia.org/wiki/File:VW_Touran_Facelift_II_1.4_TSI_Comfortline_Silverleaf_Front.JPG
+- Volkswagen Touran II (5T) MPV, 2016–2019 — Jakub „Flyz1” Maciejewski, CC BY-SA 4.0: https://commons.wikimedia.org/wiki/File:Volkswagen_Touran_(MSP16).jpg
+- Volkswagen Tiguan III SUV, 2024–2026 — Calreyn88, CC BY-SA 4.0: https://commons.wikimedia.org/wiki/File:2024_Volkswagen_Tiguan.jpg
+- SEAT Leon I (1M) hatchback, 2000–2005 — Andy777, CC BY 3.0: https://commons.wikimedia.org/wiki/File:Seat_Leon_1M_FR.jpg
+- SEAT Leon IV (KL) hatchback, 2020–2023 — Calreyn88, CC BY-SA 4.0: https://commons.wikimedia.org/wiki/File:2021_Seat_Leon.jpg
+
+**Manifest: 222 wpisy i 171/171 modeli.** Automatyczny audyt Wikimedia Commons `43718800985` potwierdził **222/222 plików, licencji i danych autora**, bez błędów. Dla generacji oznacza to przynajmniej jedno dopasowanie w zakresie lat; nie pełne pokrycie wszystkich roczników/nadwozi.
+
+Zaktualizowano testy generacji. Naprawiono starą asercję oczekującą braku fotografii Tourana II oraz niepoprawne porównywanie dwóch poprawnie utworzonych obiektów zdjęcia po referencji zamiast po identyfikatorze pliku. Wynik pełnego CI należy potwierdzić po ostatnim commicie.
+
+**Nadal do zrobienia:** dopełnienie brakujących lat i odmian nadwoziowych, kontrola wizualna rzeczywistej zgodności obrazu, offline Windows oraz próby na urządzeniach iOS/Android.
