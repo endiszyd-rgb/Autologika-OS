@@ -573,3 +573,32 @@ test('Audi A4 B7 and VW Passat B6 sedan/wagon sources have body-accurate generat
   assert.equal(resolveVerifiedVehiclePhoto({make,model,generation,year,bodyType:'suv'}),null)
  }
 })
+
+test('eight formerly unrepresented generations resolve to a correctly attributed photo',()=>{
+ const samples=[
+  ['Audi','A5','8T/8F',2009,'coupe'],
+  ['Mercedes-Benz','Klasa C','W203',2003,'wagon'],
+  ['Mercedes-Benz','Klasa E','W212',2011,'sedan'],
+  ['Volkswagen','Touran','I FL (1T3)',2012,'mpv'],
+  ['Volkswagen','Touran','II (5T)',2017,'mpv'],
+  ['Volkswagen','Tiguan','III',2025,'suv'],
+  ['SEAT','Leon','1M',2004,'hatchback'],
+  ['SEAT','Leon','KL',2021,'hatchback']
+ ]
+ for(const [make,model,generation,year,bodyType] of samples){
+  const v={make,model,generation,year,bodyType}
+  const photo=resolveVerifiedVehiclePhoto(v)
+  assert.ok(photo,'Not resolved: '+JSON.stringify(v))
+  assert.equal(photo.generation,generation)
+  assert.equal(photo.bodyType,bodyType)
+  assert.ok(isPhotoLicenseAllowed(photo.license))
+  assert.equal(resolveVerifiedVehiclePhoto({...v,bodyType:'sedan'}),bodyType==='sedan'?photo:null)
+ }
+ assert.equal(resolveVerifiedVehiclePhoto({make:'Volkswagen',model:'Tiguan',generation:'II (AD/BW)',year:2025,bodyType:'suv'}),null)
+ assert.equal(resolveVerifiedVehiclePhoto({make:'SEAT',model:'Leon',generation:'1M',year:2021,bodyType:'hatchback'}),null)
+})
+test('every defined generation has at least one photo that resolves for a specific year and body',()=>{
+ assert.equal(vehiclePhotoInventorySummary.generationCount,48)
+ assert.equal(vehiclePhotoInventorySummary.generationMissing,0)
+ assert.equal(vehiclePhotoInventorySummary.generationWithPhotos,48)
+})
