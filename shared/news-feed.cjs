@@ -125,11 +125,12 @@ function sanitizeCache(cache){
 }
 
 // Cache 1 h; offline albo błąd wszystkich źródeł → ostatnie pobrane dane z flagą stale
-async function getNewsFeed({force=false,readCache,writeCache,now=()=>new Date(),ttl=NEWS_TTL_MS,...io}={}){
+// fetchAll (opcjonalnie) zastępuje pobieranie źródeł — np. PWA pobiera gotowy zestaw z serwera (funkcja news w Supabase)
+async function getNewsFeed({force=false,readCache,writeCache,now=()=>new Date(),ttl=NEWS_TTL_MS,fetchAll,...io}={}){
  let cache=null
  try{cache=sanitizeCache(readCache?await readCache():null)}catch{cache=null}
  if(!force&&isFresh(cache,now(),ttl))return{...cache,cached:true,stale:false}
- const fresh=await fetchNewsFeed({...io,now})
+ const fresh=fetchAll?await fetchAll({now}):await fetchNewsFeed({...io,now})
  const usable=fresh.items.length||fresh.rates.length
  if(!usable&&cache)return{...cache,cached:true,stale:true,errors:fresh.errors}
  // częściowa awaria: brakujące części uzupełniamy z cache

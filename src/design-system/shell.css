@@ -477,7 +477,32 @@ html.ui2 body{font-variant-numeric:tabular-nums}
 html.ui2 #hala,html.ui2 #hala-picker{--hala-body:var(--ui-font-sans);--hala-mono:var(--ui-font-mono)}
 html.ui2 #hala-picker{font-family:var(--ui-font-sans)}
 /* Pola wyszukiwania z ikoną: jedna ramka (wokół całego pola), ikona wewnątrz, bez drugiej ramki na samym <input> */
-html.ui2 :is(.vehicleSearch,.ptToolbar>div:first-child,.manualSearch,.workCatalogSearch label,.careToolbar>label,.attentionToolbar>label,.paletteInputRow){display:flex;align-items:center;gap:8px;min-width:0}
-html.ui2 :is(.vehicleSearch,.ptToolbar>div:first-child,.manualSearch,.workCatalogSearch label,.careToolbar>label,.attentionToolbar>label,.paletteInputRow)>span{flex:none;color:var(--ui-text-3)}
-html.ui2 :is(.vehicleSearch,.ptToolbar>div:first-child,.manualSearch,.workCatalogSearch label,.careToolbar>label,.attentionToolbar>label,.paletteInputRow) input{flex:1;min-width:0;border:0!important;background:transparent!important;box-shadow:none!important;outline:none}
-html.ui2 :is(.vehicleSearch,.ptToolbar>div:first-child,.manualSearch,.workCatalogSearch label,.careToolbar>label,.attentionToolbar>label):focus-within{border-color:var(--ui-accent)!important}
+html.ui2 :is(.vehicleSearch,.ptToolbar>div:first-child,.manualSearch,.workCatalogSearch label,.careToolbar>label,.attentionToolbar>label,.paletteInputRow,.plannerOrderChoicesHead label){display:flex;align-items:center;gap:8px;min-width:0}
+html.ui2 :is(.vehicleSearch,.ptToolbar>div:first-child,.manualSearch,.workCatalogSearch label,.careToolbar>label,.attentionToolbar>label,.paletteInputRow,.plannerOrderChoicesHead label)>span{flex:none;color:var(--ui-text-3)}
+html.ui2 :is(.vehicleSearch,.ptToolbar>div:first-child,.manualSearch,.workCatalogSearch label,.careToolbar>label,.attentionToolbar>label,.paletteInputRow,.plannerOrderChoicesHead label) input{flex:1;min-width:0;border:0!important;background:transparent!important;box-shadow:none!important;outline:none}
+html.ui2 :is(.vehicleSearch,.ptToolbar>div:first-child,.manualSearch,.workCatalogSearch label,.careToolbar>label,.attentionToolbar>label,.plannerOrderChoicesHead label):focus-within{border-color:var(--ui-accent)!important}
+
+/* ==========================================================================
+   Okienka — poprawki układu wykryte przez test wyglądu (npm run test:layout)
+   ========================================================================== */
+/* Terminarz › nowa wizyta: auto i klient w osobnych liniach, karta rośnie razem z treścią */
+/* Siatka (grid) z przyciskami liczyła za niskie wiersze — karty nachodziły na siebie; flex-wrap liczy wysokość z treści */
+html.ui2 .plannerOrderChoiceList{display:flex;flex-wrap:wrap;align-items:stretch;align-content:flex-start}
+html.ui2 .plannerOrderChoiceList>button{flex:0 0 calc((100% - 18px)/3);height:auto;min-height:145px}
+@media (max-width:760px){html.ui2 .plannerOrderChoiceList>button{flex-basis:100%}}
+html.ui2 .plannerOrderChoiceList .plannerVisitIdentity{flex-wrap:nowrap;padding-right:64px}
+html.ui2 .plannerOrderChoiceList .plannerVisitIdentity>div{display:grid;gap:2px;flex:1 1 auto;min-width:0}
+html.ui2 .plannerOrderChoiceList .plannerVisitIdentity strong{overflow-wrap:anywhere}
+/* Nagłówek okienek terminarza: przycisk zamknięcia kwadratowy, nie rozciągnięty na wysokość nagłówka */
+html.ui2 .plannerModalHead{align-items:flex-start;gap:var(--ui-space-3)}
+html.ui2 .plannerModalHead>button{flex:none;width:36px;height:36px;min-height:36px;padding:0;display:grid;place-items:center;font-size:18px;line-height:1}
+/* Nowe zlecenie › lista pojazdów: zdjęcie | rejestracja | auto i klient | stan wyboru */
+html.ui2 .vehicleChoiceList>button{grid-template-columns:auto 104px minmax(0,1fr) auto;justify-items:start}
+html.ui2 .vehicleChoiceList>button>div{min-width:0;width:100%}
+html.ui2 .vehicleChoiceList>button>em{justify-self:end;white-space:nowrap}
+@media (max-width:800px){
+ html.ui2 .vehicleChoiceList>button{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"photo plate" "photo info";row-gap:2px}
+ html.ui2 .vehicleChoiceList>button>:first-child{grid-area:photo}
+ html.ui2 .vehicleChoiceList>button>.vehicleChoicePlate{grid-area:plate}
+ html.ui2 .vehicleChoiceList>button>div{grid-area:info}
+}

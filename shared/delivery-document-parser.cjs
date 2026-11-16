@@ -1,3 +1,4 @@
+const {formatMoney}=require('./money-format.cjs')
 const textKey=value=>String(value||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ł/g,'l').replace(/[^a-z0-9]/gi,'').toUpperCase()
 const roundMoney=value=>Math.round((Number(value)||0)*100)/100
 const polishNumber=value=>{
@@ -75,7 +76,7 @@ function parseDeliveryDocument(rawText){
   if(!rows.length)warnings.push('Nie rozpoznano pozycji tabeli. Sprawdź jakość zdjęcia lub dodaj wiersze ręcznie.')
   if(rows.some(row=>row.confidence==='CHECK'))warnings.push('Co najmniej jeden numer lub cena wymaga sprawdzenia z dokumentem.')
   const rowsGross=roundMoney(rows.reduce((sum,row)=>sum+row.gross_total,0)),documentGross=totalMatches.length?polishNumber(totalMatches[totalMatches.length-1][0]):rowsGross
-  if(documentGross>0&&Math.abs(documentGross-rowsGross)>.1)warnings.push(`Suma odczytanych pozycji (${rowsGross.toFixed(2)} zł) różni się od wartości dokumentu (${documentGross.toFixed(2)} zł). Sprawdź, czy OCR nie pominął wiersza.`)
+  if(documentGross>0&&Math.abs(documentGross-rowsGross)>.1)warnings.push(`Suma odczytanych pozycji (${formatMoney(rowsGross)}) różni się od wartości dokumentu (${formatMoney(documentGross)}). Sprawdź, czy OCR nie pominął wiersza.`)
   return{
     supplier_name:findSupplier(lines,documentIndex),
     document_no:documentMatch?.[1]||'',

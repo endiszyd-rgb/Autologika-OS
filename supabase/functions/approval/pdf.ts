@@ -5,12 +5,14 @@ import {loadApprovalFonts} from './fonts.generated.ts'
 const PAGE_W=595.28,PAGE_H=841.89,MARGIN=42,CONTENT_W=PAGE_W-MARGIN*2
 const ink=rgb(.10,.12,.11),muted=rgb(.39,.43,.40),lineColor=rgb(.78,.80,.78),soft=rgb(.955,.965,.955),red=rgb(.68,.055,.075),green=rgb(.28,.50,.30)
 const safeText=(value:any)=>String(value??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,'').replace(/[–—]/g,'-')
-const money=(value:any)=>`${Number(value||0).toFixed(2).replace('.',',')} PLN`
+// Kwoty jak w aplikacji: odstęp tysięcy (twarda spacja, żeby kwota nie łamała się między wierszami), przecinek dziesiętny
+const moneyFormat=new Intl.NumberFormat('pl-PL',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'})
+const money=(value:any)=>`${moneyFormat.format(Number(value)||0).replace(/[\u202F\u00A0]/g,'\u00A0')}\u00A0PLN`
 
 function wrapped(value:any,font:any,size:number,maxWidth:number){
  const result:string[]=[]
  for(const paragraph of safeText(value).split(/\n/)){
-  const words=paragraph.trim().split(/\s+/).filter(Boolean);let current=''
+  const words=paragraph.trim().split(/[ \t\r\f\v]+/).filter(Boolean);let current=''
   for(const word of words){
    const candidate=current?`${current} ${word}`:word
    if(font.widthOfTextAtSize(candidate,size)<=maxWidth){current=candidate;continue}

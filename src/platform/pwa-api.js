@@ -13,7 +13,27 @@ import workshopSettings from '../../electron/workshop-settings.cjs'
 
 const NEWS_CACHE_KEY='autologika.newsFeed.v1'
 // RSS portali nie wysyła nagłówków CORS, więc w przeglądarce działa tylko API NBP; wiadomości pobiera aplikacja Windows.
-const pwaNewsFeed=(options={})=>newsFeed.getNewsFeed({force:Boolean(options?.force),fetchJson:async url=>{const response=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout?.(10000)});if(!response.ok)throw new Error(`HTTP ${response.status}`);return response.json()},readCache:()=>{try{return JSON.parse(localStorage.getItem(NEWS_CACHE_KEY)||'null')}catch{return null}},writeCache:value=>{try{localStorage.setItem(NEWS_CACHE_KEY,JSON.stringify(value))}catch{}}}).then(result=>({...result,rssUnavailable:true}))
+// Wiadomości: portale RSS pobiera serwer (funkcja news w Supabase), bo przeglądarka nie może czytać ich kanałów (CORS).
+// Gdy serwer jest niedostępny — same kursy NBP prosto z api.nbp.pl (to API pozwala na zapytania z przeglądarki).
+const pwaNewsJson=async url=>{const response=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout?.(10000)});if(!response.ok)throw new Error(`HTTP ${response.status}`);return response.json()}
+const pwaNewsFeed=(options={})=>{
+ let viaServer=false,serverStale=false
+ return newsFeed.getNewsFeed({
+  force:Boolean(options?.force),
+  fetchAll:async({now})=>{
+   try{
+    const feed=newsFeed.sanitizeCache(await pwaCloud.request(`/functions/v1/news${options?.force?'?force=1':''}`,{method:'GET'}))
+    if(feed&&(feed.items.length||feed.rates.length)){viaServer=true;serverStale=feed.stale===true;return{...feed,errors:Array.isArray(feed.errors)?feed.errors:[]}}
+    throw new Error('Serwer nie zwrócił wiadomości')
+   }catch(error){
+    const fallback=await newsFeed.fetchNewsFeed({fetchJson:pwaNewsJson,now})
+    return{...fallback,errors:[{source:'AutoLogika Cloud',message:String(error?.message||error)},...fallback.errors]}
+   }
+  },
+  readCache:()=>{try{return JSON.parse(localStorage.getItem(NEWS_CACHE_KEY)||'null')}catch{return null}},
+  writeCache:value=>{try{localStorage.setItem(NEWS_CACHE_KEY,JSON.stringify(value))}catch{}}
+ }).then(result=>({...result,stale:Boolean(result.stale||(serverStale&&!result.cached)),rssUnavailable:!viaServer&&!result.items?.length}))
+}
 
 const now=()=>new Date().toISOString()
 const text=value=>String(value??'').trim()

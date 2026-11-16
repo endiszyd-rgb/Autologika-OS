@@ -1,3 +1,4 @@
+const {formatMoney}=require('../shared/money-format.cjs')
 const {withQuoteHistory}=require('./quote-history.cjs')
 const { app, BrowserWindow, ipcMain, dialog, shell, clipboard, Notification, net, nativeImage, systemPreferences } = require('electron')
 const path = require('path')
@@ -621,7 +622,7 @@ ipcMain.handle('orders:updateWait',(_,{id,waitState})=>{
 })
 ipcMain.handle('orders:updateDetails',(_,{id,data})=>updateOrderDetails(getDb(),id,data))
 
-ipcMain.handle('orders:updateFinancials',(_,{id,data})=>{const db=getDb();return db.transaction(()=>{requireEditableOrder(db,id);const values=['labor_hours','labor_rate','parts_cost','parts_sale','other_cost','other_sale','discount','diagnosis_fee'].map(key=>Number(data[key]||0));if(values.some(value=>!Number.isFinite(value)||value<0))throw new Error('Wartości finansowe muszą być liczbami nieujemnymi.');db.prepare(`UPDATE orders SET labor_hours=?,labor_rate=?,parts_cost=?,parts_sale=?,other_cost=?,other_sale=?,discount=?,diagnosis_fee=? WHERE id=?`).run(...values,id);db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(id,'FINANCIALS','Zmieniono parametry finansowe zlecenia',`Robocizna ${values[0].toFixed(2)} h × ${values[1].toFixed(2)} zł · rabat ${values[6].toFixed(2)} zł · diagnostyka ${values[7].toFixed(2)} zł`);return true})()})
+ipcMain.handle('orders:updateFinancials',(_,{id,data})=>{const db=getDb();return db.transaction(()=>{requireEditableOrder(db,id);const values=['labor_hours','labor_rate','parts_cost','parts_sale','other_cost','other_sale','discount','diagnosis_fee'].map(key=>Number(data[key]||0));if(values.some(value=>!Number.isFinite(value)||value<0))throw new Error('Wartości finansowe muszą być liczbami nieujemnymi.');db.prepare(`UPDATE orders SET labor_hours=?,labor_rate=?,parts_cost=?,parts_sale=?,other_cost=?,other_sale=?,discount=?,diagnosis_fee=? WHERE id=?`).run(...values,id);db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(id,'FINANCIALS','Zmieniono parametry finansowe zlecenia',`Robocizna ${values[0].toFixed(2)} h × ${formatMoney(values[1])} · rabat ${formatMoney(values[6])} · diagnostyka ${formatMoney(values[7])}`);return true})()})
 ipcMain.handle('orders:updateFinalPrice',(_,{id,price,note})=>{
   const db=getDb(),order=db.prepare('SELECT final_price FROM orders WHERE id=?').get(id)
   if(!order)throw new Error('Zlecenie nie istnieje.')
@@ -629,7 +630,7 @@ ipcMain.handle('orders:updateFinalPrice',(_,{id,price,note})=>{
   const change=finalPriceChange({previous:order.final_price,next:price,note})
   db.transaction(()=>{
     db.prepare('UPDATE orders SET final_price=?,final_price_note=?,final_price_updated_at=CURRENT_TIMESTAMP WHERE id=?').run(change.after,change.after===null?'':change.note,id)
-    const before=change.before===null?'wyliczenie automatyczne':`${change.before.toFixed(2)} zł`,after=change.after===null?'wyliczenie automatyczne':`${change.after.toFixed(2)} zł`
+    const before=change.before===null?'wyliczenie automatyczne':`${formatMoney(change.before)}`,after=change.after===null?'wyliczenie automatyczne':`${formatMoney(change.after)}`
     db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(id,'FINAL_PRICE','Zmiana ceny końcowej',`${before} → ${after}${change.note?` · ${change.note}`:''}`)
   })()
   syncCloseoutAutomation(id)
@@ -760,7 +761,7 @@ ipcMain.handle('quotes:requestApproval',(_,id)=>{
   const r=db.prepare(`INSERT INTO approvals(order_id,status,amount,scope,channel,note) VALUES (?,'PENDING',?,?,?,?)`).run(q.order_id,total,scope,'SMS',`Kosztorys ${items.length} pozycji`)
   if(typeof snapshotEstimate==='function'&&db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='repair_estimate_snapshots'").get())snapshotEstimate(db,{orderId:q.order_id,quoteId:id,status:'SENT'})
   db.prepare(`UPDATE orders SET status='AKCEPTACJA',wait_state='DECYZJA' WHERE id=?`).run(q.order_id)
-  db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(q.order_id,'APPROVAL','Wycena wysłana do akceptacji',`${total.toFixed(2)} zł · ${scope}`)
+  db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(q.order_id,'APPROVAL','Wycena wysłana do akceptacji',`${formatMoney(total)} · ${scope}`)
   return{ok:true,approvalId:r.lastInsertRowid,total}
 })
 ipcMain.handle('quotes:accept',(_,id)=>{
@@ -982,7 +983,7 @@ ipcMain.handle('payments:add',(_,{orderId,data})=>{
     const saved=db.prepare(`INSERT INTO payments(order_id,amount,method,reference,note) VALUES (?,?,?,?,?)`)
       .run(orderId,entry.amount,entry.method,entry.reference,entry.note)
     db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
-      .run(orderId,'PAYMENT','Płatność',`${entry.amount.toFixed(2)} zł · ${entry.method}`)
+      .run(orderId,'PAYMENT','Płatność',`${formatMoney(entry.amount)} · ${entry.method}`)
     return saved
   })()
   syncCloseoutAutomation(orderId)
@@ -994,7 +995,7 @@ ipcMain.handle('payments:remove',(_,id)=>{
   db.transaction(()=>{
     db.prepare(`DELETE FROM payments WHERE id=?`).run(id)
     db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
-      .run(row.order_id,'PAYMENT','Usunięto płatność',`${Number(row.amount||0).toFixed(2)} zł`)
+      .run(row.order_id,'PAYMENT','Usunięto płatność',`${formatMoney(Number(row.amount||0))}`)
   })()
   syncCloseoutAutomation(row.order_id)
   return true
@@ -1064,7 +1065,7 @@ ipcMain.handle('approvals:add',(_,{orderId,data})=>{
     const saved=db.prepare(`INSERT INTO approvals(order_id,status,amount,scope,channel,note,decided_at) VALUES (?,?,?,?,?,?,CASE WHEN ?='PENDING' THEN NULL ELSE CURRENT_TIMESTAMP END)`)
       .run(orderId,entry.status,entry.amount,entry.scope,entry.channel,entry.note,entry.status)
     db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
-      .run(orderId,'APPROVAL',entry.status==='APPROVED'?'Klient zaakceptował koszt':entry.status==='DECLINED'?'Klient odrzucił koszt':'Oczekiwanie na akceptację',`${entry.amount.toFixed(2)} zł · ${entry.scope}`)
+      .run(orderId,'APPROVAL',entry.status==='APPROVED'?'Klient zaakceptował koszt':entry.status==='DECLINED'?'Klient odrzucił koszt':'Oczekiwanie na akceptację',`${formatMoney(entry.amount)} · ${entry.scope}`)
     if(entry.status==='APPROVED')prepared=materializeApprovedQuote(db,{scope:entry.scope})
     return saved
   })()
@@ -1082,7 +1083,7 @@ ipcMain.handle('approvals:decide',(_,{id,status,note})=>{
   db.transaction(()=>{
     db.prepare(`UPDATE approvals SET status=?,note=CASE WHEN ?!='' THEN ? ELSE note END,decided_at=CURRENT_TIMESTAMP WHERE id=?`).run(decision,decisionNote,decisionNote,id)
     db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`)
-      .run(row.order_id,'APPROVAL',decision==='APPROVED'?'Klient zaakceptował koszt':'Klient odrzucił koszt',`${Number(row.amount||0).toFixed(2)} zł · ${row.scope||''}`)
+      .run(row.order_id,'APPROVAL',decision==='APPROVED'?'Klient zaakceptował koszt':'Klient odrzucił koszt',`${formatMoney(Number(row.amount||0))} · ${row.scope||''}`)
     if(decision==='APPROVED')prepared=materializeApprovedQuote(db,row)
   })()
   syncCloseoutAutomation(row.order_id)
@@ -1241,4 +1242,4 @@ ipcMain.handle('dvi:pickMedia',async(_,{orderId,itemId})=>{const item=getDb().pr
 ipcMain.handle('procedures:toggle',(_,{id,key,checked})=>{const db=getDb();const row=db.prepare('SELECT order_id,progress_json FROM work_procedure_runs WHERE id=?').get(id);if(!row)return false;requireEditableOrder(db,row.order_id);let p={};try{p=JSON.parse(row.progress_json||'{}')}catch{}p[key]=!!checked;db.prepare('UPDATE work_procedure_runs SET progress_json=? WHERE id=?').run(JSON.stringify(p),id);return true})
 ipcMain.handle('procedures:setProgress',(_,{id,progress})=>{const db=getDb(),row=db.prepare('SELECT order_id FROM work_procedure_runs WHERE id=?').get(id);if(!row)return false;requireEditableOrder(db,row.order_id);const clean=Object.fromEntries(Object.entries(progress||{}).filter(([key])=>/^(pre|steps|qc):\d+$/.test(key)).map(([key,value])=>[key,!!value]));db.prepare('UPDATE work_procedure_runs SET progress_json=? WHERE id=?').run(JSON.stringify(clean),id);return true})
 ipcMain.handle('procedures:remove',(_,id)=>{const db=getDb(),row=db.prepare('SELECT order_id FROM work_procedure_runs WHERE id=?').get(id);if(!row)return false;requireEditableOrder(db,row.order_id);db.prepare('DELETE FROM work_procedure_runs WHERE id=?').run(id);return true})
-ipcMain.handle('jobParts:update',(_,{id,data})=>{const db=getDb(),part=db.prepare('SELECT * FROM job_part_orders WHERE id=?').get(id);if(!part)return false;requireEditableOrder(db,part.order_id);let price=+data.unit_price||0;if(!price&&+data.unit_cost>0)price=Math.round((+data.unit_cost)*(1+partMarkup(+data.unit_cost))*100)/100;const supplierName=data.supplier_name||(data.supplier_id?db.prepare('SELECT name FROM suppliers WHERE id=?').get(data.supplier_id)?.name:'')||'';const qty=wholePartQuantity(data.qty),cost=+data.unit_cost||0;const tx=db.transaction(()=>{db.prepare(`UPDATE job_part_orders SET supplier_id=?,supplier_name=?,part_no=?,oe_number=?,inventory_part_id=?,barcode=?,brand=?,vehicle_fitment=?,cross_numbers=?,lookup_source=?,lookup_url=?,name=?,qty=?,unit_cost=?,unit_price=?,external_order_no=?,expected_at=?,notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(data.supplier_id||null,supplierName,data.part_no||'',data.oe_number||'',data.inventory_part_id||null,normalizeBarcode(data.barcode||''),data.brand||'',data.vehicle_fitment||'',data.cross_numbers||'',data.lookup_source||'',data.lookup_url||'',data.name||'',qty,cost,price,data.external_order_no||'',data.expected_at||null,data.notes||'',id);if(part.status==='ZAMONTOWANE'){const marker=jobPartTechnicalDescription(part.cloud_id);let installed=db.prepare('SELECT id FROM order_items WHERE order_id=? AND technical_description=? ORDER BY id DESC LIMIT 1').get(part.order_id,marker);if(!installed)installed=db.prepare("SELECT id FROM order_items WHERE order_id=? AND kind='CZESC' AND name=? AND ABS(qty-?)<0.0001 AND ABS(unit_cost-?)<0.0001 ORDER BY id DESC LIMIT 1").get(part.order_id,part.name,part.qty,part.unit_cost);if(installed){db.prepare(`UPDATE order_items SET name=?,qty=?,unit_cost=?,unit_price=?,part_no=?,oe_number=?,supplier=?,notes=?,technical_description=? WHERE id=?`).run(data.name||'',qty,cost,price,data.part_no||'',data.oe_number||'',supplierName,data.notes||'',marker,installed.id);syncOrderItemTotals(part.order_id)}}db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(part.order_id,'PART_PRICE_UPDATED','Zmieniono cenę części',`${data.name||part.name} · zakup ${cost.toFixed(2)} zł · klient ${price.toFixed(2)} zł`);return true});return tx()})
+ipcMain.handle('jobParts:update',(_,{id,data})=>{const db=getDb(),part=db.prepare('SELECT * FROM job_part_orders WHERE id=?').get(id);if(!part)return false;requireEditableOrder(db,part.order_id);let price=+data.unit_price||0;if(!price&&+data.unit_cost>0)price=Math.round((+data.unit_cost)*(1+partMarkup(+data.unit_cost))*100)/100;const supplierName=data.supplier_name||(data.supplier_id?db.prepare('SELECT name FROM suppliers WHERE id=?').get(data.supplier_id)?.name:'')||'';const qty=wholePartQuantity(data.qty),cost=+data.unit_cost||0;const tx=db.transaction(()=>{db.prepare(`UPDATE job_part_orders SET supplier_id=?,supplier_name=?,part_no=?,oe_number=?,inventory_part_id=?,barcode=?,brand=?,vehicle_fitment=?,cross_numbers=?,lookup_source=?,lookup_url=?,name=?,qty=?,unit_cost=?,unit_price=?,external_order_no=?,expected_at=?,notes=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).run(data.supplier_id||null,supplierName,data.part_no||'',data.oe_number||'',data.inventory_part_id||null,normalizeBarcode(data.barcode||''),data.brand||'',data.vehicle_fitment||'',data.cross_numbers||'',data.lookup_source||'',data.lookup_url||'',data.name||'',qty,cost,price,data.external_order_no||'',data.expected_at||null,data.notes||'',id);if(part.status==='ZAMONTOWANE'){const marker=jobPartTechnicalDescription(part.cloud_id);let installed=db.prepare('SELECT id FROM order_items WHERE order_id=? AND technical_description=? ORDER BY id DESC LIMIT 1').get(part.order_id,marker);if(!installed)installed=db.prepare("SELECT id FROM order_items WHERE order_id=? AND kind='CZESC' AND name=? AND ABS(qty-?)<0.0001 AND ABS(unit_cost-?)<0.0001 ORDER BY id DESC LIMIT 1").get(part.order_id,part.name,part.qty,part.unit_cost);if(installed){db.prepare(`UPDATE order_items SET name=?,qty=?,unit_cost=?,unit_price=?,part_no=?,oe_number=?,supplier=?,notes=?,technical_description=? WHERE id=?`).run(data.name||'',qty,cost,price,data.part_no||'',data.oe_number||'',supplierName,data.notes||'',marker,installed.id);syncOrderItemTotals(part.order_id)}}db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(part.order_id,'PART_PRICE_UPDATED','Zmieniono cenę części',`${data.name||part.name} · zakup ${formatMoney(cost)} · klient ${formatMoney(price)}`);return true});return tx()})

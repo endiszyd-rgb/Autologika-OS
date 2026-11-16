@@ -1,6 +1,6 @@
 {
   "name": "autologika-os",
-  "version": "1.1.12",
+  "version": "1.1.13",
   "private": true,
   "description": "Autologika OS - system operacyjny warsztatu samochodowego",
   "author": "Autologika",
@@ -14,6 +14,7 @@
     "test:migration:existing": "node scripts/run-electron-smoke.cjs existing-db-v18-smoke.cjs",
     "test:ui": "npm run build && node scripts/run-electron-smoke.cjs ui-preview.cjs",
     "test:pwa": "npm run build && node scripts/check-pwa-build.mjs && node scripts/run-pwa-browser-smoke.cjs",
+    "test:layout": "npm run build && node scripts/run-electron-smoke.cjs ui-layout-audit.cjs",
     "test:protocol": "node scripts/run-electron-smoke.cjs protocol-preview.cjs",
     "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
     "build": "vite build",

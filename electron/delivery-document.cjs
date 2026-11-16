@@ -1,3 +1,4 @@
+const {formatMoney}=require('../shared/money-format.cjs')
 const {validateDelivery}=require('../shared/delivery-review.cjs')
 const fs=require('fs')
 const path=require('path')
@@ -25,7 +26,7 @@ async function recognizeDeliveryDocument(filePath,{cachePath,onProgress=()=>{},t
       const rowsGross=roundMoney(primary.items.reduce((sum,item)=>sum+Number(item.gross_total||0),0))
       primary.warnings=[]
       if(primary.items.some(item=>item.confidence==='CHECK'))primary.warnings.push('Co najmniej jeden numer lub cena wymaga sprawdzenia z dokumentem.')
-      if(primary.gross_total>0&&Math.abs(primary.gross_total-rowsGross)>.1)primary.warnings.push(`Suma odczytanych pozycji (${rowsGross.toFixed(2)} zł) różni się od wartości dokumentu (${primary.gross_total.toFixed(2)} zł). Sprawdź, czy OCR nie pominął wiersza.`)
+      if(primary.gross_total>0&&Math.abs(primary.gross_total-rowsGross)>.1)primary.warnings.push(`Suma odczytanych pozycji (${formatMoney(rowsGross)}) różni się od wartości dokumentu (${formatMoney(primary.gross_total)}). Sprawdź, czy OCR nie pominął wiersza.`)
     }
     return{...primary,ocr_confidence:roundMoney(result.data.confidence||0)}
   }finally{if(worker)await worker.terminate()}

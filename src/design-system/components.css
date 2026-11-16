@@ -181,7 +181,7 @@ html.ui2 .shell .primary,html.ui2 .modal .primary,html.ui2 .plannerModal .primar
  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 4px 14px rgba(212,61,101,.28);
 }
 html.ui2 .shell .primary:hover:not(:disabled),html.ui2 .modal .primary:hover:not(:disabled),html.ui2 .plannerModal .primary:hover:not(:disabled){border-color:transparent;background:linear-gradient(180deg,#e5527a,#b52f53);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 8px 24px rgba(212,61,101,.4)}
-/* workshop-ergonomics.css wymusza .primary {background:#e52532!important}. W UI 2.0 akcja główna
+/* Jeden przycisk główny w całej aplikacji (klasa .primary; własne przyciski ekranów używają własnych klas, np. .halaPrimary). W UI 2.0 akcja główna
    zostaje wyraźna, ale w kolorze marki — jeden przycisk główny w całej aplikacji. */
 html.ui2 :is(.primary,.releaseVehicleButton){border-color:transparent!important;background:var(--ui-accent-gradient)!important;color:#fff!important}
 html.ui2 :is(.primary,.releaseVehicleButton):hover:not(:disabled){background:linear-gradient(180deg,#e5527a,#b52f53)!important}

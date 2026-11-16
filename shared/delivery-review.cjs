@@ -1,3 +1,4 @@
+const {formatMoney}=require('./money-format.cjs')
 const {textKey,roundMoney}=require('./delivery-document-parser.cjs')
 const number=value=>typeof value==='number'?value:typeof value==='string'&&value.trim()!==''?Number(value.trim().replace(',','.')):NaN
 
@@ -39,6 +40,6 @@ function confirmDelivery(document,confirm){
  const qty=clean.items.reduce((sum,item)=>sum+item.qty,0),net=roundMoney(clean.items.reduce((sum,item)=>sum+item.net_total,0)),gross=roundMoney(clean.items.reduce((sum,item)=>sum+item.gross_total,0))
  const warning=duplicates.size?`\nPowtórzone numery części: ${[...duplicates].join(', ')}. Ilości tych wierszy zostaną dodane. Sprawdź, czy OCR nie powielił pozycji.`:''
  const mismatch=number(document.gross_total)>0&&Math.abs(number(document.gross_total)-gross)>.1?'\nSuma wybranych pozycji różni się od sumy dokumentu. Sprawdź pominięte lub wyłączone wiersze.':''
- return confirm(`Potwierdź przyjęcie do magazynu: ${clean.items.length} pozycji, ${qty} szt.\nNetto: ${net.toFixed(2)} zł · brutto: ${gross.toFixed(2)} zł.${warning}${mismatch}\nSprawdziłem numery części, ilości i ceny z dokumentem. Zapisać dostawę i zwiększyć stany?`)?clean:null
+ return confirm(`Potwierdź przyjęcie do magazynu: ${clean.items.length} pozycji, ${qty} szt.\nNetto: ${formatMoney(net)} · brutto: ${formatMoney(gross)}.${warning}${mismatch}\nSprawdziłem numery części, ilości i ceny z dokumentem. Zapisać dostawę i zwiększyć stany?`)?clean:null
 }
 module.exports={editDeliveryItem,validateDelivery,confirmDelivery}

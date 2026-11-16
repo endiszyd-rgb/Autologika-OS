@@ -1,4 +1,5 @@
 const {withQuoteHistory}=require('../electron/quote-history.cjs')
+const {formatMoney}=require('../shared/money-format.cjs')
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
 const { DatabaseSync } = require('node:sqlite')
@@ -25,7 +26,7 @@ function setup(t) {
   const source = fs.readFileSync(require.resolve('../electron/main.cjs'), 'utf8')
   vm.runInNewContext(source.slice(source.indexOf("ipcMain.handle('quotes:get'"), source.indexOf("ipcMain.handle('attachments:list'")), {
     ipcMain: { handle: (name, callback) => { handlers[name] = callback } },
-    getDb: () => db, withQuoteHistory, findQuoteApproval, assertQuoteEditable, assertApprovalQuoteAmount, replaceQuoteWithOrderSnapshot, materializeApprovedQuote, requireEditableOrder, wholePartQuantity, partMarkup: () => 0.2, normalizeBarcode:value=>String(value||''), syncOrderItemTotals: () => {},
+    getDb: () => db, withQuoteHistory, findQuoteApproval, assertQuoteEditable, assertApprovalQuoteAmount, replaceQuoteWithOrderSnapshot, materializeApprovedQuote, requireEditableOrder, wholePartQuantity, partMarkup: () => 0.2, formatMoney, normalizeBarcode:value=>String(value||''), syncOrderItemTotals: () => {},
   })
   return { db, call: (name, arg) => handlers[`quotes:${name}`](null, arg) }
 }

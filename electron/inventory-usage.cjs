@@ -1,3 +1,4 @@
+const {formatMoney}=require('../shared/money-format.cjs')
 const {wholePartQuantity}=require('./part-quantity.cjs')
 
 function number(value){
@@ -132,8 +133,8 @@ function updateOrderItem(db,id,input={}){
     if(linkedCloudId)db.prepare(`UPDATE job_part_orders SET name=?,qty=?,unit_cost=?,unit_price=?,part_no=?,oe_number=?,supplier_name=?,updated_at=CURRENT_TIMESTAMP WHERE cloud_id=? AND order_id=?`)
       .run(name,qty,unitCost,unitPrice,String(input.part_no||'').trim(),String(input.oe_number||'').trim(),String(input.supplier||'').trim(),linkedCloudId,row.order_id)
     syncOrderTotals(db,row.order_id)
-    const before=`${row.name} · ${number(row.qty).toLocaleString('pl-PL')} × ${number(row.unit_price).toFixed(2)} zł`
-    const after=`${name} · ${qty.toLocaleString('pl-PL')} × ${unitPrice.toFixed(2)} zł`
+    const before=`${row.name} · ${number(row.qty).toLocaleString('pl-PL')} × ${formatMoney(number(row.unit_price))}`
+    const after=`${name} · ${qty.toLocaleString('pl-PL')} × ${formatMoney(unitPrice)}`
     db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(row.order_id,'ORDER_ITEM_UPDATED','Zmieniono pozycję zlecenia',`${before} → ${after}`)
     return{updated:true,orderId:row.order_id,inventoryPartId:row.inventory_part_id||null,stockDelta:row.inventory_part_id?number(row.qty)-qty:0,linkedJobPartCloudId:linkedCloudId}
   })()
@@ -156,7 +157,7 @@ function createOrderItem(db,orderId,input={}){
       targetOrderId,kind,name,qty,unitCost,unitPrice,String(input.part_no||'').trim(),String(input.oe_number||'').trim(),String(input.supplier||'').trim(),description,input.catalog_work_id||null,input.catalog_variant_id||null,input.work_name||null,input.variant_name||null,description,String(input.technical_description||''),number(hours),number(price)
     )
     syncOrderTotals(db,targetOrderId)
-    db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(targetOrderId,'ORDER_ITEM_ADDED','Dodano pozycję zlecenia',`${name} · ${qty.toLocaleString('pl-PL')} × ${unitPrice.toFixed(2)} zł`)
+    db.prepare('INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)').run(targetOrderId,'ORDER_ITEM_ADDED','Dodano pozycję zlecenia',`${name} · ${qty.toLocaleString('pl-PL')} × ${formatMoney(unitPrice)}`)
     return{id:Number(result.lastInsertRowid),orderId:targetOrderId}
   })()
 }

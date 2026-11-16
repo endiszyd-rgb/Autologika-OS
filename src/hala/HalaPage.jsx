@@ -215,7 +215,7 @@ function NewsFeed({api}){
      <span className={'halaNewsIcon tone-'+item.tone}><Glyph name={item.icon} size={26}/></span>
      <span className="halaNewsText"><span className={'halaNewsMeta tone-'+item.tone}>{item.label} · <em>{item.source}{item.date?` · ${item.date}`:''}</em></span><b>{item.title}</b>{item.lead&&<small>{item.lead}</small>}</span>
     </a>)
-    :<p className="halaMuted halaNewsEmpty">{error||(feed?.rssUnavailable?'Wiadomości z portali pobiera aplikacja AutoLogika na Windows. Tutaj widzisz kursy NBP.':all.length?'Brak wiadomości w tej kategorii.':'Nie udało się pobrać wiadomości. Spróbujemy ponownie za godzinę.')}</p>}
+    :<p className="halaMuted halaNewsEmpty">{error||(feed?.rssUnavailable?'Wiadomości z portali są chwilowo niedostępne — spróbujemy ponownie za godzinę. Kursy NBP działają.':all.length?'Brak wiadomości w tej kategorii.':'Nie udało się pobrać wiadomości. Spróbujemy ponownie za godzinę.')}</p>}
   </div>
   <div className="halaNewsFoot">
    <span>{sources.length?`Źródła: ${sources.join(' · ')}`:'Źródła: Motofakty · Interia · MotoFocus · autoGALERIA · NBP'}{feed?.stale&&' · tryb offline (ostatnie pobrane)'}</span>

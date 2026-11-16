@@ -1,3 +1,4 @@
+const {formatMoney}=require('../shared/money-format.cjs')
 const fs = require('fs')
 const path = require('path')
 const os = require('os')
@@ -220,7 +221,7 @@ async function scanRemoteApprovals(c=loadConfig(),db=getDb(),hooks={}){
     db.transaction(()=>{
       db.prepare(`UPDATE approvals SET status=?,note=CASE WHEN ?!='' THEN ? ELSE note END,decided_at=? WHERE id=?`).run(r.status,r.customer_note||'',r.customer_note||'',decidedAt,approval.id);
       if(r.status==='APPROVED'){assertApprovalQuoteAmount(db,approval);prepared=materializeApprovedQuote(db,approval)}else db.prepare(`UPDATE orders SET wait_state='DECYZJA' WHERE id=?`).run(approval.order_id);
-      db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(approval.order_id,'REMOTE_APPROVAL',outcome.eventTitle,`${Number(approval.amount||0).toFixed(2)} zł${r.customer_note?` · ${r.customer_note}`:''}`);
+      db.prepare(`INSERT INTO order_events(order_id,event_type,title,details) VALUES (?,?,?,?)`).run(approval.order_id,'REMOTE_APPROVAL',outcome.eventTitle,`${formatMoney(Number(approval.amount||0))}${r.customer_note?` · ${r.customer_note}`:''}`);
     })();
     const item={approvalId:approval.id,orderId:approval.order_id,status:r.status,amount:Number(approval.amount||0),note:r.customer_note||'',decidedAt,customer:order.customer||'',plate:order.plate||'',vehicle:`${order.make||''} ${order.model||''}`.trim(),title:order.title||'',prepared:prepared.prepared,partsPrepared:prepared.parts||0,toastTitle:outcome.toastTitle,tone:outcome.tone,icon:outcome.icon};
     changed.push(item);emitApproval(item);

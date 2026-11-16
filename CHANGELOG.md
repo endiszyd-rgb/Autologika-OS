@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.13 — 2026-11-16
+
+### Okienka, wydruki i wiadomości na telefonie
+
+- Stały test wyglądu `npm run test:layout`: wszystkie zakładki w dwóch szerokościach i okienka (nowe/edycja/podgląd); wykrywa za mały i ucięty tekst, wychodzenie poza ekran, treść wystającą z kart, nachodzące karty i format kwot.
+- Okienka: „Nowa wizyta” (układ kart zleceń, wyszukiwarka, przycisk zamknięcia), „Nowe zlecenie” (lista pojazdów).
+- Stare globalne reguły dla `header`, `aside`, `nav`, `main` dotyczą już tylko ramki aplikacji — nie zmieniają kart i okienek (poprawione: „Zasoby i dostępność”, nagłówek „Podglądu zlecenia”, Finanse, drzewo Dokumentacji technicznej).
+- Jeden format kwot także w wydrukach, protokołach PDF, historii zlecenia, komunikatach i PDF akceptacji kosztorysu (separator tysięcy, przecinek dziesiętny); czas pracy „1,2 h”, przebieg „145 000 km”.
+- PWA: wiadomości z portali przez funkcję serwera `news` (Supabase, tylko zalogowani, stała lista źródeł, cache 1 h); bez niej — kursy NBP jak dotąd.
+
 ## 1.1.12 — 2026-11-16
 
 ### Spójny wygląd wszystkich zakładek

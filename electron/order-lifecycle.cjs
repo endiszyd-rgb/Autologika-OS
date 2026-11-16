@@ -1,3 +1,4 @@
+const {formatMoney}=require('../shared/money-format.cjs')
 const STATUSES=['PRZYJETE','DIAGNOZA','WYCENA','AKCEPTACJA','NAPRAWA','QC_NAPRAWY','QC_WYDANIA','PLATNOSC','GOTOWE','WYDANE']
 const WAIT_STATES=['BRAK','KLIENT','CZESCI','DECYZJA']
 const {stopActiveWorkLogs}=require('./work-time.cjs')
@@ -57,7 +58,7 @@ function updateOrderDetails(db,id,data={}){
     if(title!==order.title)changes.push(`nazwa: ${order.title||'brak'} → ${title}`)
     if(complaint!==String(order.complaint||''))changes.push('zaktualizowano zgłoszenie klienta')
     if(priority!==order.priority)changes.push(`priorytet: ${order.priority||'NORMALNY'} → ${priority}`)
-    if(diagnosisLimit!==Number(order.diagnosis_limit||0))changes.push(`limit diagnostyki: ${diagnosisLimit.toFixed(2)} zł`)
+    if(diagnosisLimit!==Number(order.diagnosis_limit||0))changes.push(`limit diagnostyki: ${formatMoney(diagnosisLimit)}`)
     if((dueAt||'')!==(order.due_at||''))changes.push(dueAt?'zmieniono termin':'usunięto termin')
   if(!changes.length)return{id:order.id,title,complaint,priority,diagnosis_limit:diagnosisLimit,due_at:dueAt,version:Number(order.version||1),changed:false}
   return db.transaction(()=>{

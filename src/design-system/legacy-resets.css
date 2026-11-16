@@ -1,10 +1,5 @@
 /* Resety starszych, globalnych reguł — celowo o NISKIEJ ważności (:where), żeby własne style komponentów zawsze wygrywały.
    Ładowane przez @import na początku shell.css, czyli po wszystkich starszych arkuszach. */
 
-/* Styl menu bocznego „nav button span{width:28px;height:27px;border…}” (styles.css) trafiał w każdy <nav> na stronach
-   (kafelki Centrum zlecenia, legenda Workflow, zakładki zlecenia) i ściskał ich tekst.
-   Ważność (0,0,3) = taka jak reguła, którą nadpisuje; wygrywa, bo jest ładowana później. */
-:where(html.ui2 .shell .pageBody) nav button span{width:auto;height:auto;border:0;border-radius:0;background:none;color:inherit;font-size:inherit;place-items:normal;display:revert}
-
 /* Kontrolki dziedziczą krój pisma aplikacji; klasy komponentów (np. monospace w odczycie OBD) nadal go zmieniają */
 :where(html.ui2) :is(button,input,select,textarea){font-family:inherit}

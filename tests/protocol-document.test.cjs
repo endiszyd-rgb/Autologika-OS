@@ -18,7 +18,9 @@ test('renders advanced service order sections and values',()=>{
   assert.match(html,/Zlecenie serwisowe/)
   assert.match(html,/P0299/)
   assert.match(html,/ABC-1/)
-  assert.match(html,/1230,00 zł/)
+  assert.match(html,/1[   ]230,00 zł/)
+  assert.match(html,/145[   ]000 km/)
+  assert.match(html,/1,2 h/)
 })
 
 test('renders release protocol with QC and recommendations',()=>{
