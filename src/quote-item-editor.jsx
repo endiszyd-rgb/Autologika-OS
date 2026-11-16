@@ -1,7 +1,8 @@
 import React,{useState} from 'react'
+import {moneyExact} from './format.mjs'
 import {QuotePartLookup} from './quote-part-lookup.jsx'
 
-const money=value=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(Number(value||0))
+const money=moneyExact
 
 export function QuoteItemEditor({api,order,item,close,saved}){
  const[d,setD]=useState({...item,qty:Number(item.qty||1),unit_cost:Number(item.unit_cost||0),unit_price:Number(item.unit_price||0),labor_hours:Number(item.labor_hours||0),labor_rate:Number(item.labor_rate||0)}),[busy,setBusy]=useState(false),[error,setError]=useState('')

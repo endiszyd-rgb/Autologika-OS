@@ -20,14 +20,14 @@ body{padding-left:var(--pwa-safe-left);padding-right:var(--pwa-safe-right);overs
   .pwaPlatform .shell>aside .navSection{display:contents;margin:0}
   .pwaPlatform .shell>aside .navSection button{display:flex;flex:0 0 68px;min-width:68px;min-height:56px;flex-direction:column;align-items:center;justify-content:center;gap:3px;margin:0;padding:5px 3px;border:1px solid transparent;border-radius:13px;scroll-snap-align:start;box-shadow:none;text-align:center}
   .pwaPlatform .shell>aside .navSection button span{display:grid;width:26px;height:25px;place-items:center;font-size:18px}
-  .pwaPlatform .shell>aside .navSection button em{display:block;max-width:64px;overflow:hidden;color:#aa9da3;font-size:9px;font-style:normal;font-weight:750;line-height:1.05;text-overflow:ellipsis;white-space:nowrap}
+  .pwaPlatform .shell>aside .navSection button em{display:block;max-width:64px;overflow:hidden;color:#aa9da3;font-size:11px;font-style:normal;font-weight:750;line-height:1.05;text-overflow:ellipsis;white-space:nowrap}
   .pwaPlatform .shell>aside .navSection button.active{border-color:#763d49;background:linear-gradient(180deg,#3b1720,#270f15);box-shadow:inset 0 -3px #ff4651}
   .pwaPlatform .shell>aside .navSection button.active em{color:#fff0f2}
-  .pwaPlatform .shell>aside .navCount{position:absolute;top:3px;right:7px;min-width:16px;height:16px;padding:1px 4px;border-radius:99px;font-size:8px}
+  .pwaPlatform .shell>aside .navCount{position:absolute;top:3px;right:7px;min-width:16px;height:16px;padding:1px 4px;border-radius:99px;font-size:11px}
   .pwaPlatform .shell>main{width:100%;max-width:none;min-height:100dvh;padding:0 13px 22px}
   .pwaPlatform .shell>main>header{position:sticky;z-index:120;top:0;height:auto;min-height:calc(70px + var(--pwa-safe-top));margin:0 -13px 15px;padding:calc(9px + var(--pwa-safe-top)) 13px 10px;border-bottom-color:#442d35;background:linear-gradient(180deg,rgba(12,5,7,.98),rgba(12,5,7,.91));backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
   .pwaPlatform .titleBlock{min-width:0}
-  .pwaPlatform .titleBlock .eyebrow{font-size:7px;letter-spacing:.1em}
+  .pwaPlatform .titleBlock .eyebrow{font-size:11px;letter-spacing:.1em}
   .pwaPlatform .titleBlock h1{max-width:250px;overflow:hidden;font-size:20px;line-height:1.1;text-overflow:ellipsis;white-space:nowrap}
   .pwaPlatform .titleBlock p,.pwaPlatform .topStatus .dateChip,.pwaPlatform .topStatus .live{display:none}
   .pwaPlatform .topStatus{flex:0 0 auto;gap:6px}

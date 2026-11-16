@@ -359,7 +359,7 @@ html.ui2 .partStatusChip.tone-neutral{background:var(--ui-surface-3);color:var(-
  html.ui2 .partsWorkspace .partsTabs button{justify-content:center;flex-direction:column;gap:3px;min-height:52px;padding:6px 4px;font-size:12px}
  html.ui2 .partsTabLabel{display:none}
  html.ui2 .partsTabShort{display:inline}
- html.ui2 .partsTabBadge{position:absolute;top:4px;right:calc(50% - 26px);min-width:18px;height:18px;font-size:10px}
+ html.ui2 .partsTabBadge{position:absolute;top:4px;right:calc(50% - 26px);min-width:18px;height:18px;font-size:11px}
  html.ui2 .partsWorkspace .stockHero{gap:14px;padding:18px;border-radius:var(--ui-radius-lg)}
  html.ui2 .partsWorkspace .stockHero h2{font-size:var(--ui-text-2xl)}
  html.ui2 .partsWorkspace .stockHero p{font-size:var(--ui-text-sm)}

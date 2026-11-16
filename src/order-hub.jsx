@@ -4,13 +4,13 @@
 // Komponenty są prezentacyjne: dostają dane już pobrane przez Centrum zlecenia
 // i wywołują wyłącznie przekazane im akcje (setTab, addFiles, exportPdf…).
 import React from 'react'
+import {moneyExact,moneyWhole,formatPhone} from './format.mjs'
 import './order-hub.css'
 import {VehiclePhoto} from './vehicle-photo.jsx'
 import {Icon,StatusBadge} from './ui.jsx'
 import {DOC_CATEGORIES,docCategory,documentationStats,isImageFile,itemCategory,newestFirst,orderFinance,orderProgress,orderSections,vehicleSpecs,vehicleTitle} from './order-hub-model.mjs'
 
-const moneyFormatter=new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN',maximumFractionDigits:2})
-export const formatMoney=value=>moneyFormatter.format(Number(value||0))
+export const formatMoney=moneyExact
 const sectionIcons={works:'check',parts:'inventory',costs:'finance',docs:'documents'}
 const formatDate=value=>{if(!value)return '';const date=new Date(value);return Number.isNaN(date.getTime())?'':date.toLocaleDateString('pl-PL',{day:'2-digit',month:'2-digit',year:'numeric'})}
 
@@ -52,7 +52,7 @@ export function OrderProgress({status,waitState,labels={}}){
 export function OrderSectionTiles({sections,activeTab,setTab}){
  return <nav className="orderSectionTiles" aria-label="Sekcje zlecenia">{sections.map(section=><button type="button" key={section.key} data-order-section={section.key} className={'orderSectionTile tone-'+section.tone+(activeTab===section.tab?' active':'')} aria-current={activeTab===section.tab?'true':undefined} onClick={()=>setTab(section.tab)}>
   <span className="orderSectionIcon" aria-hidden="true"><Icon name={sectionIcons[section.key]} size={18}/></span>
-  <span className="orderSectionText"><small>{section.label}</small><b>{section.money?formatMoney(section.value):section.value}</b><em>{section.detail}</em></span>
+  <span className="orderSectionText"><small>{section.label}</small><b>{section.money?moneyWhole(section.value):section.value}</b><em>{section.detail}</em></span>
   <Icon name="chevron" size={16} className="orderSectionChevron"/>
  </button>)}</nav>
 }
@@ -104,7 +104,7 @@ export function OrderPreview({order,items,parts,files,payments,repairs,labels,ex
   <header className="orderPreviewHeader"><div><span className="ui-eyebrow">ZLECENIE SERWISOWE #{order.id}</span><h3>{order.title||'Diagnostyka / naprawa'}</h3><small>Przyjęte {formatDate(order.opened_at||order.created_at)}{order.due_at?` · termin ${formatDate(order.due_at)}`:''}</small></div><StatusBadge status={order.status} label={labels[order.status]||order.status}/></header>
   <div className="orderPreviewVehicle"><VehiclePhoto vehicle={order}/><div><b>{vehicleTitle(order)}</b><PlateBadge plate={order.plate}/><VehicleSpecChips vehicle={order}/></div></div>
   <dl className="orderPreviewFacts">
-   <div><dt>Klient</dt><dd>{order.customer||'—'}{order.phone?` · ${order.phone}`:''}</dd></div>
+   <div><dt>Klient</dt><dd>{order.customer||'—'}{order.phone?` · ${formatPhone(order.phone)}`:''}</dd></div>
    <div><dt>Realizacja</dt><dd>{progress.steps.find(step=>step.state==='current')?.label||'Wydane'} · {progress.percent}%{progress.waiting?` · ${progress.waitLabel}`:''}</dd></div>
    <div className="wide"><dt>Zgłoszenie klienta</dt><dd>{order.complaint||'Brak opisu objawu'}</dd></div>
   </dl>

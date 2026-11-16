@@ -1,3 +1,4 @@
+@import './legacy-resets.css';
 /* ==========================================================================
    AutoLogika UI 2.0 — powłoka aplikacji
    Menu boczne, górny pasek, nagłówek strony, dolny dock (PWA) i pulpit.
@@ -286,7 +287,7 @@ html.ui2 .shell::before{display:none}
   display:grid;place-items:center;width:52px;height:30px;border-radius:var(--ui-radius-full);
   transition:background-color var(--ui-duration-base) var(--ui-ease-standard),color var(--ui-duration-base) var(--ui-ease-standard),transform var(--ui-duration-base) var(--ui-ease-emphasized);
  }
- html.ui2.pwaPlatform .shell>aside .navSection button em{max-width:68px;color:var(--ui-text-3);font-size:10.5px;font-weight:var(--ui-weight-medium);letter-spacing:0}
+ html.ui2.pwaPlatform .shell>aside .navSection button em{max-width:72px;color:var(--ui-text-3);font-size:11px;font-weight:var(--ui-weight-medium);letter-spacing:0}
  html.ui2.pwaPlatform .shell>aside .navSection button:active span{transform:scale(.9)}
  html.ui2.pwaPlatform .shell>aside .navSection button.active{border:0;background:transparent;box-shadow:none}
  html.ui2.pwaPlatform .shell>aside .navSection button.active span{background:var(--ui-accent-soft-strong);color:var(--ui-wine-100)}
@@ -466,3 +467,17 @@ html.ui2.workshopOutdoor .shell .topBar :is(.commandLauncher,.attentionLauncher,
 html.ui2.workshopOutdoor :is(.studioTextButton,.studioFilters button,.studioFullButton,.studioGoal .iconButton){min-height:var(--ui-touch-min)}
 html.ui2.workshopOutdoor .studioGoal .iconButton{width:var(--ui-touch-min);height:var(--ui-touch-min)}
 html.ui2.workshopOutdoor .ui-btn{--btn-h:var(--ui-touch-min);--btn-fs:var(--ui-text-md)}
+
+/* ==========================================================================
+   Spójność typografii i liczb (cała aplikacja)
+   ========================================================================== */
+/* Cyfry o stałej szerokości: kwoty, przebiegi i liczniki układają się w kolumnach */
+html.ui2 body{font-variant-numeric:tabular-nums}
+/* Jedna rodzina pisma na Pulpicie (Hala) i w oknie wyboru zlecenia */
+html.ui2 #hala,html.ui2 #hala-picker{--hala-body:var(--ui-font-sans);--hala-mono:var(--ui-font-mono)}
+html.ui2 #hala-picker{font-family:var(--ui-font-sans)}
+/* Pola wyszukiwania z ikoną: jedna ramka (wokół całego pola), ikona wewnątrz, bez drugiej ramki na samym <input> */
+html.ui2 :is(.vehicleSearch,.ptToolbar>div:first-child,.manualSearch,.workCatalogSearch label,.careToolbar>label,.attentionToolbar>label,.paletteInputRow){display:flex;align-items:center;gap:8px;min-width:0}
+html.ui2 :is(.vehicleSearch,.ptToolbar>div:first-child,.manualSearch,.workCatalogSearch label,.careToolbar>label,.attentionToolbar>label,.paletteInputRow)>span{flex:none;color:var(--ui-text-3)}
+html.ui2 :is(.vehicleSearch,.ptToolbar>div:first-child,.manualSearch,.workCatalogSearch label,.careToolbar>label,.attentionToolbar>label,.paletteInputRow) input{flex:1;min-width:0;border:0!important;background:transparent!important;box-shadow:none!important;outline:none}
+html.ui2 :is(.vehicleSearch,.ptToolbar>div:first-child,.manualSearch,.workCatalogSearch label,.careToolbar>label,.attentionToolbar>label):focus-within{border-color:var(--ui-accent)!important}

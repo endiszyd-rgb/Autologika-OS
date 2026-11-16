@@ -2,20 +2,20 @@
 .ptHero { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 24px; padding: 24px 26px; border: 1px solid #3f2a2f; border-radius: 20px; background: radial-gradient(circle at 80% -20%, rgba(196, 244, 124, .08), transparent 32%), linear-gradient(135deg, #211118, #160b0e); box-shadow: 0 18px 50px rgba(0,0,0,.22); }
 .ptHero::after { content: ""; position: absolute; right: 240px; top: -150px; width: 300px; height: 300px; border: 1px solid rgba(213,91,142,.09); border-radius: 50%; }
 .ptHero > div:first-child, .ptHero > button { position: relative; z-index: 1; }
-.ptHero small, .ptPreviewHead small, .ptScope small { color: #d96c99; font-size: 10px; font-weight: 900; letter-spacing: 1.25px; }
+.ptHero small, .ptPreviewHead small, .ptScope small { color: #d96c99; font-size: 11px; font-weight: 900; letter-spacing: 1.25px; }
 .ptHero h2 { margin: 7px 0; color: #f6f3f4; font-size: 30px; letter-spacing: -.6px; }
 .ptHero p { max-width: 720px; margin: 0; color: #af9ba3; font-size: 13px; line-height: 1.6; }
 .ptStats { position: relative; z-index: 1; display: flex; gap: 7px; }
 .ptStats > div { min-width: 76px; padding: 11px 13px; border: 1px solid #3f2a33; border-radius: 12px; background: rgba(20,10,14,.75); text-align: center; }
 .ptStats b { display: block; color: #f6f3f4; font-size: 22px; }
-.ptStats span { color: #8a9a9f; font-size: 10px; }
+.ptStats span { color: #8a9a9f; font-size: 11px; }
 
 .ptMode { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ptMode > button { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 10px; padding: 12px 14px; border-color: #3c2830; background: #1a0e11; text-align: left; }
 .ptMode > button > span { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid #48313b; border-radius: 9px; color: #7c5d6a; }
 .ptMode > button > div { display: grid; gap: 2px; }
 .ptMode > button b { color: #e5dce0; font-size: 13px; }
-.ptMode > button small { color: #839399; font-size: 10px; }
+.ptMode > button small { color: #839399; font-size: 11px; }
 .ptMode > button.active { border-color: rgba(213,91,142,.38); background: linear-gradient(90deg, rgba(213,91,142,.1), #1a0e11); }
 .ptMode > button.active > span { border-color: rgba(213,91,142,.35); color: #df73a0; background: rgba(213,91,142,.07); }
 .ptMode > button.active b { color: #f4eff1; }
@@ -30,24 +30,24 @@
 .ptCatalogCard, .ptCustomCard { position: relative; overflow: hidden; min-height: 274px; padding: 18px; border: 1px solid #412c35; border-radius: 15px; background: linear-gradient(145deg, #23131a, #190d10); animation: ptIn .38s both; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
 .ptCatalogCard:hover, .ptCustomCard:hover { transform: translateY(-2px); border-color: #573b47; box-shadow: 0 13px 28px rgba(0,0,0,.2); }
 .ptCatalogCard > header, .ptCustomCard > header { height: auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 11px; border: 0; }
-.ptCatalogCard > header span, .ptCustomCard > header span { overflow: hidden; color: #dc6c9b; font-size: 9px; font-weight: 900; letter-spacing: .8px; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
-.ptCatalogCard > header em, .ptCustomCard > header em { color: #91a1a6; font-size: 10px; font-style: normal; white-space: nowrap; }
+.ptCatalogCard > header span, .ptCustomCard > header span { overflow: hidden; color: #dc6c9b; font-size: 11px; font-weight: 900; letter-spacing: .8px; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.ptCatalogCard > header em, .ptCustomCard > header em { color: #91a1a6; font-size: 11px; font-style: normal; white-space: nowrap; }
 .ptCatalogCard h3, .ptCustomCard h3 { min-height: 42px; margin: 0 0 5px; color: #f4f0f2; font-size: 18px; line-height: 1.3; }
 .ptCatalogCard > p, .ptCustomCard > p { margin: 0 0 13px; color: #aab7ba; font-size: 11px; }
-.ptCatalogCard > small { display: -webkit-box; min-height: 46px; overflow: hidden; color: #84959b; font-size: 10px; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.ptCatalogCard > small { display: -webkit-box; min-height: 46px; overflow: hidden; color: #84959b; font-size: 11px; line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .ptCounts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 11px; }
-.ptCounts span { padding: 8px 4px; border: 1px solid #3f2a33; border-radius: 8px; color: #86969b; font-size: 9px; text-align: center; }
+.ptCounts span { padding: 8px 4px; border: 1px solid #3f2a33; border-radius: 8px; color: #86969b; font-size: 11px; text-align: center; }
 .ptCounts b { display: block; margin-bottom: 2px; color: #e2d8dc; font-size: 13px; }
 .ptCatalogCard > footer, .ptCustomCard > footer { display: flex; gap: 6px; margin-top: 12px; }
-.ptCatalogCard > footer button, .ptCustomCard > footer button { flex: 1; min-height: 38px; padding: 8px 10px; font-size: 10px; }
+.ptCatalogCard > footer button, .ptCustomCard > footer button { flex: 1; min-height: 38px; padding: 8px 10px; font-size: 11px; }
 .ptCustomCard { min-height: 220px; }
-.ptCustomCard > header em { padding: 3px 6px; border-radius: 12px; background: rgba(196, 244, 124, .08); color: #b6dd7b; font-size: 7px; font-weight: 900; }
+.ptCustomCard > header em { padding: 3px 6px; border-radius: 12px; background: rgba(196, 244, 124, .08); color: #b6dd7b; font-size: 11px; font-weight: 900; }
 .ptMore { align-self: center; min-width: 220px; margin: 6px auto 12px; }
-.ptMore span { margin-left: 8px; color: #718087; font-size: 8px; }
+.ptMore span { margin-left: 8px; color: #718087; font-size: 11px; }
 .ptEmpty { grid-column: 1 / -1; min-height: 320px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; border: 1px dashed #422e36; border-radius: 15px; color: #6d7d83; text-align: center; }
 .ptEmpty > span { width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid #4b343e; border-radius: 14px; color: #d37099; font-size: 20px; }
 .ptEmpty h3 { margin: 12px 0 4px; color: #d7cbd0; }
-.ptEmpty p { max-width: 480px; margin: 0 0 15px; font-size: 10px; line-height: 1.5; }
+.ptEmpty p { max-width: 480px; margin: 0 0 15px; font-size: 11px; line-height: 1.5; }
 
 .ptPreviewHead { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 14px; border-bottom: 1px solid #3c292e; }
 .ptPreviewHead h2 { margin: 5px 0; font-size: 25px; }
@@ -57,9 +57,9 @@
 .ptPreviewGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .ptPreviewList { overflow: hidden; border: 1px solid #3d2a32; border-radius: 11px; background: #1a0e11; }
 .ptPreviewList h4 { display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 12px 14px; border-bottom: 1px solid #39262e; color: #e9e2e5; font-size: 12px; }
-.ptPreviewList h4 span { padding: 3px 7px; border-radius: 10px; background: #2a1920; color: #91a1a6; font-size: 10px; }
+.ptPreviewList h4 span { padding: 3px 7px; border-radius: 10px; background: #2a1920; color: #91a1a6; font-size: 11px; }
 .ptPreviewList p { display: grid; grid-template-columns: 28px 1fr; gap: 9px; margin: 0; padding: 10px 12px; border-bottom: 1px solid #2f1c24; color: #c1cbcd; font-size: 11px; line-height: 1.5; }
-.ptPreviewList p i { color: #da6c9a; font-size: 10px; font-style: normal; font-weight: 800; }
+.ptPreviewList p i { color: #da6c9a; font-size: 11px; font-style: normal; font-weight: 800; }
 .ptPreviewList > small { display: block; padding: 13px; color: #63747b; }
 .ptPreviewList.qc { border-color: rgba(94, 226, 155, .2); }
 .ptPreviewList.qc p i { color: #5ee29b; }

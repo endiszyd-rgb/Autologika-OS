@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.12 — 2026-11-16
+
+### Spójny wygląd wszystkich zakładek
+
+- Minimalny rozmiar tekstu 11 px w całej aplikacji (wcześniej ok. 2000 napisów 7–10 px) i ujednolicona skala rozmiarów.
+- Jeden format kwot: separator tysięcy zawsze („5 550 zł”), pełne złote w kafelkach i podsumowaniach, grosze w pozycjach, płatnościach i cenach części; cyfry o stałej szerokości.
+- Godziny i procenty z przecinkiem („1,5 h”, „12,5%”), telefony w grupach („500 600 700”).
+- Naprawy układu: kafelki Centrum zlecenia, etapy Workflow i karty zleceń, nazwy aut w Terminarzu, karty Workshop LIVE, nagłówek Cennika, „Pokaż rozbicie” w Finansach, procent rozliczenia, pola wyszukiwania (Klienci, Szablony, Care, Do uwagi, Dokumentacja techniczna).
+- Pulpit (Hala) używa tej samej czcionki co reszta aplikacji.
+
 ## 1.1.11 — 2026-11-14
 
 - Płynne animacje i przejścia: aplikacja Windows domyślnie korzysta z akceleracji GPU (wcześniej obraz rysował procesor, przez co animacje się przycinały).

@@ -1,4 +1,5 @@
 import {confirmAction} from './confirmation-queue.mjs'
+import {moneyExact,formatPercent} from './format.mjs'
 import review from '../shared/delivery-review.cjs'
 import React,{useEffect,useMemo,useState,useRef} from 'react'
 import {Icon} from './ui.jsx'
@@ -7,7 +8,7 @@ import './parts-ui.css'
 
 const IMPORT_STEPS=['Wybór pliku','Odczyt OCR','Weryfikacja','Przyjęcie']
 
-const money=value=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN',minimumFractionDigits:2}).format(Number(value||0))
+const money=moneyExact
 const blankItem=()=>({enabled:true,part_no:'',name:'',qty:1,unit_cost:0,net_total:0,vat_rate:23,vat_amount:0,gross_total:0,confidence:'CHECK'})
 const phaseLabel={
   'loading tesseract core':'Uruchamianie silnika OCR',
@@ -51,7 +52,7 @@ export function DeliveryDocumentImport({api,close,onImported}){
    {phase==='ERROR'&&<div className="deliveryFailure" role="alert"><Icon name="notifications" size={30}/><h3>Nie udało się odczytać dokumentu</h3><p>Jeśli problem dotyczy samego zdjęcia, zrób je na płasko, w dobrym świetle i z całą tabelą w kadrze.</p><p className="deliveryFailureDetail">{error}</p><button className="primary" onClick={scanDocument}>Wybierz inne zdjęcie</button></div>}
    {phase==='DONE'&&<div className="deliverySuccess"><span>✓</span><small>DOSTAWA PRZYJĘTA</small><h3>{result.item_count} pozycji trafiło do magazynu</h3><p>Utworzono {result.created} nowych kart części, a stan {result.updated} istniejących kart został zwiększony.</p><div><b>{Number(result.quantity||0).toLocaleString('pl-PL')} szt.</b><span>{result.supplier_name}</span></div><button className="primary" onClick={close}>Przejdź do magazynu</button></div>}
    {phase==='REVIEW'&&document&&<>
-    <div className="deliverySummary"><div><small>PLIK</small><b>{scan.file_name}</b><span>Pewność OCR {Number(document.ocr_confidence||0).toFixed(0)}%</span></div><div><small>POZYCJE</small><b>{selected.length}</b><span>{document.items.filter(item=>item.confidence==='CHECK').length} do sprawdzenia</span></div><div><small>WARTOŚĆ DOKUMENTU</small><b>{money(document.gross_total||totals.gross)}</b><span>brutto</span></div><button onClick={scanDocument}>↻ Inny dokument</button></div>
+    <div className="deliverySummary"><div><small>PLIK</small><b>{scan.file_name}</b><span>Pewność OCR {formatPercent(Number(document.ocr_confidence||0),0)}</span></div><div><small>POZYCJE</small><b>{selected.length}</b><span>{document.items.filter(item=>item.confidence==='CHECK').length} do sprawdzenia</span></div><div><small>WARTOŚĆ DOKUMENTU</small><b>{money(document.gross_total||totals.gross)}</b><span>brutto</span></div><button onClick={scanDocument}>↻ Inny dokument</button></div>
     {scan.duplicate&&<div className="deliveryDuplicate"><b>Ten dokument jest już w magazynie</b><span>Import #{scan.duplicate.id}{scan.duplicate.external_document_no?` · ${scan.duplicate.external_document_no}`:''}{scan.duplicate.supplier?` · ${scan.duplicate.supplier}`:''}. Wybierz inne zdjęcie, aby nie podwoić stanów.</span></div>}
     {document.warnings?.length>0&&<div className="deliveryWarnings">{document.warnings.map((warning,index)=><span key={index}>! {warning}</span>)}</div>}
     <div className="deliveryMeta"><label>Dostawca<input value={document.supplier_name||''} onChange={event=>updateHeader('supplier_name',event.target.value)} placeholder="Nazwa hurtowni"/></label><label>Numer dokumentu<input value={document.document_no||''} onChange={event=>updateHeader('document_no',event.target.value)} placeholder="np. 3/WZ/2025/16969"/></label><label>Data dostawy<input type="date" value={document.document_date||''} onChange={event=>updateHeader('document_date',event.target.value)}/></label></div>

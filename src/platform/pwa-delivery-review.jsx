@@ -1,8 +1,9 @@
 import review from '../../shared/delivery-review.cjs'
+import {moneyExact} from '../format.mjs'
 import React,{useId} from 'react'
 import {deliveryReviewSummary,stepQuantity} from '../parts-model.mjs'
 
-const money=value=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN',minimumFractionDigits:2}).format(Number(value||0))
+const money=moneyExact
 const quantity=value=>Number(value||0).toLocaleString('pl-PL')
 const itemsLabel=count=>count===1?'pozycję':count%10>=2&&count%10<=4&&(count%100<12||count%100>14)?'pozycje':'pozycji'
 

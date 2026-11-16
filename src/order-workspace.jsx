@@ -1,9 +1,10 @@
 import React,{useState} from 'react'
+import {moneyWhole} from './format.mjs'
 import {Icon} from './ui.jsx'
 import {VehiclePhoto} from './vehicle-photo.jsx'
 import './order-workspace.css'
 
-const money=n=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN',maximumFractionDigits:0}).format(Number(n||0))
+const money=moneyWhole
 const stages=[['PRZYJETE','Przyjęcie'],['DIAGNOZA','Diagnoza'],['WYCENA','Wycena'],['AKCEPTACJA','Akceptacja'],['NAPRAWA','Naprawa'],['QC_NAPRAWY','Kontrola naprawy'],['QC_WYDANIA','Kontrola wydania'],['PLATNOSC','Płatność'],['GOTOWE','Gotowe'],['WYDANE','Wydane']]
 const openLabels={diagnosis:'diagnostykę',quote:'kosztorys',parts:'części',time:'czas pracy',approval:'akceptacje',payment:'płatność',qc:'kontrolę jakości',closeout:'zamknięcie',timeline:'historię',contact:'kontakt'}
 const groups=[

@@ -80,7 +80,7 @@ html:not(.pwaPlatform) .shell>aside .navSection button.active{color:#fff}
 html:not(.pwaPlatform) .shell>aside .navSection button.active span{color:#fff;filter:none}
 html:not(.pwaPlatform) .shell>aside .navSection button.active::after,html:not(.pwaPlatform) .shell>aside .navSection button::before{display:none}
 html:not(.pwaPlatform) .shell>aside .navSection button:focus-visible{outline:2px solid var(--b-pink);outline-offset:-2px}
-html:not(.pwaPlatform) .shell>aside .navCount{position:absolute;left:28px;top:5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--b-amber);color:#2a1300;font:700 10px/16px var(--b-font);font-style:normal;text-align:center}
+html:not(.pwaPlatform) .shell>aside .navCount{position:absolute;left:28px;top:5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--b-amber);color:#2a1300;font:700 11px/16px var(--b-font);font-style:normal;text-align:center}
 .navPill{
  position:absolute;left:4px;right:4px;z-index:0;
  border-radius:12px;pointer-events:none;

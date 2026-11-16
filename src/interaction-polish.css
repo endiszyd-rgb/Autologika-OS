@@ -203,7 +203,7 @@ textarea{resize:vertical}
 @keyframes feedbackProgress{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @media(max-width:600px){.appFeedbackToast{top:10px;right:10px;width:calc(100vw - 20px)}}
 
-.statusBadge{--status-color:#a8b1ac;display:inline-flex;align-items:center;gap:7px;width:max-content;padding:6px 9px;border:1px solid color-mix(in srgb,var(--status-color) 34%,transparent);border-radius:999px;background:color-mix(in srgb,var(--status-color) 10%,transparent);color:var(--status-color);font-size:10px;font-weight:850;letter-spacing:.055em;text-transform:uppercase;white-space:nowrap}
+.statusBadge{--status-color:#a8b1ac;display:inline-flex;align-items:center;gap:7px;width:max-content;padding:6px 9px;border:1px solid color-mix(in srgb,var(--status-color) 34%,transparent);border-radius:999px;background:color-mix(in srgb,var(--status-color) 10%,transparent);color:var(--status-color);font-size:11px;font-weight:850;letter-spacing:.055em;text-transform:uppercase;white-space:nowrap}
 .statusBadge i{width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px color-mix(in srgb,var(--status-color) 15%,transparent)}
 .statusBadge.info{--status-color:#eb7baa}.statusBadge.warning{--status-color:#e7bd59}.statusBadge.violet{--status-color:#e89db0}.statusBadge.active{--status-color:#ee966a}.statusBadge.success{--status-color:#aeea72}.statusBadge.danger{--status-color:#ff8b7e}.statusBadge.neutral{--status-color:#9da8a2}
 
@@ -238,7 +238,7 @@ textarea{resize:vertical}
 
 .modalTitle small{
   color:#8fa080;
-  font-size:8px;
+  font-size:11px;
   font-weight:850;
   letter-spacing:.15em;
 }
@@ -263,7 +263,7 @@ textarea{resize:vertical}
   border-radius:6px;
   background:#12090b;
   color:#8e9b91;
-  font:700 9px/1 ui-monospace,SFMono-Regular,Consolas,monospace;
+  font:700 11px/1 ui-monospace,SFMono-Regular,Consolas,monospace;
   box-shadow:inset 0 -1px 0 #00000088;
 }
 

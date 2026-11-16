@@ -50,7 +50,7 @@
 .shell .brand span{color:#9e717c;letter-spacing:1.45px}
 .shell aside nav{padding-top:15px;scrollbar-color:rgba(207,109,133,.24) transparent}
 .shell .navSection{margin-bottom:18px}
-.shell .navSection>small{color:#7e535e;font-size:8px;font-weight:750;letter-spacing:1.85px}
+.shell .navSection>small{color:#7e535e;font-size:11px;font-weight:750;letter-spacing:1.85px}
 .shell .navSection button{
  position:relative;
  min-height:39px;
@@ -82,7 +82,7 @@
  background:rgba(22,5,9,.76);
  backdrop-filter:blur(24px) saturate(135%);
 }
-.shell .titleBlock .eyebrow{color:#91626e;font-size:8px;font-weight:750;letter-spacing:1.35px}
+.shell .titleBlock .eyebrow{color:#91626e;font-size:11px;font-weight:750;letter-spacing:1.35px}
 .shell .titleBlock h1{color:var(--analytics-text);font-size:19px;font-weight:650}
 .shell .commandLauncher{
  min-width:190px;
@@ -317,7 +317,7 @@
  padding-top:34px;
  animation:cockpitLoadingIn .3s ease-out both;
 }
-.studioSkeleton::before{content:"ŁADOWANIE PULPITU";position:absolute;top:0;left:0;color:#aa717f;font-size:8px;font-weight:850;letter-spacing:.18em}
+.studioSkeleton::before{content:"ŁADOWANIE PULPITU";position:absolute;top:0;left:0;color:#aa717f;font-size:11px;font-weight:850;letter-spacing:.18em}
 .studioSkeleton::after{content:"";position:absolute;top:17px;left:0;width:160px;height:2px;border-radius:2px;background:linear-gradient(90deg,#fb6a8e,#d53d7c,transparent);animation:cockpitSkeletonProgress 1.4s ease-in-out infinite}
 .studioSkeleton>div{border:1px solid rgba(217,108,135,.13)!important;background:linear-gradient(105deg,#290a12 20%,#501624 44%,#561832 50%,#290a12 76%)!important;background-size:240% 100%!important;animation:cockpitSkeletonShimmer 1.6s linear infinite!important}
 
@@ -390,7 +390,7 @@
 .studioBlip.opening::before{border-color:#dd6396;background:rgba(94,29,56,.88);box-shadow:0 0 0 5px rgba(217,75,134,.1),0 0 32px rgba(217,75,134,.38);animation:radarOpening .42s ease-in-out infinite alternate}
 .studioBlip.opening>i{background:#ee69a0;box-shadow:0 0 18px #ee69a0}
 .radarTooltip{z-index:20;min-width:155px;text-align:left}
-.radarTooltip em{display:block;margin-top:7px;padding-top:6px;border-top:1px solid rgba(226,112,140,.18);color:#ec859f;font-size:8px;font-style:normal;font-weight:800;letter-spacing:.06em}
+.radarTooltip em{display:block;margin-top:7px;padding-top:6px;border-top:1px solid rgba(226,112,140,.18);color:#ec859f;font-size:11px;font-style:normal;font-weight:800;letter-spacing:.06em}
 
 .studioKpi{animation:cockpitCardIn .48s cubic-bezier(.16,.8,.22,1) both}
 .studioKpi:nth-child(1){animation-delay:.10s}.studioKpi:nth-child(2){animation-delay:.16s}.studioKpi:nth-child(3){animation-delay:.22s}.studioKpi:nth-child(4){animation-delay:.28s}

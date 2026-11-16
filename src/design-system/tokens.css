@@ -63,8 +63,8 @@
  /* --- Typografia ----------------------------------------------------- */
  --ui-font-sans:'Outfit Variable','Segoe UI Variable Text','Segoe UI',system-ui,-apple-system,'Roboto',sans-serif;
  --ui-font-mono:ui-monospace,'Cascadia Code','SF Mono','Roboto Mono',Consolas,monospace;
- --ui-text-2xs:10.5px;
- --ui-text-xs:11.5px;
+ --ui-text-2xs:11px;
+ --ui-text-xs:12px;
  --ui-text-sm:13px;
  --ui-text-md:14px;
  --ui-text-lg:16px;

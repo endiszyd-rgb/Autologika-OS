@@ -1,4 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react'
+import {moneyExact} from './format.mjs'
 import {Icon} from './ui.jsx'
 import {oeNumbers,vehicleLabel,vehiclePartScore} from './vehicle-part-match.js'
 import {useModalBehavior} from './modal-behavior.js'
@@ -8,8 +9,7 @@ import {STOCK_FILTERS,STOCK_SORTS,deliveryLineTotal,deliveryPreview,deliveryStat
 import './parts-workspace.css'
 import './parts-ui.css'
 
-const moneyFormatter=new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN',maximumFractionDigits:2})
-const money=value=>moneyFormatter.format(Number(value||0))
+const money=moneyExact
 const emptyPart={barcode:'',part_no:'',name:'',brand:'',category:'',description:'',vehicle_fitment:'',cross_numbers:'',image_url:'',lookup_source:'',lookup_url:'',stock:0,min_stock:0,unit_cost:0,sell_price:0,supplier_id:'',location:'',notes:''}
 
 const quantity=value=>Number(value||0).toLocaleString('pl-PL')

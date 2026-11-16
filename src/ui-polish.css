@@ -16,8 +16,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 .navSection button{min-height:44px;color:#bbc5bc}
 .shell aside nav{overflow-x:hidden}
-.navSection button em{font-size:12.5px;font-weight:650}
-.navSection>small{color:#849188;font-size:8.5px}
+.navSection button em{font-size:13px;font-weight:650}
+.navSection>small{color:#849188;font-size:11px}
 .navSection button.active{
   background:linear-gradient(90deg,#3a1820 0%,#251317 76%,#1b0d11 100%);
   border-color:#526640;
@@ -25,16 +25,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 
 .titleBlock h1{font-size:24px;letter-spacing:-.5px}
-.titleBlock p{display:block;margin:4px 0 0;color:#8f9c92;font-size:10.5px;line-height:1.35}
+.titleBlock p{display:block;margin:4px 0 0;color:#8f9c92;font-size:11px;line-height:1.35}
 .panel,.metric,.workspaceCard{border-color:#48574b;box-shadow:0 1px 0 #ffffff0a,0 16px 38px #00000033}
 .panelhead{padding-bottom:12px;border-bottom-color:#465249}
 .panelhead h2,.panel h2{font-size:14px;line-height:1.35;letter-spacing:0}
-.muted{color:#b4beb6;font-size:11.5px;line-height:1.7}
+.muted{color:#b4beb6;font-size:12px;line-height:1.7}
 .formgrid label,.diagform label,.notes3 label{font-size:11px;color:#c5cec6;gap:7px}
 table{font-size:12px}
-th{color:#d1d8d1;font-size:10.5px;letter-spacing:.025em}
+th{color:#d1d8d1;font-size:11px;letter-spacing:.025em}
 td{color:#eef2ed;font-size:12px;line-height:1.5}
-td small{color:#9eaaa0;font-size:10.5px}
+td small{color:#9eaaa0;font-size:11px}
 button{font-weight:650;line-height:1.25}
 button.primary{box-shadow:0 7px 20px #a8db6420}
 button:disabled{opacity:.48;filter:saturate(.55);cursor:not-allowed}
@@ -43,7 +43,7 @@ tbody tr{transition:background-color .16s ease}
 .actionableEmpty{display:grid;justify-items:center;max-width:620px;margin:18px auto;padding:44px 30px;border:1px dashed #4d5c50;border-radius:16px;background:radial-gradient(circle at 50% 0,#2f452455,transparent 52%),#190d10}
 .actionableEmpty>span{display:grid;place-items:center;width:48px;height:48px;margin-bottom:14px;border:1px solid #5d744b;border-radius:14px;background:#3d1721;color:#c8ee9b;box-shadow:0 12px 30px #00000055}
 .actionableEmpty>b{color:#edf5e9;font-size:19px;letter-spacing:-.25px}
-.actionableEmpty>p{max-width:500px;margin:9px 0 19px;color:#9caa9f;font-size:11.5px;line-height:1.65}
+.actionableEmpty>p{max-width:500px;margin:9px 0 19px;color:#9caa9f;font-size:12px;line-height:1.65}
 .actionableEmpty>button{display:inline-flex;align-items:center;gap:9px;padding-inline:17px}
 
 .modalback{animation:uiBackdropIn .18s ease-out}
@@ -56,7 +56,7 @@ tbody tr{transition:background-color .16s ease}
   background:linear-gradient(180deg,#201115,#180d10);
   box-shadow:0 12px 36px #00000033;
 }
-.orderCenterPage .centerPicker>label{font-size:10px;color:#aebaae}
+.orderCenterPage .centerPicker>label{font-size:11px;color:#aebaae}
 .orderCenterPage .centerPicker select{font-weight:650;color:#f4f8f2}
 .centerDocuments{position:relative}
 .centerDocuments>summary{display:flex;align-items:center;min-height:42px;padding:9px 13px;border:1px solid #4a594e;border-radius:9px;background:#30191f;color:#edf4eb;font-size:11px;font-weight:750;cursor:pointer;list-style:none}
@@ -100,7 +100,7 @@ tbody tr{transition:background-color .16s ease}
   backdrop-filter:blur(18px);
 }
 .orderTabGroup{min-width:0;padding:6px;border:1px solid #3b2027;border-radius:10px;background:#1e0f13}
-.orderTabGroup>small{display:block;padding:0 6px 6px;color:#778b78;font-size:7px;font-weight:800;letter-spacing:1.25px}
+.orderTabGroup>small{display:block;padding:0 6px 6px;color:#778b78;font-size:11px;font-weight:800;letter-spacing:1.25px}
 .orderTabGroup>div{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:4px}
 .orderTabGroup button{
   position:relative;
@@ -128,14 +128,14 @@ tbody tr{transition:background-color .16s ease}
   border-radius:99px;
   background:var(--order-accent);
 }
-.orderTabGroup button i{position:absolute;top:4px;right:5px;min-width:17px;padding:2px 4px;border-radius:99px;background:#d6b457;color:#17130b;font-size:8px;font-style:normal}
+.orderTabGroup button i{position:absolute;top:4px;right:5px;min-width:17px;padding:2px 4px;border-radius:99px;background:#d6b457;color:#17130b;font-size:11px;font-style:normal}
 .centerManualProcess{margin:-3px 0 13px;border:1px solid #354139;border-radius:11px;background:#180c0f}
-.centerManualProcess>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 13px;color:#aeb9af;font-size:10px;font-weight:750;cursor:pointer;list-style:none}
+.centerManualProcess>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 13px;color:#aeb9af;font-size:11px;font-weight:750;cursor:pointer;list-style:none}
 .centerManualProcess>summary::-webkit-details-marker{display:none}
 .centerManualProcess>summary:before{content:'▸';color:#9fca70;transition:transform .16s ease}
 .centerManualProcess[open]>summary:before{transform:rotate(90deg)}
 .centerManualProcess>summary>span{margin-right:auto}
-.centerManualProcess>summary>em{color:#7f8d82;font-size:9px;font-style:normal;font-weight:550}
+.centerManualProcess>summary>em{color:#7f8d82;font-size:11px;font-style:normal;font-weight:550}
 .centerManualProcess>div{padding:2px 13px 10px;border-top:1px solid #3f232a}
 .centerManualProcess .centerSteps{margin:9px 0}.centerManualProcess .waitBar{margin:0}
 .quickGrid.compact{grid-template-columns:repeat(2,minmax(0,1fr))}.quickGrid.compact button{min-height:52px}
@@ -157,13 +157,13 @@ tbody tr{transition:background-color .16s ease}
   background:radial-gradient(circle at 88% 0,#31452366,transparent 34%),linear-gradient(135deg,#251317,#1b0d11 72%);
   box-shadow:0 16px 42px #00000033;
 }
-.workflowSummary small{color:#b3df7e;font-size:9px;font-weight:850;letter-spacing:.14em}
+.workflowSummary small{color:#b3df7e;font-size:11px;font-weight:850;letter-spacing:.14em}
 .workflowSummary h2{margin:5px 0 3px;font-size:25px;letter-spacing:-.45px}
-.workflowSummary p{margin:0;color:#aeb9b0;font-size:11.5px}
+.workflowSummary p{margin:0;color:#aeb9b0;font-size:12px}
 .workflowPulse{display:grid;grid-template-columns:repeat(3,minmax(94px,1fr));gap:8px}
 .workflowPulse>div{min-width:118px;padding:11px 14px;border:1px solid #455348;border-radius:11px;background:#160a0dbb}
 .workflowPulse span,.workflowPulse b{display:block}
-.workflowPulse span{color:#9eaaa0;font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+.workflowPulse span{color:#9eaaa0;font-size:11px;text-transform:uppercase;letter-spacing:.08em}
 .workflowPulse b{margin-top:4px;color:#eaf4e5;font-size:20px}
 .workflowPulse .amber{border-color:#665331;background:#1b1710}.workflowPulse .amber b{color:#f0c572}
 .workflowPulse .green{border-color:#435b39;background:#111a10}.workflowPulse .green b{color:#b6e58d}
@@ -171,8 +171,8 @@ tbody tr{transition:background-color .16s ease}
 .workflowLegend button{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:center;gap:9px;min-height:52px;padding:9px 11px;text-align:left;border-color:#3d4940;background:linear-gradient(145deg,#1f1014,#170b0e);box-shadow:inset 0 1px #ffffff05}
 .workflowLegend button:hover,.workflowLegend button:focus-visible{border-color:var(--stage);background:#261318}
 .workflowLegend button>i{width:7px;height:28px;border-radius:99px;background:var(--stage,#7e9182);box-shadow:0 0 12px color-mix(in srgb,var(--stage,#7e9182) 55%,transparent)}
-.workflowLegend button>span{display:grid;gap:2px;min-width:0;color:#d4ddd5;font-size:10.5px}
-.workflowLegend button>span small{color:#718078;font-size:7.5px;font-weight:850;letter-spacing:.12em}
+.workflowLegend button>span{display:grid;gap:2px;min-width:0;color:#d4ddd5;font-size:11px}
+.workflowLegend button>span small{color:#718078;font-size:11px;font-weight:850;letter-spacing:.12em}
 .workflowLegend button>b{display:grid;place-items:center;min-width:25px;height:25px;padding:0 6px;border:1px solid color-mix(in srgb,var(--stage,#7e9182) 38%,#303a32);border-radius:8px;background:#12090b;color:#edf4ea;font-size:11px}
 .workflowPage .kanban{gap:12px;align-items:stretch;overflow:visible}
 .workflowPage .kanCol{position:relative;min-height:500px;padding:10px;border-color:#425047;background:#180c0f;overflow:hidden}
@@ -180,24 +180,24 @@ tbody tr{transition:background-color .16s ease}
 .workflowPage .stage-przyjete{--stage:#cd778d}.workflowPage .stage-diagnoza{--stage:#e2bd65}.workflowPage .stage-akceptacja{--stage:#e2915f}.workflowPage .stage-naprawa{--stage:#d78d9f}.workflowPage .stage-gotowe{--stage:#9fda72}
 .workflowPage .kanHead{align-items:center;margin:0 -1px 10px;padding:10px 5px 13px;background:transparent;border-bottom-color:#3c493f}
 .workflowPage .kanHead>div small,.workflowPage .kanHead>div b{display:block}
-.workflowPage .kanHead>div small{margin-bottom:3px;color:#78877d;font-size:8px;letter-spacing:.12em}
+.workflowPage .kanHead>div small{margin-bottom:3px;color:#78877d;font-size:11px;letter-spacing:.12em}
 .workflowPage .kanHead>div b{font-size:14px}
 .workflowPage .kanHead>span{display:grid;place-items:center;min-width:26px;height:26px;padding:0 7px;background:#3a2026;color:#e9f2e7;font-weight:800}
 .workflowPage .kanCard{position:relative;margin-bottom:10px;padding:14px;border-color:#465449;background:linear-gradient(155deg,#271519,#1e1013);box-shadow:0 9px 24px #00000033}
 .workflowPage .kanCard:before{content:"";position:absolute;inset:12px auto 12px 0;width:2px;border-radius:99px;background:var(--stage)}
 .workflowPage .kanCardTop,.workflowPage .kanCardBottom{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .workflowPage .kanCardTop>b{overflow:hidden;max-width:72%;font-size:14px;line-height:1.25;letter-spacing:.01em;text-overflow:ellipsis;white-space:nowrap}
-.workflowPage .kanCardTop .tag{font-size:8px}
+.workflowPage .kanCardTop .tag{font-size:11px}
 .workflowPage .kanCard h3{margin:9px 0 5px;color:#edf2eb;font-size:12px;line-height:1.4}
-.workflowPage .kanCard>small{display:block;color:#9aa69c;font-size:10px}
+.workflowPage .kanCard>small{display:block;color:#9aa69c;font-size:11px}
 .workflowPage .kanCard>.kanVehicleMeta{overflow:hidden;margin-top:4px;color:#b5868c;text-overflow:ellipsis;white-space:nowrap}
 .workflowPage .kanCardBottom{margin-top:13px;padding-top:10px;border-top:1px solid #354138}
 .workflowPage .kanCardBottom em{margin:0;color:#ccec9f;font-size:12px;font-weight:800}
-.workflowPage .kanCardBottom button{min-height:30px;padding:5px 9px;border-color:#4c5b4f;background:#31191f;font-size:9.5px}
+.workflowPage .kanCardBottom button{min-height:30px;padding:5px 9px;border-color:#4c5b4f;background:#31191f;font-size:11px}
 .workflowPage .kanCardBottom button:hover{border-color:#9ecb70;background:#412129;color:#ddf5bd}
 .kanEmpty{display:grid;place-items:center;min-height:120px;padding:18px;text-align:center;border:1px dashed #354239;border-radius:10px;background:#1b0d11}
 .kanEmpty span{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#371c23;color:#9aca72}
-.kanEmpty b{margin:8px 0 3px;color:#a8b3aa;font-size:11px}.kanEmpty small{color:#718078;font-size:9.5px;line-height:1.45}
+.kanEmpty b{margin:8px 0 3px;color:#a8b3aa;font-size:11px}.kanEmpty small{color:#718078;font-size:11px;line-height:1.45}
 
 @keyframes uiBackdropIn{from{opacity:0}to{opacity:1}}
 @keyframes uiModalIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
@@ -237,9 +237,13 @@ tbody tr{transition:background-color .16s ease}
 .releaseDecision{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px;border:1px solid #56643e;border-radius:14px;background:linear-gradient(120deg,#260f15,#180d10)}
 .releaseDecision.done{border-color:#355b43;background:linear-gradient(120deg,#13231a,#101611)}
 .releaseDecisionIcon{display:grid;place-items:center;width:46px;height:46px;border-radius:13px;background:#b9ef79;color:#1a0a0e;font-size:24px;font-weight:950;box-shadow:0 8px 24px #7dad4530}
-.releaseDecision small{color:#a9d575;font-size:8px;font-weight:900;letter-spacing:.16em}.releaseDecision h3{margin:4px 0;font-size:20px}.releaseDecision p{margin:0;color:#93a096;font-size:10px;line-height:1.5}
+.releaseDecision small{color:#a9d575;font-size:11px;font-weight:900;letter-spacing:.16em}.releaseDecision h3{margin:4px 0;font-size:20px}.releaseDecision p{margin:0;color:#93a096;font-size:11px;line-height:1.5}
 .releaseDecisionMeta{min-width:145px;padding-left:16px;border-left:1px solid #34412e;text-align:right}.releaseDecisionMeta span,.releaseDecisionMeta small{display:block;color:#849082}.releaseDecisionMeta b{display:block;margin:3px 0;font-size:22px}.releaseDecisionMeta b.debt{color:#edb957}
-.closeoutOptional{margin-top:12px;border:1px solid #303a32;border-radius:12px;background:#150a0d;overflow:hidden}.closeoutOptional>summary{display:flex;justify-content:space-between;gap:14px;padding:13px 15px;cursor:pointer;color:#c6d0c7;font-size:11px;font-weight:800}.closeoutOptional>summary b{color:#9fb57d}.closeoutOptional>p{margin:0;padding:0 15px 10px;color:#7e8b82;font-size:10px}.closeoutOptional>.closeoutProgress,.closeoutOptional>.closeoutChecks{margin-left:15px;margin-right:15px}.closeoutOptional>.closeoutChecks{margin-bottom:15px}
+.closeoutOptional{margin-top:12px;border:1px solid #303a32;border-radius:12px;background:#150a0d;overflow:hidden}.closeoutOptional>summary{display:flex;justify-content:space-between;gap:14px;padding:13px 15px;cursor:pointer;color:#c6d0c7;font-size:11px;font-weight:800}.closeoutOptional>summary b{color:#9fb57d}.closeoutOptional>p{margin:0;padding:0 15px 10px;color:#7e8b82;font-size:11px}.closeoutOptional>.closeoutProgress,.closeoutOptional>.closeoutChecks{margin-left:15px;margin-right:15px}.closeoutOptional>.closeoutChecks{margin-bottom:15px}
 .releaseActions{display:flex;justify-content:flex-end;gap:9px;margin-top:14px}.releaseVehicleButton{min-width:230px;min-height:48px;font-size:12px;letter-spacing:.04em}
-.qcCompact{display:flex;align-items:center;gap:14px}.qcCompact .qcRing{flex:0 0 auto}.qcCompact small{color:#9fc46f;font-size:8px;font-weight:900;letter-spacing:.14em}.qcCompact h3{margin:3px 0;font-size:16px}.qcCompact p{margin:0;color:#879389;font-size:10px}.qcOptionalEditor{margin-top:12px;border:1px solid #303a32;border-radius:11px;background:#150a0d}.qcOptionalEditor>summary{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;cursor:pointer;color:#bdc8be;font-size:10px;font-weight:800}.qcOptionalEditor>summary b{color:#a8d475}.qcOptionalEditor>.notes3,.qcOptionalEditor>.qcChecklist,.qcOptionalEditor>.actionrow{margin-left:14px;margin-right:14px}.qcOptionalEditor>.actionrow{margin-bottom:14px}
+.qcCompact{display:flex;align-items:center;gap:14px}.qcCompact .qcRing{flex:0 0 auto}.qcCompact small{color:#9fc46f;font-size:11px;font-weight:900;letter-spacing:.14em}.qcCompact h3{margin:3px 0;font-size:16px}.qcCompact p{margin:0;color:#879389;font-size:11px}.qcOptionalEditor{margin-top:12px;border:1px solid #303a32;border-radius:11px;background:#150a0d}.qcOptionalEditor>summary{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;cursor:pointer;color:#bdc8be;font-size:11px;font-weight:800}.qcOptionalEditor>summary b{color:#a8d475}.qcOptionalEditor>.notes3,.qcOptionalEditor>.qcChecklist,.qcOptionalEditor>.actionrow{margin-left:14px;margin-right:14px}.qcOptionalEditor>.actionrow{margin-bottom:14px}
 @media(max-width:760px){.releaseDecision{grid-template-columns:auto 1fr}.releaseDecisionMeta{grid-column:1/-1;padding:10px 0 0;border-top:1px solid #34412e;border-left:0;text-align:left}.releaseActions{align-items:stretch;flex-direction:column}.releaseVehicleButton{width:100%}}
+/* Karta Workflow: pełna nazwa auta (do 2 linii), status przechodzi pod spód, gdy brakuje miejsca */
+.workflowPage .kanCardTop{flex-wrap:wrap;justify-content:flex-start}
+.workflowPage .kanCardTop>b{flex:1 1 90px;min-width:90px;max-width:none;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.workflowPage .kanCardTop .tag{margin-left:auto}

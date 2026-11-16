@@ -3,7 +3,7 @@
    Nadpisujemy reguły !important z pwa.css tylko tam, gdzie to konieczne. */
 
 .pwaCaptureTitle{display:grid;gap:2px;min-width:0}
-.pwaCaptureTitle small{font-size:10.5px;letter-spacing:.12em;opacity:.75}
+.pwaCaptureTitle small{font-size:11px;letter-spacing:.12em;opacity:.75}
 .pwaCaptureSteps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0 0 14px;padding:0;list-style:none}
 .pwaCaptureSteps li{display:grid;justify-items:center;gap:5px;text-align:center;font-size:11px}
 .pwaCaptureSteps li>span{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;font-weight:700}
