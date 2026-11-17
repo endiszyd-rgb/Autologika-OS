@@ -1,5 +1,6 @@
 import React,{useEffect,useState} from 'react'
 import {calculateLabor,DEFAULT_PRICING,PRICING_KEY,validatePricing,pricingDescription,describePriceHistory} from './repair-pricing.mjs'
+import {moneyExact} from './format.mjs'
 
 export function useWorkshopRate(api,setForm){
  useEffect(()=>{let active=true;api.settings.catalogOverrides().then(map=>{const rate=map[PRICING_KEY]?.hourlyRate;if(active&&rate!=null)setForm(current=>current.labor_rate===''?{...current,labor_rate:rate}:current)}).catch(()=>{});return()=>{active=false}},[api,setForm])
@@ -18,7 +19,32 @@ export function LaborCalculator({config,hours,setHours,initialPrice,onChange}){
  try{result=calculateLabor({hours,hourlyRate:config.hourlyRate,corrosionMultiplier:corrosion?config.corrosionMultiplier:1,accessMultiplier:access?config.accessMultiplier:1,manualPrice:manual?price:null,reason})}catch(e){error=e.message}
  const serialized=JSON.stringify(result)
  useEffect(()=>{onChange(result?{...result,description:pricingDescription(result)}:null)},[serialized])
- return <fieldset className="wide"><legend>Kalkulacja robocizny</legend><p>Czas orientacyjny — nie jest zweryfikowaną normą producenta.</p><div className="formgrid"><label>Czas szacowany [h]<input type="number" min="0.01" step="0.01" value={hours} onChange={e=>setHours(e.target.value)}/></label><div className="pricingRateSummary"><span>Stała stawka warsztatu</span><strong>{Number(config.hourlyRate)>0?`${Number(config.hourlyRate).toFixed(2)} zł/h`:'nieustawiona — ustaw ją w Cenniku'}</strong></div></div><details className="laborAdvanced"><summary>Korekty i cena ręczna (opcjonalnie)</summary><div className="formgrid"><label><input type="checkbox" checked={corrosion} disabled={manual} onChange={e=>setCorrosion(e.target.checked)}/> Korozja ×{config.corrosionMultiplier}</label><label><input type="checkbox" checked={access} disabled={manual} onChange={e=>setAccess(e.target.checked)}/> Utrudniony dostęp ×{config.accessMultiplier}</label><label><input type="checkbox" checked={manual} onChange={e=>setManual(e.target.checked)}/> Cena ręczna zamiast kalkulacji</label>{manual&&<><label>Cena robocizny [zł]<input type="number" min="0" step="0.01" value={price} onChange={e=>setPrice(e.target.value)}/></label><label className="wide">Uzasadnienie ceny<input value={reason} onChange={e=>setReason(e.target.value)}/></label></>}</div></details>{error?<p role="alert">{error}</p>:<p><strong>{result.total.toFixed(2)} zł</strong> · {manual?'Cena ustalona ręcznie':'Czas × stała stawka warsztatu'}</p>}</fieldset>
+ const rateSet=Number(config.hourlyRate)>0
+ // Warstwa graficzna: czas (do edycji) × stała stawka = wynik; korekty i cena ręczna jako opcje drugorzędne.
+ return <fieldset className={'wide laborCalc'+(manual?' isManual':'')}>
+  <legend>Kalkulacja robocizny</legend>
+  <p className="laborCalcNote">Czas orientacyjny — nie jest zweryfikowaną normą producenta.</p>
+  <div className="laborCalcMain">
+   <label className="laborCalcHours"><span>Czas szacowany [h]</span><input type="number" inputMode="decimal" min="0.01" step="0.01" value={hours} onChange={e=>setHours(e.target.value)}/></label>
+   <span className="laborCalcOperator" aria-hidden="true">×</span>
+   <div className={'pricingRateSummary'+(rateSet?'':' isMissing')}><span>Stała stawka warsztatu</span><strong>{rateSet?`${moneyExact(config.hourlyRate)}/h`:'nieustawiona — ustaw ją w Cenniku'}</strong></div>
+   <span className="laborCalcOperator" aria-hidden="true">=</span>
+   {error
+    ?<p className="laborCalcResult isError" role="alert">{error}</p>
+    :<output className="laborCalcResult" aria-live="polite"><span>{manual?'Cena ustalona ręcznie':'Czas × stała stawka warsztatu'}</span><strong>{moneyExact(result.total)}</strong></output>}
+  </div>
+  <details className="laborAdvanced">
+   <summary>Korekty i cena ręczna (opcjonalnie)</summary>
+   <div className="laborAdvancedBody">
+    <div className="laborOptions">
+     <label className="laborOption"><input type="checkbox" checked={corrosion} disabled={manual} onChange={e=>setCorrosion(e.target.checked)}/><span>Korozja <em>×{config.corrosionMultiplier}</em></span></label>
+     <label className="laborOption"><input type="checkbox" checked={access} disabled={manual} onChange={e=>setAccess(e.target.checked)}/><span>Utrudniony dostęp <em>×{config.accessMultiplier}</em></span></label>
+     <label className="laborOption"><input type="checkbox" checked={manual} onChange={e=>setManual(e.target.checked)}/><span>Cena ręczna zamiast kalkulacji</span></label>
+    </div>
+    {manual&&<div className="laborManualFields"><label>Cena robocizny [zł]<input type="number" inputMode="decimal" min="0" step="0.01" value={price} onChange={e=>setPrice(e.target.value)}/></label><label>Uzasadnienie ceny<input value={reason} onChange={e=>setReason(e.target.value)}/></label></div>}
+   </div>
+  </details>
+ </fieldset>
 }
 
 export function QuoteHistory({api,orderId}){

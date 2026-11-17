@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.17 — 2026-11-17
+
+### Czytelniejszy kalkulator robocizny
+
+- Układ „czas × stała stawka = wynik”: wyróżnione pole czasu do edycji, stawka jako karta tylko do odczytu, wynik z zielonym akcentem (bordo przy cenie ręcznej).
+- Kwoty w formacie aplikacji („220,00 zł/h”, „264,00 zł”).
+- Korekty i cena ręczna jako drugorzędne opcje z kompaktowymi przełącznikami.
+- Wąski ekran: czas i stawka obok siebie, wynik pod spodem; widoczny fokus klawiatury; przejścia wyłączone przy ograniczeniu animacji w systemie.
+- Logika wyceny, stała stawka i przepływ dodawania pozycji bez zmian.
+
 ## 1.1.16 — 2026-11-17
 
 ### Szybsze dodawanie napraw

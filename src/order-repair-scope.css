@@ -69,8 +69,70 @@ html.ui2 .repairPositionPreview strong{color:var(--ui-text);font-variant-numeric
 html.ui2 .repairPositionPreview .total{grid-column:1/-1;grid-template-columns:1fr auto;align-items:center;background:var(--ui-accent-soft)}
 html.ui2 .repairPositionPreview .total strong{font-size:18px;color:var(--ui-accent-text)}
 @media(max-width:700px){html.ui2 .repairPositionPreview{grid-template-columns:repeat(2,minmax(0,1fr))}}
-html.ui2 .pricingRateSummary{display:grid;align-content:center;gap:5px;padding:10px 12px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface-2);color:var(--ui-text-2);font-size:11px}
-html.ui2 .pricingRateSummary strong{color:var(--ui-accent-text);font-size:14px}
-html.ui2 .laborAdvanced{grid-column:1/-1;padding:8px 11px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface-1)}
-html.ui2 .laborAdvanced summary{color:var(--ui-text-2);cursor:pointer;font-size:11px}
-html.ui2 .laborAdvanced .formgrid{margin-top:11px}
+/* ==========================================================================
+   Kalkulator robocizny (okno „Dodaj pracę z katalogu” / „Dodaj pracę do kosztorysu”)
+   Hierarchia: czas do edycji × stała stawka = wynik; korekty i cena ręczna drugorzędne.
+   ========================================================================== */
+html.ui2 .laborCalc{--labor-green:#a7cf8f;--labor-green-soft:rgba(167,207,143,.09);--labor-green-line:rgba(167,207,143,.3);min-width:0;margin:8px 0 0;padding:16px 18px 18px;border:1px solid var(--ui-border-strong);border-radius:var(--ui-radius-lg);background:linear-gradient(160deg,rgba(212,61,101,.07),transparent 46%),var(--ui-surface-1);display:grid;gap:14px}
+html.ui2 .laborCalc>legend{float:left;width:100%;margin:0;padding:0;color:var(--ui-text);font-size:15px;font-weight:650;letter-spacing:.005em}
+html.ui2 .laborCalc>legend+*{clear:both}
+html.ui2 .laborCalc .laborCalcNote{margin:-8px 0 0;color:var(--ui-text-3);font-size:12px;line-height:1.45}
+/* Główny rząd: czas × stawka = wynik */
+html.ui2 .laborCalcMain{display:grid;grid-template-columns:minmax(150px,.9fr) auto minmax(150px,1fr) auto minmax(180px,1.15fr);align-items:stretch;gap:10px}
+html.ui2 .laborCalcMain>*{min-width:0}
+html.ui2 .laborCalcOperator{align-self:center;margin-top:18px;color:var(--ui-text-3);font-size:18px;font-weight:500;line-height:1}
+/* Czas — jedyne pole do edycji w głównym rzędzie: mocniejsza ramka i większa cyfra */
+html.ui2 .laborCalc .laborCalcHours{display:grid;gap:6px;align-content:start;margin:0;color:var(--ui-text-2);font-size:12px;font-weight:550}
+html.ui2 .laborCalc .laborCalcHours input{width:100%;height:52px;padding:0 14px;border:1.5px solid var(--ui-border-strong);border-radius:var(--ui-radius-md);background:var(--ui-surface-inset);color:var(--ui-text);font-size:22px;font-weight:650;font-variant-numeric:tabular-nums;transition:border-color var(--ui-duration-fast) var(--ui-ease-standard),box-shadow var(--ui-duration-fast) var(--ui-ease-standard)}
+html.ui2 .laborCalc .laborCalcHours input:hover:not(:focus){border-color:rgba(255,214,224,.32)}
+html.ui2 .laborCalc .laborCalcHours input:focus{border-color:var(--ui-border-focus);box-shadow:var(--ui-ring);outline:none}
+/* Stała stawka — tylko do odczytu, spokojna karta */
+html.ui2 .laborCalc .pricingRateSummary{display:grid;align-content:space-between;gap:6px;min-height:76px;padding:11px 14px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface-2);color:var(--ui-text-3);font-size:12px}
+html.ui2 .laborCalc .pricingRateSummary strong{color:var(--ui-text);font-size:17px;font-weight:650;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+html.ui2 .laborCalc .pricingRateSummary.isMissing{border-color:rgba(240,82,92,.35);background:var(--ui-danger-soft)}
+html.ui2 .laborCalc .pricingRateSummary.isMissing strong{color:var(--ui-danger-text);font-size:13px;line-height:1.35}
+/* Wynik kalkulacji — stonowany zielony akcent */
+html.ui2 .laborCalc .laborCalcResult{display:grid;align-content:space-between;gap:6px;min-height:76px;margin:0;padding:11px 14px;border:1px solid var(--labor-green-line);border-radius:var(--ui-radius-md);background:var(--labor-green-soft);color:var(--ui-text-3);font-size:12px}
+html.ui2 .laborCalc .laborCalcResult strong{color:var(--labor-green);font-size:24px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+html.ui2 .laborCalc .laborCalcResult.isError{align-content:center;border-color:rgba(240,82,92,.35);background:var(--ui-danger-soft);color:var(--ui-danger-text);font-size:13px;line-height:1.4}
+/* Cena ręczna: wynik w kolorze marki, znaki działań wyciszone */
+html.ui2 .laborCalc.isManual .laborCalcResult{border-color:rgba(212,61,101,.38);background:var(--ui-accent-soft)}
+html.ui2 .laborCalc.isManual .laborCalcResult strong{color:var(--ui-accent-text)}
+html.ui2 .laborCalc.isManual .laborCalcOperator{opacity:.35}
+/* Opcje dodatkowe — drugorzędne: bez tła, cienka linia, mniejszy tekst */
+html.ui2 .laborCalc .laborAdvanced{margin:0;padding:0;border:0;border-top:1px dashed var(--ui-border);border-radius:0;background:none}
+html.ui2 .laborCalc .laborAdvanced>summary{display:inline-flex;align-items:center;gap:9px;min-height:36px;margin-top:6px;padding:4px 8px 4px 6px;border-radius:var(--ui-radius-sm);color:var(--ui-text-3);font-size:12px;cursor:pointer;list-style:none;transition:color var(--ui-duration-fast) var(--ui-ease-standard)}
+html.ui2 .laborCalc .laborAdvanced>summary::-webkit-details-marker{display:none}
+html.ui2 .laborCalc .laborAdvanced>summary::before{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform var(--ui-duration-fast) var(--ui-ease-standard)}
+html.ui2 .laborCalc .laborAdvanced[open]>summary::before{transform:rotate(45deg)}
+html.ui2 .laborCalc .laborAdvanced>summary:hover,html.ui2 .laborCalc .laborAdvanced[open]>summary{color:var(--ui-text-2)}
+html.ui2 .laborCalc .laborAdvancedBody{display:grid;gap:12px;padding:6px 0 2px}
+html.ui2 .laborCalc .laborOptions{display:flex;flex-wrap:wrap;gap:8px}
+html.ui2 .laborCalc .laborOption{display:inline-flex;align-items:center;gap:9px;min-height:40px;margin:0;padding:8px 12px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);background:var(--ui-surface-2);color:var(--ui-text-2);font-size:13px;cursor:pointer;transition:border-color var(--ui-duration-fast) var(--ui-ease-standard),background-color var(--ui-duration-fast) var(--ui-ease-standard)}
+html.ui2 .laborCalc .laborOption:hover{border-color:var(--ui-border-strong)}
+html.ui2 .laborCalc .laborOption:has(input:checked){border-color:var(--labor-green-line);background:var(--labor-green-soft);color:var(--ui-text)}
+html.ui2 .laborCalc .laborOption:has(input:disabled){opacity:.5;cursor:not-allowed}
+html.ui2 .laborCalc .laborOption:has(input:focus-visible){outline:2px solid var(--ui-border-focus);outline-offset:2px}
+html.ui2 .laborCalc .laborOption input{flex:none;width:17px;height:17px;min-height:0;margin:0;padding:0;border:0;box-shadow:none;accent-color:#7fae6a;cursor:inherit}
+html.ui2 .laborCalc .laborOption input:focus{box-shadow:none;outline:none}
+html.ui2 .laborCalc .laborOption em{color:var(--ui-text-3);font-style:normal;font-variant-numeric:tabular-nums}
+html.ui2 .laborCalc .laborManualFields{display:grid;grid-template-columns:minmax(140px,.6fr) minmax(0,1.4fr);gap:10px}
+html.ui2 .laborCalc .laborManualFields label{display:grid;gap:5px;margin:0;color:var(--ui-text-2);font-size:12px}
+html.ui2 .laborCalc .laborManualFields input{width:100%}
+/* Wąski ekran: czas i stawka obok siebie, wynik pod spodem na całą szerokość, bez znaków działań */
+@media (max-width:760px){
+ html.ui2 .laborCalc{padding:14px 14px 16px}
+ html.ui2 .laborCalcMain{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ html.ui2 .laborCalcOperator{display:none}
+ html.ui2 .laborCalc .laborCalcResult{grid-column:1/-1;grid-template-columns:1fr auto;align-items:center;min-height:0}
+ html.ui2 .laborCalc .pricingRateSummary{min-height:0;align-self:end}
+ html.ui2 .laborCalc .laborCalcHours input{height:48px;font-size:20px}
+ html.ui2 .laborCalc .laborOption{flex:1 1 100%}
+ html.ui2 .laborCalc .laborManualFields{grid-template-columns:1fr}
+}
+@media (max-width:360px){
+ html.ui2 .laborCalcMain{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+ html.ui2 .laborCalc *,html.ui2 .laborCalc *::before{transition:none!important;animation:none!important}
+}
