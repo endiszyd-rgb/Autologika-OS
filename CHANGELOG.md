@@ -1,3 +1,9 @@
+## 1.1.18 — protokół wydania i części zlecenia
+
+- Protokół wydania pokazuje statusy kontroli jakości tekstowo, bez widocznych checkboxów i znaczników wyboru.
+- Zakładka Części zawiera jedną wspólną listę dla całego zlecenia, bez panelu przypisywania części do poszczególnych napraw.
+- Dodanie naprawy z katalogu nie tworzy automatycznie przypisanych części; części można uzupełnić ręcznie na wspólnej liście.
+
 # Changelog
 
 ## 1.1.17 — 2026-11-17
