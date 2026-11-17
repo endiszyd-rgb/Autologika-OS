@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.16 — 2026-11-17
+
+### Szybsze dodawanie napraw
+
+- Kalkulator pobiera stałą stawkę roboczogodziny z ustawień warsztatu, a przy jej braku używa stawki zapisanej w zleceniu.
+- Usunięto checkbox potwierdzający czas i zakres. Czas można zmienić i od razu dodać pozycję.
+- Korekty i cena ręczna są dostępne w rozwijanych opcjach dodatkowych.
+
 ## 1.1.15 — 2026-11-17
 
 ### Katalog czasów napraw
