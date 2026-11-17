@@ -25,7 +25,8 @@ export function calculateLabor({hours,hourlyRate,corrosionMultiplier=1,accessMul
 export function resolveCatalogVariant(group,job,variant,overrides={},legacyPrices={}){
  const own=overrides[variant.id]||{},key=`${group}::${job.name}::${variant.name}`
  const price=Object.hasOwn(own,'price')?own.price:Object.hasOwn(legacyPrices,key)?legacyPrices[key]:null
- return {...variant,...own,price:price==null?null:number(price,'cena warsztatu',0,100000000),timeSource:'WORKSHOP_ESTIMATE',priceSource:price==null?'UNCONFIGURED':'WORKSHOP'}
+ const timeBasis=Object.hasOwn(own,'hours')?'WORKSHOP_OVERRIDE':variant.timeBasis||'AUTLOGIKA_ESTIMATE'
+ return {...variant,...own,price:price==null?null:number(price,'cena warsztatu',0,100000000),timeBasis,timeSource:timeBasis,priceSource:price==null?'UNCONFIGURED':'WORKSHOP'}
 }
 export function pricingDescription(result){
  return `Kalkulacja warsztatu (czas szacowany, nie norma): ${result.hours} h × ${result.hourlyRate} zł/h × korozja ${result.corrosionMultiplier} × dostęp ${result.accessMultiplier}; ${result.manual?`cena ręczna: ${result.reason}; `:''}razem ${result.total.toFixed(2)} zł.`
