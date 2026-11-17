@@ -776,6 +776,26 @@ ipcMain.handle('quotes:accept',(_,id)=>{
   return result
 })
 ipcMain.handle('attachments:list',(_,orderId)=>getDb().prepare("SELECT id,order_id,name,file_path,mime,storage_path,size_bytes,sha256,category,cloud_id,updated_at,created_at FROM attachments WHERE order_id=? AND deleted_at IS NULL ORDER BY created_at DESC").all(orderId))
+const attachmentThumbnailCache=new Map()
+ipcMain.handle('attachments:thumbnail',async(_,payload={})=>{
+ const id=Number(payload.id),maxSize=Math.max(64,Math.min(800,Math.round(Number(payload.options?.maxSize)||320)))
+ if(!Number.isSafeInteger(id)||id<1)return null
+ const db=getDb(),row=db.prepare("SELECT id,order_id,name,mime,file_path,sha256,updated_at FROM attachments WHERE id=? AND deleted_at IS NULL").get(id)
+ if(!row||!String(row.mime||'').toLowerCase().startsWith('image/'))return null
+ try{
+  const source=row.file_path&&fs.existsSync(row.file_path)?row.file_path:await cloudSync.ensureAttachmentLocal(id)
+  const key=`${id}:${row.sha256||row.updated_at||row.file_path}:${maxSize}`,cached=attachmentThumbnailCache.get(key)
+  if(cached){attachmentThumbnailCache.delete(key);attachmentThumbnailCache.set(key,cached);return cached}
+  const image=nativeImage.createFromPath(source)
+  if(image.isEmpty())return null
+  const thumb=image.resize({width:maxSize,quality:'good'}),size=thumb.getSize()
+  if(!size.width||!size.height)return null
+  const result={id:row.id,src:thumb.toDataURL(),width:size.width,height:size.height}
+  attachmentThumbnailCache.set(key,result)
+  while(attachmentThumbnailCache.size>100)attachmentThumbnailCache.delete(attachmentThumbnailCache.keys().next().value)
+  return result
+ }catch{return null}
+})
 ipcMain.handle('attachments:pick',async(_,{orderId,category='PRZYJECIE'}={})=>{const r=await dialog.showOpenDialog({properties:['openFile','multiSelections'],filters:[{name:'Zdjęcia i PDF',extensions:['jpg','jpeg','png','webp','heic','pdf']}]});if(r.canceled)return[];const db=getDb();const dir=path.join(app.getPath('userData'),'attachments',String(orderId));fs.mkdirSync(dir,{recursive:true});const out=[];for(const src of r.filePaths){const ext=path.extname(src).toLowerCase();const name=path.basename(src);const dst=path.join(dir,`${Date.now()}-${crypto.randomBytes(3).toString('hex')}${ext}`);fs.copyFileSync(src,dst);const buf=fs.readFileSync(dst);const mime=ext==='.pdf'?'application/pdf':`image/${ext.replace('.','').replace('jpg','jpeg')}`;const rr=db.prepare('INSERT INTO attachments(order_id,name,file_path,mime,size_bytes,sha256,category) VALUES (?,?,?,?,?,?,?)').run(orderId,name,dst,mime,buf.length,crypto.createHash('sha256').update(buf).digest('hex'),category);out.push({id:rr.lastInsertRowid,name,file_path:dst,category})}return out})
 ipcMain.handle('attachments:remove',(_,id)=>{const db=getDb();const a=db.prepare('SELECT * FROM attachments WHERE id=?').get(id);if(a){try{if(a.file_path)fs.unlinkSync(a.file_path)}catch{}db.prepare("UPDATE attachments SET file_path='',deleted_at=CURRENT_TIMESTAMP WHERE id=?").run(id)}return true})
 ipcMain.handle('attachments:open',async(_,id)=>{const filePath=await cloudSync.ensureAttachmentLocal(id);const result=await shell.openPath(filePath);if(result)throw new Error(result);return true})

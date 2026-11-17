@@ -177,9 +177,15 @@ html.ui2 .photoRecent button{display:flex;align-items:center;gap:var(--ui-space-
 html.ui2 .photoRecent button:hover{background:var(--ui-surface-2)!important}
 html.ui2 .photoRecentKind{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:var(--ui-radius-sm);background:var(--ui-surface-3);color:var(--ui-text-3);font:var(--ui-weight-bold) 9.5px/1 var(--ui-font-sans);letter-spacing:.04em}
 html.ui2 .photoRecentKind.image{background:var(--ui-info-soft);color:var(--ui-info-text)}
+html.ui2 .photoRecentThumb{flex:none;width:42px;height:42px;object-fit:cover;border-radius:var(--ui-radius-sm);background:var(--ui-surface-3)}
 html.ui2 .photoRecent span:last-child{display:grid;min-width:0}
 html.ui2 .photoRecent b{overflow:hidden;font-size:var(--ui-text-xs);font-weight:var(--ui-weight-medium);text-overflow:ellipsis;white-space:nowrap}
 html.ui2 .photoRecent small{color:var(--ui-text-3);font-size:var(--ui-text-2xs)}
+html.ui2 .orderPreviewPhotos>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ui-space-2)}
+html.ui2 .orderPreviewPhotos button{display:grid;justify-items:start;gap:5px;min-width:0;padding:6px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface-2);color:var(--ui-text-2);text-align:left}
+html.ui2 .orderPreviewPhotos img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--ui-radius-sm)}
+html.ui2 .orderPreviewPhotos .photoRecentKind{width:100%;height:68px}
+html.ui2 .orderPreviewPhotos button>span:last-child{font-size:var(--ui-text-2xs)}
 
 /* Karta zgłoszenia i panele przeglądu w siatce */
 html.ui2 .orderCenterPage .centerGrid{gap:var(--ui-space-4)}

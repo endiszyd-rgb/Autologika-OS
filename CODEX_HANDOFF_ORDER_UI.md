@@ -10,6 +10,21 @@ Każdy kontrakt musi mieć tę samą sygnaturę w trzech miejscach:
 
 Audyt `npm run test:connections` wymaga, żeby każde wywołanie `api.*` miało obsługę w preload.
 
+## Postęp prac
+
+- `attachments.thumbnail(id,{maxSize})` jest zaimplementowane w Electronie i PWA,
+  z użyciem wyłącznie aktywnego rekordu załącznika. Electron zwraca zmniejszony
+  data URL, a PWA podpisany URL Storage ważny 10 minut.
+- Miniatury widać w ostatnich plikach dokumentacji i podglądzie zlecenia. PDF-y
+  i nieobsługiwane obrazy zachowują znacznik typu pliku.
+- PWA korzysta z transformacji Storage. Dokumentacja Supabase podaje, że wymaga
+  ona włączonej funkcji w projekcie i jest dostępna od planu Pro; gdy transformacja
+  jest wyłączona, PWA pomija miniaturę. Nie zmieniano ustawień projektu ani bazy.
+- Build Vite przeszedł. Pełny smoke Electron/PWA oraz testy kontraktu pozostają
+  do wykonania przed uznaniem punktu 1 za ukończony.
+- Następne zadanie: `vehicles.coverPhoto` (punkt 2), z zachowaniem zdjęcia
+  katalogowego jako zapasowego obrazu.
+
 ---
 
 ## 1. Miniatury zdjęć zlecenia — `attachments.thumbnail`

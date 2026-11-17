@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.14 — 2026-11-17
+
+### Kosztorys napraw i dokumentacja zlecenia
+
+- Każda naprawa ma własny czas, stawkę sprzedaży i koszt roboczogodziny, rabat, VAT oraz przypisane części; podgląd pozycji aktualizuje się podczas edycji.
+- Zdjęcia zlecenia mają miniatury w podglądzie i dokumentacji, gdy platforma udostępnia ich bezpieczny podgląd.
+- Zweryfikowano protokoły przyjęcia, zlecenia i wydania w PDF oraz przepływ ich generowania w aplikacji.
+
 ## 1.1.13 — 2026-11-16
 
 ### Okienka, wydruki i wiadomości na telefonie
