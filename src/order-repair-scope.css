@@ -69,3 +69,8 @@ html.ui2 .repairPositionPreview strong{color:var(--ui-text);font-variant-numeric
 html.ui2 .repairPositionPreview .total{grid-column:1/-1;grid-template-columns:1fr auto;align-items:center;background:var(--ui-accent-soft)}
 html.ui2 .repairPositionPreview .total strong{font-size:18px;color:var(--ui-accent-text)}
 @media(max-width:700px){html.ui2 .repairPositionPreview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+html.ui2 .pricingRateSummary{display:grid;align-content:center;gap:5px;padding:10px 12px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface-2);color:var(--ui-text-2);font-size:11px}
+html.ui2 .pricingRateSummary strong{color:var(--ui-accent-text);font-size:14px}
+html.ui2 .laborAdvanced{grid-column:1/-1;padding:8px 11px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface-1)}
+html.ui2 .laborAdvanced summary{color:var(--ui-text-2);cursor:pointer;font-size:11px}
+html.ui2 .laborAdvanced .formgrid{margin-top:11px}
