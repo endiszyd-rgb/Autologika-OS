@@ -253,6 +253,16 @@ export class PwaCloudClient{
     const response=await fetch(`${this.url}/storage/v1/object/authenticated/${encodeURIComponent(bucket)}/${encoded}`,{headers:{apikey:this.apiKey,Authorization:`Bearer ${token}`}})
     const text=response.ok?null:await response.text();if(!response.ok)throw new Error(messageFromResponse(response.status,text));return response.blob()
   }
+
+  async createSignedUrl(bucket,path,expiresIn=600,transform){
+    const safeBucket=String(bucket||''),segments=String(path||'').split('/')
+    if(!/^[a-z0-9_-]+$/i.test(safeBucket)||!segments.length||segments.some(part=>!part||part==='.'||part==='..'))throw new Error('Nieprawidłowa ścieżka pliku.')
+    const encoded=segments.map(encodeURIComponent).join('/'),epoch=this.epoch
+    const data=await this.request(`/storage/v1/object/sign/${encodeURIComponent(safeBucket)}/${encoded}`,{method:'POST',body:JSON.stringify({expiresIn,...(transform?{transform}:{})})})
+    this.assertSession(epoch)
+    if(typeof data?.signedURL!=='string'||!data.signedURL.startsWith('/object/sign/'))throw new Error('Storage nie zwrócił podpisanego adresu pliku.')
+    return new URL(`/storage/v1${data.signedURL}`,this.url).href
+  }
 }
 
 export const pwaCloud=new PwaCloudClient()

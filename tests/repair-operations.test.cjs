@@ -1,7 +1,7 @@
 const test=require('node:test')
 const assert=require('node:assert/strict')
 const {DatabaseSync}=require('node:sqlite')
-const {installRepairPart,updateRepairOperation}=require('../electron/repair-operations.cjs')
+const {installRepairPart,updateRepairOperation,calculateRepairEstimate,orderEstimate}=require('../electron/repair-operations.cjs')
 
 function database(){
  const db=new DatabaseSync(':memory:')
@@ -80,4 +80,18 @@ test('nazwa naprawy nie może zostać wyczyszczona',()=>{
  const db=repairDatabase()
  assert.throws(()=>updateRepairOperation(db,{operationId:1,data:{title:'   '}}),/Nazwa naprawy jest wymagana/)
  assert.equal(db.prepare('SELECT title FROM order_repair_operations WHERE id=1').get().title,'Stara nazwa')
+})
+
+test('each repair calculates its own hours, rate, discount, VAT, and assigned parts',()=>{
+ const db=repairDatabase()
+ db.prepare(`INSERT INTO order_repair_operations(id,order_id,title,planned_hours,labor_rate,labor_cost_rate,discount_percent,vat_rate,other_cost,other_price)
+   VALUES(2,7,'Clutch replacement',2.25,240,100,10,8,5,20)`).run()
+ db.prepare('INSERT INTO repair_parts(id,repair_operation_id,qty,unit_cost,unit_price) VALUES(1,2,2,30,45)').run()
+
+ const first=calculateRepairEstimate(db,1),second=calculateRepairEstimate(db,2),total=orderEstimate(db,7)
+ assert.deepEqual([first.laborNet,first.laborCost,first.gross],[225,105,276.75])
+ assert.deepEqual([second.laborNet,second.laborCost,second.partsCost,second.partsSale,second.discount,second.vat,second.gross,second.cost,second.margin],[540,225,60,90,65,46.8,631.8,290,295])
+ assert.deepEqual(total.operations.map(item=>item.repairOperationId),[1,2])
+ assert.deepEqual([total.totals.laborNet,total.totals.laborCost,total.totals.gross,total.totals.cost,total.totals.margin],[765,330,908.55,395,415])
+ assert.equal(calculateRepairEstimate(db,1).gross,276.75)
 })

@@ -59,3 +59,13 @@
 /* Widoczna edycja głównych danych zlecenia */
 .centerHeroIdentity{min-width:0;flex:1}.orderTitleRow{display:flex;align-items:center;gap:14px;margin:7px 0 9px}.orderTitleRow>div{min-width:0}.orderTitleRow span{display:block;margin-bottom:2px;color:#c8848b;font-size:11px;font-weight:900;letter-spacing:.12em}.orderCenterPage .orderTitleRow h3{margin:0}.orderTitleRow>button{flex:none;min-height:36px;padding:8px 12px;border-color:#74444d;background:#30121a;color:#ffc2c6;font-weight:800}.orderTitleRow>button:hover{border-color:#e15964;background:#461a25}.orderDetailsEditorIntro{display:grid;grid-template-columns:minmax(240px,.8fr) 1.2fr;gap:20px;align-items:center;margin-bottom:16px;padding:16px 18px;border:1px solid #5c3942;border-left:4px solid var(--mobile-red,#f44755);border-radius:14px;background:linear-gradient(135deg,#291016,#140a0d)}.orderDetailsEditorIntro small,.orderDetailsEditorIntro b,.orderDetailsEditorIntro span{display:block}.orderDetailsEditorIntro small{color:#e1848c;font-size:11px;font-weight:900;letter-spacing:.13em}.orderDetailsEditorIntro b{margin:5px 0;font-size:20px}.orderDetailsEditorIntro span,.orderDetailsEditorIntro p{color:#a99da1;font-size:11px;line-height:1.5}.orderDetailsEditorIntro p{margin:0}.orderDetailsEditor textarea{min-height:105px}
 @media(max-width:760px){.orderTitleRow{align-items:flex-start;flex-direction:column}.orderTitleRow>button{width:100%}.orderDetailsEditorIntro{grid-template-columns:1fr}}
+
+html.ui2 .repairPositionPreview{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-md);background:var(--ui-surface-2)}
+html.ui2 .repairPositionPreview>b{grid-column:1/-1;color:var(--ui-text);font-size:12px}
+html.ui2 .repairPositionPreview>div{display:grid;gap:2px;min-width:0;padding:8px;border:1px solid var(--ui-border);border-radius:var(--ui-radius-sm);background:var(--ui-surface-1)}
+html.ui2 .repairPositionPreview span{color:var(--ui-text-2);font-size:11px}
+html.ui2 .repairPositionPreview small{color:var(--ui-text-3);font-size:10px}
+html.ui2 .repairPositionPreview strong{color:var(--ui-text);font-variant-numeric:tabular-nums}
+html.ui2 .repairPositionPreview .total{grid-column:1/-1;grid-template-columns:1fr auto;align-items:center;background:var(--ui-accent-soft)}
+html.ui2 .repairPositionPreview .total strong{font-size:18px;color:var(--ui-accent-text)}
+@media(max-width:700px){html.ui2 .repairPositionPreview{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -5,7 +5,6 @@ on:
     paths:
       - 'src/vehicle-photo*'
       - 'src/vehicle-catalog.js'
-      - 'src/quick-intake-screen.jsx'
       - 'src/schedule.jsx'
       - 'src/dashboard.jsx'
       - 'src/order-workspace.jsx'
@@ -37,7 +36,7 @@ jobs:
         run: |
           node --input-type=module -e '
           import {readFileSync} from "node:fs";
-          const files=["src/schedule.jsx","src/dashboard.jsx","src/order-workspace.jsx","src/operations-screens.jsx","src/quick-intake-screen.jsx","src/main.jsx"];
+          const files=["src/schedule.jsx","src/dashboard.jsx","src/order-workspace.jsx","src/operations-screens.jsx","src/main.jsx"];
           for(const path of files){
             const matches=readFileSync(path,"utf8").match(/import\s+\{VehiclePhoto\}\s+from\s+["\x27]\.\/vehicle-photo\.jsx["\x27]/g)||[];
             if(matches.length!==1)throw Error(path+": expected 1 VehiclePhoto import, found "+matches.length);

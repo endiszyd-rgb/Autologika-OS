@@ -3,7 +3,7 @@
 // dokumentacja fotograficzna i podgląd zlecenia.
 // Komponenty są prezentacyjne: dostają dane już pobrane przez Centrum zlecenia
 // i wywołują wyłącznie przekazane im akcje (setTab, addFiles, exportPdf…).
-import React from 'react'
+import React,{useEffect,useState} from 'react'
 import {moneyExact,moneyWhole,formatPhone} from './format.mjs'
 import './order-hub.css'
 import {VehiclePhoto} from './vehicle-photo.jsx'
@@ -84,17 +84,23 @@ export function OrderFinanceSummary({finance,onSettle,onQuote}){
 }
 
 // Dokumentacja fotograficzna według etapów zlecenia.
-export function OrderPhotoDocs({files,addFiles,openFile,openDocs}){
+function AttachmentThumbnail({file,getThumbnail}){
+ const[src,setSrc]=useState('')
+ useEffect(()=>{let active=true;if(!isImageFile(file)||typeof getThumbnail!=='function')return()=>{active=false};getThumbnail(file.id,{maxSize:320}).then(result=>{if(active&&result?.src)setSrc(result.src)}).catch(()=>{});return()=>{active=false}},[file,getThumbnail])
+ return src?<img className="photoRecentThumb" src={src} alt="" loading="lazy"/>:<span className={'photoRecentKind'+(isImageFile(file)?' image':'')} aria-hidden="true">{isImageFile(file)?'IMG':String(file.name||'').split('.').pop().slice(0,4).toUpperCase()||'PLIK'}</span>
+}
+
+export function OrderPhotoDocs({files,addFiles,openFile,openDocs,getThumbnail}){
  const stats=documentationStats(files),recent=newestFirst(files).slice(0,6)
  return <section className="orderPhotoDocs ui-card" aria-labelledby="orderPhotoDocsTitle">
   <div className="ui-card__header"><div><span className="ui-eyebrow">DOKUMENTACJA</span><h3 id="orderPhotoDocsTitle" className="ui-card__title">Zdjęcia i pliki</h3><span className="ui-card__subtitle">{stats.total?`${stats.photos} zdjęć · ${stats.documents} dokumentów · ${stats.cloud} w chmurze`:'Udokumentuj stan auta przy przyjęciu'}</span></div><button type="button" className="ui-btn ui-btn--sm" onClick={openDocs}>Wszystkie <Icon name="arrow" size={14}/></button></div>
   <div className="photoStageGrid">{DOC_CATEGORIES.map(([key,label])=>{const count=stats.byCategory[key],empty=!count.photos&&!count.files;return <button type="button" key={key} data-photo-stage={key} className={'photoStage'+(empty?' empty':'')} onClick={()=>addFiles(key)} title={`Dodaj zdjęcia: ${label}`}><span className="photoStageIcon" aria-hidden="true">{empty?<Icon name="intake" size={18}/>:<Icon name="documents" size={18}/>}</span><b>{label}</b><small>{empty?'Dodaj zdjęcia':`${count.photos} zdj. · ${count.files} plików`}</small></button>})}</div>
-  {recent.length>0&&<ul className="photoRecent">{recent.map(file=><li key={file.id}><button type="button" onClick={()=>openFile(file)} title={`Otwórz ${file.name}`}><span className={'photoRecentKind'+(isImageFile(file)?' image':'')} aria-hidden="true">{isImageFile(file)?'IMG':String(file.name||'').split('.').pop().slice(0,4).toUpperCase()||'PLIK'}</span><span><b>{file.name}</b><small>{DOC_CATEGORIES.find(([key])=>key===docCategory(file))?.[1]} · {formatDate(file.created_at)}</small></span></button></li>)}</ul>}
+  {recent.length>0&&<ul className="photoRecent">{recent.map(file=><li key={file.id}><button type="button" onClick={()=>openFile(file)} title={`Otwórz ${file.name}`}><AttachmentThumbnail file={file} getThumbnail={getThumbnail}/><span><b>{file.name}</b><small>{DOC_CATEGORIES.find(([key])=>key===docCategory(file))?.[1]} · {formatDate(file.created_at)}</small></span></button></li>)}</ul>}
  </section>
 }
 
 // Podgląd zlecenia — czytelne podsumowanie dla mechanika lub klienta, bez edycji.
-export function OrderPreview({order,items,parts,files,payments,repairs,labels,exportPdf}){
+export function OrderPreview({order,items,parts,files,payments,repairs,labels,exportPdf,getThumbnail,openFile}){
  const finance=orderFinance({order,items,payments}),docs=documentationStats(files)
  // Jak w zakładkach Zakres napraw / Części: pozycje i części przypięte do naprawy są częścią tej naprawy.
  const looseItems=items.filter(item=>!item.repair_operation_id),looseParts=parts.filter(part=>!part.repair_operation_id)
@@ -111,6 +117,7 @@ export function OrderPreview({order,items,parts,files,payments,repairs,labels,ex
   <section className="orderPreviewList"><h4>Naprawy i robocizna <span className="countBadge">{works.length+repairs.length}</span></h4>{repairs.length>0&&<p className="orderPreviewHint">Kwoty napraw zawierają ich robociznę i przypisane części (brutto).</p>}{repairs.length||works.length?<ul>{repairs.map(repair=><li key={'r'+repair.id}><span>{[repair.title,repair.variant].filter(Boolean).join(' · ')||'Naprawa'}</span>{repair.estimate?.gross!=null?<b>{formatMoney(repair.estimate.gross)}</b>:<em>naprawa</em>}</li>)}{works.map(item=><li key={'w'+item.id}><span>{item.work_name||item.name}</span><b>{formatMoney(Number(item.qty||1)*Number(item.unit_price||0))}</b></li>)}</ul>:<p className="muted">Zakres prac nie został jeszcze dodany.</p>}</section>
   <section className="orderPreviewList"><h4>Części i materiały <span className="countBadge">{materials.length}</span></h4>{materials.length?<ul>{materials.map(item=><li key={'i'+item.id}><span>{item.name}{item.part_no?` · ${item.part_no}`:''}</span><b>{formatMoney(Number(item.qty||1)*Number(item.unit_price||0))}</b></li>)}</ul>:<p className="muted">Brak części w rozliczeniu.</p>}{looseParts.length>0&&<><h5>Zamówienia części</h5><ul>{looseParts.map(part=><li key={'p'+part.id}><span>{part.name}{part.part_no?` · ${part.part_no}`:''}</span><em>{String(part.status||'').replaceAll('_',' ').toLowerCase()}</em></li>)}</ul></>}</section>
   <div className="orderPreviewTotals"><div><span>Wartość zlecenia</span><b>{formatMoney(finance.total)}</b></div><div><span>Wpłacono</span><b>{formatMoney(finance.paid)}</b></div><div className={finance.balance>0.01?'due':''}><span>Do zapłaty</span><b>{formatMoney(finance.balance)}</b></div><div><span>Dokumentacja</span><b>{docs.photos} zdjęć · {docs.documents} plików</b></div></div>
+  {files.some(isImageFile)&&<section className="orderPreviewPhotos" aria-label="Zdjęcia ze zlecenia"><h4>Ostatnie zdjęcia</h4><div>{newestFirst(files).filter(isImageFile).slice(0,6).map(file=><button type="button" key={file.id} onClick={()=>openFile?.(file)} title={`Otwórz zdjęcie ${file.name}`}><AttachmentThumbnail file={file} getThumbnail={getThumbnail}/><span>{DOC_CATEGORIES.find(([key])=>key===docCategory(file))?.[1]}</span></button>)}</div></section>}
   <footer className="orderPreviewActions"><button type="button" className="ui-btn" onClick={()=>exportPdf('intake')}><Icon name="documents" size={16}/> Protokół przyjęcia</button><button type="button" className="ui-btn ui-btn--primary" onClick={()=>exportPdf('order')}><Icon name="documents" size={16}/> Zlecenie serwisowe PDF</button><button type="button" className="ui-btn" onClick={()=>exportPdf('release')}><Icon name="documents" size={16}/> Protokół wydania</button></footer>
  </div>
 }
