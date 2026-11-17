@@ -16,7 +16,8 @@ test('every catalog variant has a stable complete definition',()=>{
   assert.ok(!ids.has(variant.id),`duplicate ${variant.id}`);ids.add(variant.id)
   assert.ok(variant.hours>0,variant.id)
   assert.equal(variant.price,null,variant.id)
-  assert.equal(variant.timeSource,'WORKSHOP_ESTIMATE')
+  assert.equal(variant.timeSource,variant.timeBasis)
+  assert.ok(['PUBLIC_COMPARATOR','CATALOG_CURATED','AUTLOGIKA_ESTIMATE'].includes(variant.timeBasis),variant.id)
   assert.ok(variant.customer_description.length>=80,variant.id)
   const procedure=procedureFor(job,variant)
   assert.equal(procedure.catalog_variant_id,variant.id)
@@ -24,6 +25,23 @@ test('every catalog variant has a stable complete definition',()=>{
   assert.ok(procedure.qc.length)
   assert.ok(procedure.tools.length)
  }
+})
+
+test('catalog work variants use distinct benchmark times where scope changes labor',()=>{
+ const findJob=name=>WORK_CATALOG.flatMap(group=>group.jobs).find(job=>job.name===name)
+ const oil=findJob('Wymiana oleju silnikowego i filtra')
+ assert.ok(oil)
+ const oilTimes=Object.fromEntries(oil.variants.map(variant=>[variant.name,variant.hours]))
+ assert.equal(oilTimes.standard,.4)
+ assert.equal(oilTimes['z demontażem osłon'],.6)
+ assert.equal(oilTimes['olej + płukanie uzgodnione'],.7)
+
+ const timing=findJob('Wymiana zestawu rozrządu')
+ assert.ok(timing)
+ const timingTimes=Object.fromEntries(timing.variants.map(variant=>[variant.name,variant.hours]))
+ assert.equal(timingTimes.pasek,5)
+ assert.equal(timingTimes['łańcuch'],8.4)
+ assert.equal(timingTimes['łańcuch wielorzędowy / rozbudowany'],9.6)
 })
 
 test('every group includes three additional specialist jobs',()=>{

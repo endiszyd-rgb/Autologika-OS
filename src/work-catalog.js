@@ -4,6 +4,7 @@ import {expandCatalogSpecialists} from './work-catalog-specialist.js'
 import {WORK_CATALOG_WORKSHOP_EXTRA} from './work-catalog-workshop-extra.js'
 import {WORK_CATALOG_WORKSHOP_V2} from './work-catalog-workshop-v2.js'
 import {WORK_CATALOG_WORKSHOP_V3} from './work-catalog-workshop-v3.js'
+import {catalogTimeForVariant} from './work-catalog-times.mjs'
 
 const BASE_WORK_CATALOG = [
   {
@@ -2621,15 +2622,19 @@ export const WORK_CATALOG=RAW_WORK_CATALOG.map(group=>({
     const workId=stableId('work',group.group,job.name)
     return {...job,price:null,id:workId,variants:(job.variants?.length?job.variants:['standard']).map(raw=>{
       const name=typeof raw==='string'?raw:raw.name
+      const time=catalogTimeForVariant({group:group.group,job:job.name,variant:name,baseHours:typeof raw==='object'&&raw.hours!=null?raw.hours:job.hours,explicitHours:typeof raw==='object'&&raw.hours!=null})
       return {
         ...(typeof raw==='object'?raw:{}),
         id:typeof raw==='object'&&raw.id?raw.id:stableId('variant',group.group,job.name,name),
         work_id:workId,
         work_name:job.name,
         name,
-        hours:Number(typeof raw==='object'&&raw.hours!=null?raw.hours:job.hours),
+        hours:time.hours,
+        timeBasis:time.timeBasis,
+        timeReference:time.timeReference,
+        timeAdjustment:time.timeAdjustment,
         price:null,
-        timeSource:'WORKSHOP_ESTIMATE',
+        timeSource:time.timeBasis,
         priceSource:'UNCONFIGURED',
         customer_description:typeof raw==='object'&&raw.customer_description?raw.customer_description:customerDescription(job,name),
         technical_description:typeof raw==='object'&&raw.technical_description?raw.technical_description:'',

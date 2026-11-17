@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.15 — 2026-11-17
+
+### Katalog czasów napraw
+
+- Każdy z 3 065 wariantów prac ma przypisany orientacyjny czas początkowy; zakres, taki jak EPB, dodatkowy demontaż, płukanie czy typ rozrządu, różnicuje czas tam, gdzie ma to uzasadnienie.
+- Dodano wybrane publiczne punkty odniesienia dla typowych napraw. Czasy nie są normami producenta, a warsztat może zmienić czas niezależnie dla każdego wariantu.
+- W katalogu i wyszukiwarce pokazujemy podstawę czasu oraz źródło; dodano przewodnik z metodą i ograniczeniami danych.
+
 ## 1.1.14 — 2026-11-17
 
 ### Kosztorys napraw i dokumentacja zlecenia
