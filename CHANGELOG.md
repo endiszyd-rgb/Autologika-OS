@@ -1,3 +1,8 @@
+## 1.1.20 — protokół wydania bez sekcji QC
+
+- Usunięto z protokołu wydania sekcję kontroli jakości i zapisane uwagi QC.
+- Zalecenia oraz rozliczenie i odbiór pozostają w dokumencie.
+
 ## 1.1.19 — ceny części i opcjonalne numery OE
 
 - Numer OE lub zamiennika nie jest wymagany przy dodawaniu części do zlecenia.

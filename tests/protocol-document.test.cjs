@@ -23,10 +23,11 @@ test('renders advanced service order sections and values',()=>{
   assert.match(html,/1,2 h/)
 })
 
-test('renders release protocol with QC and recommendations',()=>{
-  const html=documentHtml(order,items,{conclusion:'Naprawiono',recommendation:'Kontrola za 1000 km'}, {},'release',null,[{label:'Jazda próbna',checked:1},{label:'Brak wycieków',checked:0}])
-  assert.match(html,/Protokół wykonania i wydania/)
-  assert.match(html,/1\/2/)
-  assert.match(html,/Jazda próbna/)
-  assert.match(html,/Kontrola za 1000 km/)
+test('renders release protocol without QC and with recommendations',()=>{
+  const html=documentHtml(order,items,{conclusion:'Fixed',recommendation:'Service reminder 1000 km'}, {qc_notes:'QC_NOTE_MUST_NOT_APPEAR',release_notes:'RECOMMENDATION_MUST_REMAIN'},'release',null,[{label:'QC_ROW_ONE',checked:1},{label:'QC_ROW_TWO',checked:0}])
+  assert.match(html,/Protok/)
+  assert.doesNotMatch(html,/QC_NOTE_MUST_NOT_APPEAR|QC_ROW_ONE|QC_ROW_TWO/)
+  assert.match(html,/RECOMMENDATION_MUST_REMAIN/)
+  assert.ok(html.includes('<i>04</i>'))
+  assert.ok(html.includes('<i>05</i>'))
 })

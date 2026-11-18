@@ -41,7 +41,7 @@ function documentHtml(order,items=[],diagnosis={},notes={},type='order',signatur
   const works=items.filter(item=>item.kind==='ROBOCIZNA')
   const saleItems=items.filter(item=>item.kind!=='ROBOCIZNA')
   const titles={intake:'Karta przyjęcia pojazdu',order:'Zlecenie serwisowe',release:'Protokół wykonania i wydania'}
-  const subtitles={intake:'Rejestracja stanu wejściowego i zakresu diagnostyki',order:'Zakres prac, części i warunki realizacji',release:'Potwierdzenie wykonania, kontroli jakości i odbioru'}
+  const subtitles={intake:'Rejestracja stanu wejściowego i zakresu diagnostyki',order:'Zakres prac, części i warunki realizacji',release:'Potwierdzenie wykonania prac i odbioru'}
   const title=titles[type]||titles.order,subtitle=subtitles[type]||subtitles.order
   const code=`AL/${new Date().getFullYear()}/${String(order.id||0).padStart(5,'0')}`
   const status=String(order.status||'PRZYJĘTE').replaceAll('_',' ')
@@ -50,8 +50,6 @@ function documentHtml(order,items=[],diagnosis={},notes={},type='order',signatur
   const diagnosisTotal=Number(order.diagnosis_fee||0),discount=Number(order.discount||0),grandTotal=Number(order.total||0)
   const workCards=works.length?works.map((item,index)=>`<article class="workCard"><div class="workIndex">${String(index+1).padStart(2,'0')}</div><div class="workBody"><div class="workTitle"><h3>${esc(item.work_name||item.name)}</h3><strong>${money(item.price_snapshot??(Number(item.qty||0)*Number(item.unit_price||0)))}</strong></div>${item.variant_name?`<span class="variant">${esc(item.variant_name)}</span>`:''}<p>${esc(item.customer_description||item.notes||'Zakres pracy zgodny ze zleceniem.')}</p><footer><span>Czas rozliczeniowy</span><b>${formatHours(item.hours_snapshot??item.qty)}</b></footer></div></article>`).join(''):`<div class="emptyState">Brak zapisanych pozycji robocizny.</div>`
   const itemTable=saleItems.length?`<table><thead><tr><th>Pozycja / numer</th><th>Rodzaj</th><th class="num">Ilość</th><th class="num">Cena jedn.</th><th class="num">Wartość</th></tr></thead><tbody>${saleItems.map(item=>`<tr><td><b>${esc(item.name)}</b><small>${esc(item.part_no||item.supplier||'')}</small></td><td><span class="typeTag">${esc(item.kind)}</span></td><td class="num">${itemQuantity(item)}</td><td class="num">${money(item.unit_price)}</td><td class="num totalCell">${money(Number(item.qty||0)*Number(item.unit_price||0))}</td></tr>`).join('')}</tbody></table>`:`<div class="emptyState">Brak części, materiałów i usług dodatkowych.</div>`
-  const qcDone=qcRows.filter(row=>row.checked).length
-  const qcContent=qcRows.length?`<div class="qcHeader"><div><b>${qcDone}/${qcRows.length}</b><span>potwierdzonych punktów</span></div><div class="qcBar"><i style="width:${Math.round(qcDone/qcRows.length*100)}%"></i></div></div><div class="qcGrid">${qcRows.map(row=>`<div class="qcItem ${row.checked?'checked':'pending'}"><span>${esc(row.label)}</span><em>${row.checked?'POTWIERDZONO':'NIEPOTWIERDZONE'}</em></div>`).join('')}</div>`:`<div class="emptyState">Brak zapisanej listy kontroli jakości.</div>`
   const financial=`<div class="financial"><div><span>Robocizna</span><b>${money(workTotal||Number(order.labor_hours||0)*Number(order.labor_rate||0))}</b></div><div><span>Diagnostyka</span><b>${money(diagnosisTotal)}</b></div><div><span>Rabat</span><b>− ${money(discount)}</b></div><div class="grand"><span>Wartość dokumentu</span><b>${money(grandTotal)}</b></div></div>`
   let body=''
   if(type==='intake'){
@@ -63,9 +61,8 @@ function documentHtml(order,items=[],diagnosis={},notes={},type='order',signatur
     body+=section(1,'Opis usterki i wynik diagnozy',textBlock(diagnosis?.conclusion||diagnosis?.symptom_confirmed,'Nie zapisano opisu usterki.'))
     body+=section(2,'Wykonane prace',workCards)
     body+=section(3,'Części, materiały i usługi',itemTable)
-    body+=section(4,'Kontrola jakości',`${qcContent}${textBlock(notes?.qc_notes,'Brak dodatkowych uwag kontroli jakości.')}`)
-    body+=section(5,'Zalecenia po naprawie',textBlock(notes?.release_notes||diagnosis?.recommendation,'Brak dodatkowych zaleceń.'),'recommendations')
-    body+=section(6,'Rozliczenie i odbiór',`${financial}${signatureSvg(signature,'Podpis odbierającego pojazd')}`,'signatureSection')
+    body+=section(4,'Zalecenia po naprawie',textBlock(notes?.release_notes||diagnosis?.recommendation,'Brak dodatkowych zaleceń.'),'recommendations')
+    body+=section(5,'Rozliczenie i odbiór',`${financial}${signatureSvg(signature,'Podpis odbierającego pojazd')}`,'signatureSection')
   }else{
     body+=section(1,'Zgłoszenie i cel wizyty',textBlock(order.complaint,'Brak opisu zgłoszenia.'))
     body+=section(2,'Ustalenia diagnostyczne',`<div class="diagnosisGrid"><div><small>OPIS USTERKI</small>${textBlock(diagnosis?.symptom_confirmed||diagnosis?.conclusion,'Diagnostyka w toku.')}</div><div><small>DANE ELEKTRONICZNE</small>${textBlock(diagnosis?.dtcs||diagnosis?.measurements,'Nie wykonywano zaawansowanej diagnostyki elektronicznej.')}</div></div>`)
