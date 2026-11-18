@@ -1,3 +1,8 @@
+## 1.1.19 — ceny części i opcjonalne numery OE
+
+- Numer OE lub zamiennika nie jest wymagany przy dodawaniu części do zlecenia.
+- Cena sprzedaży ustawia się domyślnie na cenę zakupu powiększoną o 30%; można ją ręcznie zmienić.
+
 ## 1.1.18 — protokół wydania i części zlecenia
 
 - Protokół wydania pokazuje statusy kontroli jakości tekstowo, bez widocznych checkboxów i znaczników wyboru.
