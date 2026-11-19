@@ -22,6 +22,16 @@
 
 # Changelog
 
+## 1.1.22 — 2026-11-19
+
+### Okienka na telefonie i szlif graficzny
+
+- Telefon: okienka nad dolnym paskiem menu — naprawa zasłoniętego przycisku „Dodaj do zamówień” przy dodawaniu części do zlecenia; okienka jako panel od dołu z uchwytem i stałym paskiem przycisków na dole.
+- Informacja „Ekran aplikacji dostępny bez sieci” znika sama po 6 s i nie wchodzi na okienka; przewijanie do pola zatrzymuje się nad paskiem menu.
+- Okienka mają nieprzezroczyste tło (nie prześwitują napisy strony) i pełny nagłówek przy przewijaniu.
+- Lżejszy tekst w polach formularzy, dwa poziomy grubości przycisków, jednolite sekcje rozwijane, liczniki w procedurze jako plakietki.
+- „Dodaj pracę z katalogu”: podsumowanie „Robocizna do dodania / Czas pracy / Dane techniczne”, kwota z groszami, układ wierszy na telefonie.
+
 ## 1.1.17 — 2026-11-17
 
 ### Czytelniejszy kalkulator robocizny
