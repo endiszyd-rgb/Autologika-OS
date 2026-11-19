@@ -1,3 +1,9 @@
+## 1.1.21 — lepsze wyszukiwanie zeskanowanych części
+
+- Uodporniono odczyt wyników wyszukiwarek na różne układy HTML oraz wyszukiwanie po numerze części.
+- Poprawiono wyciąganie numeru katalogowego z opisów i ograniczono błędne odczyty fragmentów słów jako kodów części.
+- Usprawniono czyszczenie nazw części i rozpoznawanie oznaczeń czujników parkowania.
+
 ## 1.1.20 — protokół wydania bez sekcji QC
 
 - Usunięto z protokołu wydania sekcję kontroli jakości i zapisane uwagi QC.
