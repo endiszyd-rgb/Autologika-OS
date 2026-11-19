@@ -86,10 +86,10 @@ function knownBrand(value=''){
 }
 
 function webPartNumber(value,barcode){
-  const labelled=String(value||'').match(/(?:article|part|catalog(?:ue)?|katalogowy|artykułu|artikla|šifra)(?:\s+(?:number|no|nr|code|części))?\s*[:#-]?\s*([A-Z0-9][A-Z0-9._/-]{2,23})/i)?.[1]
-  if(labelled&&normalizeBarcode(labelled)!==barcode)return labelled
+  const labelled=String(value||'').match(/\b(?:article|part|catalog(?:ue)?|katalogowy|artykułu|artikla|šifra)(?:\s+(?:number|no|nr|code|części))?\s*[:#-]?\s*([A-Z0-9][A-Z0-9._/-]{2,23})/i)?.[1]
+  if(labelled&&normalizeBarcode(labelled)!==barcode)return labelled.replace(/[._/-]+$/,'')
   const tokens=String(value||'').replace(barcode,' ').match(/[A-Z0-9][A-Z0-9._/-]{3,23}/gi)||[]
-  return tokens.find(token=>/[A-Z]/i.test(token)&&/\d/.test(token)&&normalizeBarcode(token)!==barcode)||''
+  return tokens.find(token=>/[A-Z]/i.test(token)&&/\d/.test(token)&&normalizeBarcode(token)!==barcode)?.replace(/[._/-]+$/,'')||''
 }
 
 function webBrand(title,partNo){
@@ -99,7 +99,7 @@ function webBrand(title,partNo){
   const partIndex=String(title).toUpperCase().indexOf(partNo.toUpperCase())
   const before=String(title||'').slice(0,partIndex)
   const stop=new Set(['FOR','FITS','FIT','NEW','GENUINE','ORIGINAL','GERMANY','UK','THE','WITH'])
-  const words=(before.match(/[A-Z][A-Z0-9-]{1,15}/g)||[]).filter(word=>!stop.has(word)&&!/\d/.test(word))
+  const words=(before.match(/[A-Z][A-Z0-9-]{1,15}/g)||[]).filter(word=>!stop.has(word)&&!VEHICLE_MAKES.some(make=>make===word)&&!/\d/.test(word))
   if(words.length)return words.at(-1)
   const after=String(title||'').slice(partIndex+partNo.length)
   return (after.match(/^\s*([A-Z][A-Z0-9-]{1,15}(?:\s+[A-Z][A-Z0-9-]{1,15})?)/)?.[1]||'').trim()
@@ -124,7 +124,7 @@ function cleanPartName(title='',barcode='',partNo='',brand=''){
     [/\boil filter\b/i,'Filtr oleju'],[/\bair filter\b/i,'Filtr powietrza'],[/\bcabin filter\b/i,'Filtr kabinowy'],
     [/\bfuel filter\b/i,'Filtr paliwa'],[/\bbrake pads?\b/i,'Klocki hamulcowe'],[/\bbrake disc\b/i,'Tarcza hamulcowa'],
     [/\bwheel bearing(?: kit)?\b/i,'Łożysko koła'],[/\bshock absorber\b/i,'Amortyzator'],[/\bcontrol arm\b/i,'Wahacz'],
-    [/\bsensor,?\s*parking distance control\b/i,'Czujnik parkowania'],
+    [/\bsensor,?\s*(?:parking|park) distance control\b/i,'Czujnik parkowania'],[/\bPDC\s+(?:parking\s+)?sensor\b/i,'Czujnik parkowania'],
     [/\b(?:rod\s*\/\s*strut|link(?:\s*\/\s*coupling rod)?)(?:,?\s+stabilis(?:er|or)(?: bar)?)?\b/i,'Łącznik stabilizatora'],[/\bstabilis(?:er|or) link\b/i,'Łącznik stabilizatora'],
     [/\btie rod end\b/i,'Końcówka drążka kierowniczego']
   ]
@@ -133,7 +133,7 @@ function cleanPartName(title='',barcode='',partNo='',brand=''){
   return value.trim()
 }
 
-const LOOKUP_VERSION='catalog-web-v6'
+const LOOKUP_VERSION='catalog-web-v7'
 const VEHICLE_MAKES=['ALFA ROMEO','ASTON MARTIN','LAND ROVER','MERCEDES-BENZ','MERCEDES','VOLKSWAGEN','VAUXHALL','CHEVROLET','CHRYSLER','CITROEN','DACIA','DAEWOO','DAIHATSU','DODGE','FERRARI','FIAT','FORD','HONDA','HYUNDAI','INFINITI','ISUZU','IVECO','JAGUAR','JEEP','KIA','LANCIA','LEXUS','MAN','MAZDA','MINI','MITSUBISHI','NISSAN','OPEL','PEUGEOT','PORSCHE','RENAULT','ROVER','SAAB','SEAT','SKODA','SMART','SSANGYONG','SUBARU','SUZUKI','TESLA','TOYOTA','VOLVO','AUDI','BMW']
 const AUTOMOTIVE_WORDS=/(?:auto(?:motive|parts?)?|samochod|vehicle|częś|czes|spare part|oe\b|oem\b|brake|hamul|filter|filtr|sensor|czujnik|bearing|łożysk|lozysk|suspension|zawiesze|engine|silnik|clutch|sprzęg|sprzeg|gearbox|skrzyni|stabilis|wahacz|amortyz|shock absorber|ignition|zapłon|zaplon|radiator|chłodnic|chlodnic|exhaust|wydech|steering|kierownic|wheel|koł|kol)/i
 const CATALOG_DOMAINS=/(?:autodoc|auto-doc|motora|autoparts|auto-parts|auto-?teile|ucando|czesciauto24|europarts|autodily|trodo|mister-auto|spareto|iparts|intercars|motointegrator|daparto|partsource)/i
@@ -391,6 +391,15 @@ async function enrichWebCandidate(fetchImpl,item){
 
 function mapWebSearch(html,scannedCode){
   const barcode=normalizeBarcode(scannedCode),results=[]
+  for(const row of parseSearchAnchors(html)){
+    const evidence=`${row.rawTitle} ${row.snippet}`
+    if(!evidence.includes(barcode))continue
+    let score=row.rawTitle.includes(barcode)?8:4
+    if(AUTOMOTIVE_WORDS.test(`${row.url} ${evidence}`))score+=3
+    if(CATALOG_DOMAINS.test(row.url))score+=6
+    if(/ebay|amazon|allegro/i.test(row.url))score-=3
+    results.push({...row,score})
+  }
   const pattern=/<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>([\s\S]*?)(?=<a[^>]*class="result__a"|$)/gi
   for(const match of String(html||'').matchAll(pattern)){
     const url=unwrapSearchUrl(match[1]),rawTitle=decodeHtml(match[2]),tail=match[3]
@@ -433,11 +442,12 @@ function mapWebSearch(html,scannedCode){
     result.score+=signals
     result.automotiveSignals=signals
   }
-  const best=results.sort((a,b)=>b.score-a.score)[0]
+  const deduped=[...new Map(results.map(result=>[result.url,result])).values()]
+  const best=deduped.sort((a,b)=>b.score-a.score)[0]
   if(!best||best.score<8||best.automotiveSignals<2)return null
   const name=best.rawTitle.replaceAll(barcode,'').replace(/\s*[|–—]\s*(?:eBay.*|AUTODOC.*)$/i,'').replace(/\s*\.{3}\s*$/,'').replace(/\s+/g,' ').trim()
   if(!name)return null
-  const related=results.filter(result=>{
+  const related=deduped.filter(result=>{
     if(best.brand&&result.brand&&normalizedIdentity(best.brand)!==normalizedIdentity(result.brand))return false
     if(best.partNo&&result.partNo&&normalizedIdentity(best.partNo)!==normalizedIdentity(result.partNo))return false
     return result.automotiveSignals>=2
@@ -459,6 +469,39 @@ function mapWebSearch(html,scannedCode){
     lookup_url:best.url,
     web_candidate:true,evidence_score:best.score,result_count:related.length,lookup_version:LOOKUP_VERSION
   })
+}
+
+function htmlAttribute(attributes,name){
+  const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')
+  return attributes.match(new RegExp(`(?:^|\\s)${escaped}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`,'i'))?.slice(1).find(Boolean)||''
+}
+
+function parseSearchAnchors(html=''){
+  const anchors=[]
+  for(const match of String(html).matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)){
+    const attrs=match[1],classes=htmlAttribute(attrs,'class').toLowerCase().split(/\s+/),href=htmlAttribute(attrs,'href')
+    if(!href)continue
+    if(classes.some(name=>['result__a','result-link'].includes(name)))anchors.push({url:href,title:decodeHtml(match[2]),index:match.index})
+    else if(classes.includes('result__snippet'))anchors.push({snippet:decodeHtml(match[2]),index:match.index})
+  }
+  for(const match of String(html).matchAll(/<(?:div|td|p)[^>]*\bclass\s*=\s*(?:"([^"]*)"|'([^']*)')[^>]*>([\s\S]*?)<\/(?:div|td|p)\s*>/gi)){
+    if(!/(?:^|\s)result-snippet(?:\s|$)/i.test(match[1]||match[2]||''))continue
+    anchors.push({snippet:decodeHtml(match[3]),index:match.index})
+  }
+  anchors.sort((a,b)=>a.index-b.index)
+  const rows=[]
+  for(let index=0;index<anchors.length;index++){
+    const anchor=anchors[index]
+    if(!anchor.title)continue
+    let snippet=''
+    for(let next=index+1;next<anchors.length&&anchors[next].index-anchor.index<7000;next++){
+      if(anchors[next].title)break
+      if(anchors[next].snippet)snippet=anchors[next].snippet
+    }
+    const url=unwrapSearchUrl(anchor.url)
+    if(url)rows.push({url,rawTitle:anchor.title,snippet})
+  }
+  return rows
 }
 
 function normalizePartNumber(value=''){
@@ -506,14 +549,12 @@ function sparetoDetailMetadata(html=''){
 }
 
 function partNumberSearchRows(html=''){
-  const rows=[]
-  const add=(url,title,snippet='')=>{url=unwrapSearchUrl(url);title=decodeHtml(title);snippet=decodeHtml(snippet);if(url&&title)rows.push({url,rawTitle:title,snippet})}
-  const duck=/<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>([\s\S]*?)(?=<a[^>]*class="result__a"|$)/gi
-  for(const match of String(html).matchAll(duck))add(match[1],match[2],match[3].match(/<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i)?.[1]||'')
-  const lite=/<a[^>]*href=["']([^"']+)["'][^>]*class=["'][^"']*result-link[^"']*["'][^>]*>([\s\S]*?)<\/a>([\s\S]*?)(?=<a[^>]*class=["'][^"']*result-link|$)/gi
-  for(const match of String(html).matchAll(lite))add(match[1],match[2],match[3].match(/class=["'][^"']*result-snippet[^"']*["'][^>]*>([\s\S]*?)<\/td>/i)?.[1]||'')
+  const rows=parseSearchAnchors(html)
   const brave=/<a[^>]*href="(https?:\/\/[^"#]+)"[^>]*class="[^"]*\bl1\b[^"]*"[^>]*>[\s\S]{0,6000}?<div[^>]*class="[^"]*\btitle\b[^"]*"[^>]*title="([^"]+)"/gi
-  for(const match of String(html).matchAll(brave))add(match[1],match[2])
+  for(const match of String(html).matchAll(brave)){
+    const url=unwrapSearchUrl(match[1]),rawTitle=decodeHtml(match[2])
+    if(url&&rawTitle)rows.push({url,rawTitle,snippet:''})
+  }
   return rows
 }
 
