@@ -2,15 +2,16 @@ import {createPortal} from 'react-dom'
 import {usePwaOverlayViewport} from './platform/pwa-overlay.jsx'
 import React,{useEffect,useRef,useState} from 'react'
 import {bytesToBase64,cameraErrorMessage} from './aztec-camera-utils.mjs'
+import {NotFoundException,ChecksumException,FormatException} from '@zxing/library'
 
-const isNotFound=error=>/NotFoundException|ChecksumException|FormatException|No MultiFormat Readers|No code/i.test(String(error?.name||error?.message||error||''))
+const isNotFound=error=>error instanceof NotFoundException||error instanceof ChecksumException||error instanceof FormatException||/NotFoundException|ChecksumException|FormatException|No MultiFormat Readers|No code/i.test(String(error?.name||'')+' '+String(error?.message||''))
 
 export default function AztecCamera({onDetected,onClose}){
  const viewportStyle=usePwaOverlayViewport()
- const videoRef=useRef(null),readerRef=useRef(null),controlsRef=useRef(null),trackRef=useRef(null),doneRef=useRef(false),attemptRef=useRef(0),cropTimerRef=useRef(null),scanCountRef=useRef(0)
+ const videoRef=useRef(null),readerRef=useRef(null),controlsRef=useRef(null),trackRef=useRef(null),doneRef=useRef(false),attemptRef=useRef(0),cropTimerRef=useRef(null),scanCountRef=useRef(0),cropBusyRef=useRef(false)
  const[status,setStatus]=useState('Uruchamiam tylny aparat…'),[error,setError]=useState(''),[torchAvailable,setTorchAvailable]=useState(false),[torch,setTorch]=useState(false),[starting,setStarting]=useState(true)
 
- const stop=()=>{attemptRef.current++;if(cropTimerRef.current!==null){clearInterval(cropTimerRef.current);cropTimerRef.current=null}scanCountRef.current=0;controlsRef.current?.stop?.();controlsRef.current=null;trackRef.current?.stop?.();trackRef.current=null;const stream=videoRef.current?.srcObject;if(stream?.getTracks)stream.getTracks().forEach(track=>track.stop());if(videoRef.current){videoRef.current.pause?.();videoRef.current.srcObject=null}setTorch(false);setTorchAvailable(false)}
+ const stop=()=>{attemptRef.current++;if(cropTimerRef.current!==null){clearInterval(cropTimerRef.current);cropTimerRef.current=null}scanCountRef.current=0;cropBusyRef.current=false;controlsRef.current?.stop?.();controlsRef.current=null;trackRef.current?.stop?.();trackRef.current=null;const stream=videoRef.current?.srcObject;if(stream?.getTracks)stream.getTracks().forEach(track=>track.stop());if(videoRef.current){videoRef.current.pause?.();videoRef.current.srcObject=null}setTorch(false);setTorchAvailable(false)}
  const deliver=result=>{if(doneRef.current)return;const raw=String(result.getText?.()||'');const bytes=result.getRawBytes?.()||new Uint8Array();if(!raw&&!bytes.length)return;doneRef.current=true;stop();onDetected?.({raw,base64:bytes.length?bytesToBase64(bytes):'',source:'IOS_CAMERA',format:'AZTEC'})}
  const start=async()=>{
   setError('');setStarting(true);doneRef.current=false;stop();const attempt=attemptRef.current
@@ -43,8 +44,8 @@ export default function AztecCamera({onDetected,onClose}){
    // occupies only a small fraction of the wide iPhone camera image.
    const cropCanvas=document.createElement('canvas')
    const cropContext=cropCanvas.getContext('2d',{willReadFrequently:true})
-   cropTimerRef.current=setInterval(()=>{
-    if(attempt!==attemptRef.current||doneRef.current||!cropContext)return
+   cropTimerRef.current=setInterval(async()=>{
+    if(attempt!==attemptRef.current||doneRef.current||!cropContext||cropBusyRef.current)return
     const video=videoRef.current
     if(!video||video.readyState<2||!video.videoWidth||!video.videoHeight)return
     scanCountRef.current++
@@ -55,8 +56,12 @@ export default function AztecCamera({onDetected,onClose}){
     cropCanvas.width=Math.min(1280,region)
     cropCanvas.height=cropCanvas.width
     cropContext.drawImage(video,Math.round((video.videoWidth-region)/2),Math.round((video.videoHeight-region)/2),region,region,0,0,cropCanvas.width,cropCanvas.height)
-    try{deliver(reader.decodeFromCanvas(cropCanvas))}
-    catch(scanError){if(!isNotFound(scanError)&&attempt===attemptRef.current)setError(cameraErrorMessage(scanError))}
+    cropBusyRef.current=true
+    try{
+     const result=await reader.decodeFromCanvas(cropCanvas)
+     if(attempt===attemptRef.current&&result)deliver(result)
+    }catch(scanError){if(!isNotFound(scanError)&&attempt===attemptRef.current)setError(cameraErrorMessage(scanError))}
+    finally{cropBusyRef.current=false}
    },850)
   }catch(reason){if(attempt!==attemptRef.current)return;setStarting(false);setError(cameraErrorMessage(reason));setStatus('Możesz wykonać zdjęcie kodu lub wybrać je z biblioteki.')}
  }
