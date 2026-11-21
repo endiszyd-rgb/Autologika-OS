@@ -70,9 +70,14 @@ export default function AztecCamera({onDetected,onClose}){
     const side=Math.min(video.videoWidth,video.videoHeight)
     const ratio=scanCountRef.current%2===0?.66:.9
     const region=Math.round(side*ratio)
+    const offset=scanCountRef.current%5
+    const shiftX=offset===2?-.12:offset===3?.12:0
+    const shiftY=offset===1?.12:offset===4?-.12:0
+    const x=Math.max(0,Math.min(video.videoWidth-region,Math.round(video.videoWidth*(.5+shiftX)-region/2)))
+    const y=Math.max(0,Math.min(video.videoHeight-region,Math.round(video.videoHeight*(.5+shiftY)-region/2)))
     cropCanvas.width=Math.min(1280,region)
     cropCanvas.height=cropCanvas.width
-    cropContext.drawImage(video,Math.round((video.videoWidth-region)/2),Math.round((video.videoHeight-region)/2),region,region,0,0,cropCanvas.width,cropCanvas.height)
+    cropContext.drawImage(video,x,y,region,region,0,0,cropCanvas.width,cropCanvas.height)
     cropBusyRef.current=true
     try{
      const result=decodeCanvasVariants(cropReaderRef.current,cropCanvas)
@@ -98,10 +103,17 @@ export default function AztecCamera({onDetected,onClose}){
    const ctx=canvas.getContext('2d',{willReadFrequently:true})
    if(!ctx)throw new Error('Brak obsługi odczytu obrazu.')
    const attempts=[[0,0,img.naturalWidth,img.naturalHeight]]
-   const side=Math.min(img.naturalWidth,img.naturalHeight)
-   for(const fraction of [.9,.7,.5]){
+   const width=img.naturalWidth,height=img.naturalHeight
+   const side=Math.min(width,height)
+   // Registration codes are often below the centre of a portrait photo.
+   // Probe multiple positions, preserving a margin around the entire symbol.
+   for(const fraction of [.95,.8,.65]){
     const region=Math.round(side*fraction)
-    attempts.push([(img.naturalWidth-region)/2,(img.naturalHeight-region)/2,region,region])
+    for(const [cx,cy] of [[.5,.5],[.5,.7],[.5,.8],[.35,.7],[.65,.7]]){
+     const x=Math.max(0,Math.min(width-region,Math.round(cx*width-region/2)))
+     const y=Math.max(0,Math.min(height-region,Math.round(cy*height-region/2)))
+     if(!attempts.some(([ax,ay,aw,ah])=>ax===x&&ay===y&&aw===region&&ah===region))attempts.push([x,y,region,region])
+    }
    }
    let result=null
    for(const [x,y,w,h] of attempts){
