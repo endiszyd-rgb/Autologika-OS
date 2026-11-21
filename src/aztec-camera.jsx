@@ -3,14 +3,14 @@ import {usePwaOverlayViewport} from './platform/pwa-overlay.jsx'
 import React,{useEffect,useRef,useState} from 'react'
 import {bytesToBase64,cameraErrorMessage} from './aztec-camera-utils.mjs'
 
-const isNotFound=error=>/NotFoundException|No MultiFormat Readers|No code/i.test(String(error?.name||error?.message||error||''))
+const isNotFound=error=>/NotFoundException|ChecksumException|FormatException|No MultiFormat Readers|No code/i.test(String(error?.name||error?.message||error||''))
 
 export default function AztecCamera({onDetected,onClose}){
  const viewportStyle=usePwaOverlayViewport()
  const videoRef=useRef(null),readerRef=useRef(null),controlsRef=useRef(null),trackRef=useRef(null),doneRef=useRef(false),attemptRef=useRef(0)
  const[status,setStatus]=useState('Uruchamiam tylny aparat…'),[error,setError]=useState(''),[torchAvailable,setTorchAvailable]=useState(false),[torch,setTorch]=useState(false),[starting,setStarting]=useState(true)
 
- const stop=()=>{attemptRef.current++;controlsRef.current?.stop?.();controlsRef.current=null;trackRef.current?.stop?.();trackRef.current=null;const stream=videoRef.current?.srcObject;if(stream?.getTracks)stream.getTracks().forEach(track=>track.stop());if(videoRef.current)videoRef.current.srcObject=null}
+ const stop=()=>{attemptRef.current++;controlsRef.current?.stop?.();controlsRef.current=null;trackRef.current?.stop?.();trackRef.current=null;const stream=videoRef.current?.srcObject;if(stream?.getTracks)stream.getTracks().forEach(track=>track.stop());if(videoRef.current){videoRef.current.pause?.();videoRef.current.srcObject=null}setTorch(false);setTorchAvailable(false)}
  const deliver=result=>{if(doneRef.current)return;doneRef.current=true;const raw=String(result.getText?.()||'');const bytes=result.getRawBytes?.()||new Uint8Array();stop();onDetected?.({raw,base64:bytes.length?bytesToBase64(bytes):'',source:'IOS_CAMERA',format:'AZTEC'})}
  const start=async()=>{
   setError('');setStarting(true);doneRef.current=false;stop();const attempt=attemptRef.current
@@ -18,13 +18,22 @@ export default function AztecCamera({onDetected,onClose}){
    const {BrowserAztecCodeReader}=await import('@zxing/browser')
    if(attempt!==attemptRef.current)return
    const reader=new BrowserAztecCodeReader(undefined,{delayBetweenScanAttempts:120,delayBetweenScanSuccess:800});readerRef.current=reader
-   const constraints={audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}}
-   const controls=await reader.decodeFromConstraints(constraints,videoRef.current,(result,scanError,scannerControls)=>{
+   const onScan=(result,scanError,scannerControls)=>{
     if(attempt!==attemptRef.current){scannerControls?.stop?.();return}
     if(scannerControls&&!controlsRef.current)controlsRef.current=scannerControls
     if(result)deliver(result)
     else if(scanError&&!isNotFound(scanError))setError(cameraErrorMessage(scanError))
-   })
+   }
+   // Safari can reject strict camera constraints even if the rear camera works.
+   // Start at a moderate resolution for smoother realtime decoding on iPhone.
+   let controls
+   try{
+    controls=await reader.decodeFromConstraints({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}},videoRef.current,onScan)
+   }catch(firstError){
+    if(attempt!==attemptRef.current)return
+    if(firstError?.name==='NotAllowedError'||firstError?.name==='SecurityError')throw firstError
+    controls=await reader.decodeFromConstraints({audio:false,video:{facingMode:'environment'}},videoRef.current,onScan)
+   }
    if(attempt!==attemptRef.current){controls.stop?.();return}
    controlsRef.current=controls
    const stream=videoRef.current?.srcObject,track=stream?.getVideoTracks?.()[0];trackRef.current=track||null
@@ -46,6 +55,6 @@ export default function AztecCamera({onDetected,onClose}){
  return createPortal(<div className="aztecCamera" style={viewportStyle} role="dialog" aria-modal="true" aria-label="Skanowanie kodu AZTEC">
   <div className="aztecCameraTop"><div><small>IOS · SKAN LOKALNY</small><b>Skanuj AZTEC dowodu</b></div><button type="button" className="aztecClose" aria-label="Zamknij skaner" onClick={()=>{stop();onClose?.()}}>×</button></div>
   <div className="aztecViewport"><video ref={videoRef} autoPlay muted playsInline/><div className="aztecShade"/><div className="aztecFrame"><i/><i/><i/><i/><span/></div>{starting&&<div className="aztecLoading"><i/>Uruchamianie…</div>}</div>
-  <div className="aztecCameraPanel"><p className={error?'error':''}>{error||status}</p><div className="aztecCameraActions">{torchAvailable&&<button type="button" className={torch?'active':''} onClick={toggleTorch}>{torch?'Wyłącz lampę':'Włącz lampę'}</button>}<label className="pwaNativeFile">Zrób zdjęcie kodu<input aria-label="Zrób zdjęcie kodu AZTEC" type="file" accept="image/*" capture="environment" onClick={stop} onChange={selectPhoto} onCancel={()=>setStarting(false)}/></label><label className="pwaNativeFile">Wybierz z galerii<input aria-label="Wybierz kod AZTEC z galerii" type="file" accept="image/*" onClick={stop} onChange={selectPhoto} onCancel={()=>setStarting(false)}/></label><button type="button" onClick={start}>Uruchom ponownie</button></div><small>Dane dowodu są dekodowane na tym urządzeniu i nie są wysyłane do usługi OCR.</small></div>
+  <div className="aztecCameraPanel"><p className={error?'error':''}>{error||status}</p><div className="aztecCameraActions">{torchAvailable&&<button type="button" className={torch?'active':''} onClick={toggleTorch}>{torch?'Wyłącz lampę':'Włącz lampę'}</button>}<label className="pwaNativeFile">Zrób zdjęcie kodu<input aria-label="Zrób zdjęcie kodu AZTEC" type="file" accept="image/*" capture="environment" onChange={selectPhoto} onCancel={()=>{setStarting(false);setStatus("Wybór zdjęcia anulowany. Aparat nadal działa.");}}/></label><label className="pwaNativeFile">Wybierz z galerii<input aria-label="Wybierz kod AZTEC z galerii" type="file" accept="image/*" onClick={stop} onChange={selectPhoto} onCancel={()=>setStarting(false)}/></label><button type="button" onClick={start}>Uruchom ponownie</button></div><small>Dane dowodu są dekodowane na tym urządzeniu i nie są wysyłane do usługi OCR.</small></div>
  </div>,document.body)
 }
