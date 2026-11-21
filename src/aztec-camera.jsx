@@ -4,11 +4,28 @@ import React,{useEffect,useRef,useState} from 'react'
 import {bytesToBase64,cameraErrorMessage} from './aztec-camera-utils.mjs'
 import {NotFoundException,ChecksumException,FormatException} from '@zxing/library'
 
+// Keep supplemental decoding isolated from the active video decoder.
+function decodeCanvasVariants(reader,canvas){
+ try{return reader.decodeFromCanvas(canvas)}catch(error){if(!isNotFound(error))throw error}
+ const context=canvas.getContext('2d',{willReadFrequently:true})
+ if(!context)return null
+ const pixels=context.getImageData(0,0,canvas.width,canvas.height)
+ const original=new Uint8ClampedArray(pixels.data)
+ for(let i=0;i<pixels.data.length;i+=4){
+  pixels.data[i]=255-original[i]
+  pixels.data[i+1]=255-original[i+1]
+  pixels.data[i+2]=255-original[i+2]
+ }
+ context.putImageData(pixels,0,0)
+ try{return reader.decodeFromCanvas(canvas)}catch(error){if(!isNotFound(error))throw error}
+ finally{pixels.data.set(original);context.putImageData(pixels,0,0)}
+ return null
+}
 const isNotFound=error=>error instanceof NotFoundException||error instanceof ChecksumException||error instanceof FormatException||/NotFoundException|ChecksumException|FormatException|No MultiFormat Readers|No code/i.test(String(error?.name||'')+' '+String(error?.message||''))
 
 export default function AztecCamera({onDetected,onClose}){
  const viewportStyle=usePwaOverlayViewport()
- const videoRef=useRef(null),readerRef=useRef(null),controlsRef=useRef(null),trackRef=useRef(null),doneRef=useRef(false),attemptRef=useRef(0),cropTimerRef=useRef(null),scanCountRef=useRef(0),cropBusyRef=useRef(false)
+ const videoRef=useRef(null),readerRef=useRef(null),cropReaderRef=useRef(null),controlsRef=useRef(null),trackRef=useRef(null),doneRef=useRef(false),attemptRef=useRef(0),cropTimerRef=useRef(null),scanCountRef=useRef(0),cropBusyRef=useRef(false)
  const[status,setStatus]=useState('Uruchamiam tylny aparat…'),[error,setError]=useState(''),[torchAvailable,setTorchAvailable]=useState(false),[torch,setTorch]=useState(false),[starting,setStarting]=useState(true)
 
  const stop=()=>{attemptRef.current++;if(cropTimerRef.current!==null){clearInterval(cropTimerRef.current);cropTimerRef.current=null}scanCountRef.current=0;cropBusyRef.current=false;controlsRef.current?.stop?.();controlsRef.current=null;trackRef.current?.stop?.();trackRef.current=null;const stream=videoRef.current?.srcObject;if(stream?.getTracks)stream.getTracks().forEach(track=>track.stop());if(videoRef.current){videoRef.current.pause?.();videoRef.current.srcObject=null}setTorch(false);setTorchAvailable(false)}
@@ -18,7 +35,7 @@ export default function AztecCamera({onDetected,onClose}){
   try{
    const {BrowserAztecCodeReader}=await import('@zxing/browser')
    if(attempt!==attemptRef.current)return
-   const reader=new BrowserAztecCodeReader(undefined,{delayBetweenScanAttempts:120,delayBetweenScanSuccess:800});readerRef.current=reader
+   const reader=new BrowserAztecCodeReader(undefined,{delayBetweenScanAttempts:120,delayBetweenScanSuccess:800});readerRef.current=reader;cropReaderRef.current=new BrowserAztecCodeReader()
    const onScan=(result,scanError,scannerControls)=>{
     if(attempt!==attemptRef.current){scannerControls?.stop?.();return}
     if(scannerControls&&!controlsRef.current)controlsRef.current=scannerControls
@@ -58,7 +75,7 @@ export default function AztecCamera({onDetected,onClose}){
     cropContext.drawImage(video,Math.round((video.videoWidth-region)/2),Math.round((video.videoHeight-region)/2),region,region,0,0,cropCanvas.width,cropCanvas.height)
     cropBusyRef.current=true
     try{
-     const result=await reader.decodeFromCanvas(cropCanvas)
+     const result=decodeCanvasVariants(cropReaderRef.current,cropCanvas)
      if(attempt===attemptRef.current&&result)deliver(result)
     }catch(scanError){if(!isNotFound(scanError)&&attempt===attemptRef.current)setError(cameraErrorMessage(scanError))}
     finally{cropBusyRef.current=false}
@@ -70,7 +87,34 @@ export default function AztecCamera({onDetected,onClose}){
   stop();doneRef.current=false;const attempt=attemptRef.current
   setError('');setStatus('Odczytuję AZTEC ze zdjęcia…');setStarting(true)
   const url=URL.createObjectURL(file)
-  try{const {BrowserAztecCodeReader}=await import('@zxing/browser');const reader=readerRef.current||new BrowserAztecCodeReader();readerRef.current=reader;const result=await reader.decodeFromImageUrl(url);if(attempt===attemptRef.current)deliver(result)}
+  try{
+   const {BrowserAztecCodeReader}=await import('@zxing/browser')
+   const reader=new BrowserAztecCodeReader()
+   const img=new Image()
+   img.src=url
+   await img.decode()
+   if(attempt!==attemptRef.current)return
+   const canvas=document.createElement('canvas')
+   const ctx=canvas.getContext('2d',{willReadFrequently:true})
+   if(!ctx)throw new Error('Brak obsługi odczytu obrazu.')
+   const attempts=[[0,0,img.naturalWidth,img.naturalHeight]]
+   const side=Math.min(img.naturalWidth,img.naturalHeight)
+   for(const fraction of [.9,.7,.5]){
+    const region=Math.round(side*fraction)
+    attempts.push([(img.naturalWidth-region)/2,(img.naturalHeight-region)/2,region,region])
+   }
+   let result=null
+   for(const [x,y,w,h] of attempts){
+    if(attempt!==attemptRef.current)return
+    const scale=Math.min(1,1600/Math.max(w,h))
+    canvas.width=Math.max(1,Math.round(w*scale));canvas.height=Math.max(1,Math.round(h*scale))
+    ctx.drawImage(img,x,y,w,h,0,0,canvas.width,canvas.height)
+    result=decodeCanvasVariants(reader,canvas)
+    if(result)break
+   }
+   if(result&&attempt===attemptRef.current)deliver(result)
+   else if(attempt===attemptRef.current)throw new NotFoundException()
+  }
   catch(reason){if(attempt!==attemptRef.current)return;setError(isNotFound(reason)?'Nie znaleziono kodu AZTEC na zdjęciu. Zrób zdjęcie bliżej, bez odblasku i z całym kodem w kadrze.':cameraErrorMessage(reason));setStatus('Spróbuj ponownie aparatem albo innym zdjęciem.');setStarting(false)}
   finally{URL.revokeObjectURL(url)}
  }
